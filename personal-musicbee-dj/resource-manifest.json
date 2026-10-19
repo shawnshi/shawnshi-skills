@@ -1,91 +1,71 @@
 {
   "schema_version": 3,
   "skill": "personal-musicbee-dj",
-  "generated_at": "2026-10-09T12:49:18+08:00",
+  "generated_at": "2026-10-19T09:59:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "dba8f613a91d9d5cad9c89d271018436c0fe04f5ef559e3c913a27be73b2c95a",
+  "skill_md_sha256": "4698e2bb58343b8732f8f74179f57c2f3ac667e9b2b22ad8af59638679aeea92",
   "top_level_files": [
     "SKILL.md",
     "config.yaml",
-    "MUSICBEE_SETUP.md",
-    "AUDIO_PREVIEW.md",
-    "requirements-audio-win313.lock",
-    "CLASSIFIER_PREVIEW.md",
-    "classifier-models.json",
-    "classifier-prompts.json",
-    "requirements-classifier-win313.lock",
-    "RUNTIME.md",
-    "runtime-manifest.json",
-    "requirements-runtime-win313.lock"
+    "runtime-manifest.json"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "dba8f613a91d9d5cad9c89d271018436c0fe04f5ef559e3c913a27be73b2c95a"
+      "sha256": "4698e2bb58343b8732f8f74179f57c2f3ac667e9b2b22ad8af59638679aeea92"
     },
     {
       "path": "config.yaml",
       "sha256": "2b23d3acf0a21a42ae9c296d6c3fa5ebb9d2b089d97f875ceca4c93c0a876bdc"
     },
     {
-      "path": "MUSICBEE_SETUP.md",
-      "sha256": "07392e2b17b7477f449a1c9cef71e881c775bb0ce89a1b593ed34f61c9556107"
-    },
-    {
-      "path": "AUDIO_PREVIEW.md",
-      "sha256": "1ef54ea748112770a37d5f94feb30fb56c76e3260df399497949e93d803adcd5"
-    },
-    {
-      "path": "requirements-audio-win313.lock",
-      "sha256": "6bb6f8c25ea6cc9a690d6d9d40983c89a45111cd4375e924352073cb11a51431"
-    },
-    {
-      "path": "CLASSIFIER_PREVIEW.md",
-      "sha256": "c3d613322dd986ec035c1ac673dc4d171be38bcc9edcc649ea64c8152e61d5dd"
-    },
-    {
-      "path": "classifier-models.json",
-      "sha256": "47fde4de8be0618aa3dbc8e387c8df82d5b9b6041020847fbe095c3523862fcd"
-    },
-    {
-      "path": "classifier-prompts.json",
-      "sha256": "f578f760ff1880bae648a8ea20045335870d068e180c2bc759af3daf60a34401"
-    },
-    {
-      "path": "requirements-classifier-win313.lock",
-      "sha256": "4f7cceb4eb4ffaa4ea2e3985e15ba54db6c9873c823ce81edb95773bd77b8b56"
-    },
-    {
-      "path": "RUNTIME.md",
-      "sha256": "7ab94b243559e0d43b965bde320bea695c6ef7f98d5409935e7dcb87b35561ad"
-    },
-    {
       "path": "runtime-manifest.json",
       "sha256": "ec13ef0c57a64ba025fba0591583b368275c4bbf6419d693620c050da0890cac"
-    },
-    {
-      "path": "requirements-runtime-win313.lock",
-      "sha256": "0072df3aeebd9c2f0da95cbdcf7f44d413593237f7c57ae94afca5bf3c98934c"
     }
   ],
   "top_level_directories": [
-    "src",
-    "tests",
     "references",
-    "vendor-tag-metadata",
-    "templates"
+    "src",
+    "templates",
+    "tests",
+    "vendor-tag-metadata"
   ],
   "resource_directories": [
-    "references",
-    "vendor-tag-metadata",
-    "templates"
+    {
+      "name": "references",
+      "file_count": 3
+    }
   ],
   "resource_file_hashes": [
     {
+      "path": "references/evaluation.md",
+      "sha256": "204f194c508f6dd56c7fab14886ed9eb8bfeaaa3867992e2ad194cd3039a5497"
+    },
+    {
+      "path": "references/MUSICBEE_SETUP.md",
+      "sha256": "6606e5cde30f44592ba44c0b84917c409ee6bc574cc064e4238de62504036228"
+    },
+    {
+      "path": "references/tag-completion.md",
+      "sha256": "e33c7d3b32d95b2707304d74a9f01f1fec2a26abd98aeccc21e35232f0200630"
+    },
+    {
       "path": "src/__init__.py",
       "sha256": "e073a4e25a9db358f3b9a7472f07baf60340aa9fe4b35bf014570b9aa5e1cd65"
+    },
+    {
+      "path": "src/audio_preview.py",
+      "sha256": "2b1b03434d651096d7f5bdd2c8d83adf2d2e4b1c80dd79c74287e25a8c125ca1"
+    },
+    {
+      "path": "src/calibrate_classifier.py",
+      "sha256": "40766c8b6b8cc325ec5bdffb1533c39f09f7313a894cdfc1ad712df1e14b6ceb"
+    },
+    {
+      "path": "src/classifier_preview.py",
+      "sha256": "b6958a58b82b2038afb5b117a13bd3bf824f3ef03ea192fa5b56a7cfdb96dbe0"
     },
     {
       "path": "src/cli.py",
@@ -96,8 +76,24 @@
       "sha256": "48b68a4feba0bc40435e92a2cae7670f9fe8847cf76392040d234fba08169723"
     },
     {
+      "path": "src/core/attributes.py",
+      "sha256": "3152f5bbff5fb0d033ffe9cc201f15b192dc6746c55809baa29682a3baf30e08"
+    },
+    {
+      "path": "src/core/audio_analysis.py",
+      "sha256": "3553033ce77cc1ed907202b2c2477f0a9373c7bd9ae40e5bbf6c5681cc788bc3"
+    },
+    {
+      "path": "src/core/audio_classifier.py",
+      "sha256": "af91f3cbc3e7a26c919e1f6b28a0b9bfdc2378cc3725f8aad5e98dec394f2d37"
+    },
+    {
       "path": "src/core/curator.py",
       "sha256": "89ff1c388588e6facc192d69df7d7e51b018a643aa9ccae415534701085a1117"
+    },
+    {
+      "path": "src/core/local_paths.py",
+      "sha256": "168fe5167530b081199b578fe0531b8447fe84b17171377a951f2669bc52f3c0"
     },
     {
       "path": "src/core/models.py",
@@ -108,16 +104,72 @@
       "sha256": "2b9c6dbbc3a2c5ef8d0c3a07eeb3fa4404381b821f1df3cffbae084d7b0e6745"
     },
     {
+      "path": "src/core/runtime_support.py",
+      "sha256": "de017ab78a745b22db5bff4452eb10a4ac7fdf9498d483e46221cc04f247db6d"
+    },
+    {
+      "path": "src/core/tag_inventory.py",
+      "sha256": "3aad228e8bc1167f9c64a77591b377884963bfda990422b78cefd38d2d86332f"
+    },
+    {
+      "path": "src/core/tag_preflight.py",
+      "sha256": "63e5cc2b04575e22ea99660ade923b496c24e83e85f7f466b2519e7b18494df7"
+    },
+    {
+      "path": "src/core/tag_writer.py",
+      "sha256": "6f717df1b952ccda4fc3a07514ad48b1153af9018d8949bb414df4d9818645e4"
+    },
+    {
       "path": "src/pilot.py",
       "sha256": "c890ee0ae15b8f65da0f62eab6605d4b15d922a5cdb3fd90fc586e3a6c9ba919"
+    },
+    {
+      "path": "src/research_wave.js",
+      "sha256": "4d4534228847abc59268b4d94fa908d557b99e009e35d68d5b9156f3e1d27260"
+    },
+    {
+      "path": "src/tag_completion.py",
+      "sha256": "da642d035a1128ae3bdab25734e6fbf52919693bab8a0ec97b89ec563b7e91d4"
+    },
+    {
+      "path": "src/tag_preview.py",
+      "sha256": "55858b7e51d794b920e064fc219d0b4b6a94adfe6395a524751f9073ec97ee17"
     },
     {
       "path": "src/utils/logger.py",
       "sha256": "7eea26e90c8701777c47e342dbf529f44dada7e4551b8b1745541bf276438d37"
     },
     {
+      "path": "templates/musicbee-tags.md",
+      "sha256": "76fd35b0bb44a598d0154519561b98b5dbdad7efd04087a4b9fd6da1a2c36b20"
+    },
+    {
+      "path": "tests/test_audio_preview.py",
+      "sha256": "9b6687b86f7f8318b4e30cd821391e90f1c77579a1663063647410b777824cbb"
+    },
+    {
+      "path": "tests/test_audit_remediations.py",
+      "sha256": "91742a927e8ffa3aac8c767923d9f794eb036f6b5b0f3581ce80128398d77a03"
+    },
+    {
+      "path": "tests/test_auto_commit_safety.py",
+      "sha256": "72862883ab97c41333adfb9108445d48659e5bd1c87ae0edb6c089b70d05e122"
+    },
+    {
+      "path": "tests/test_classifier_preview.py",
+      "sha256": "144db7e9bba42830b929605635fc64680bc026acbc34641a07514ae6ca74d8a3"
+    },
+    {
       "path": "tests/test_cli_launch.py",
       "sha256": "976daca60f52bc8e3f9892fd3c4ef98074e61b1f171c6c5ba853d0a1875f9e21"
+    },
+    {
+      "path": "tests/test_coverage_and_paths.py",
+      "sha256": "28450b5afa6d3c985d9b98cb08b41fa239eba9fe5664be94aaab15fe16f54c2c"
+    },
+    {
+      "path": "tests/test_dj_attributes.py",
+      "sha256": "d8f289747082c2a60b031b2866e5e38ffa95525953b88f422a5fcd2fe7bd5149"
     },
     {
       "path": "tests/test_dj_policy.py",
@@ -128,163 +180,353 @@
       "sha256": "4912dd6ac0b53f6dc02bad6784be7d6db00e1418c0394bad933c9f783c192698"
     },
     {
+      "path": "tests/test_full_mode_limits.py",
+      "sha256": "be7f15c15e829f5f13c8a256684789a1855489684189d3cbb7758737e83a5ab0"
+    },
+    {
       "path": "tests/test_pilot.py",
       "sha256": "8bb1702d44090093411533665da952b8164bd539a6824c1bcf7f49716aa7965e"
-    },
-    {
-      "path": "tests/test_runtime.py",
-      "sha256": "19477e6affb27ef1ec498754344d03bdee9f29954ed4bf6bed554f9e13edca5e"
-    },
-    {
-      "path": "tests/test_dj_attributes.py",
-      "sha256": "d8f289747082c2a60b031b2866e5e38ffa95525953b88f422a5fcd2fe7bd5149"
-    },
-    {
-      "path": "src/tag_preview.py",
-      "sha256": "55858b7e51d794b920e064fc219d0b4b6a94adfe6395a524751f9073ec97ee17"
-    },
-    {
-      "path": "tests/test_tag_preview.py",
-      "sha256": "b891d7d195c35ffa5fa1dc9d279ca4255781f51f42edc5a7163477321bbb56e3"
-    },
-    {
-      "path": "src/audio_preview.py",
-      "sha256": "2b1b03434d651096d7f5bdd2c8d83adf2d2e4b1c80dd79c74287e25a8c125ca1"
-    },
-    {
-      "path": "src/core/audio_analysis.py",
-      "sha256": "3553033ce77cc1ed907202b2c2477f0a9373c7bd9ae40e5bbf6c5681cc788bc3"
-    },
-    {
-      "path": "tests/test_audio_preview.py",
-      "sha256": "9b6687b86f7f8318b4e30cd821391e90f1c77579a1663063647410b777824cbb"
-    },
-    {
-      "path": "src/core/attributes.py",
-      "sha256": "3152f5bbff5fb0d033ffe9cc201f15b192dc6746c55809baa29682a3baf30e08"
-    },
-    {
-      "path": "tests/test_selection_evidence.py",
-      "sha256": "443b97d3da915f84ee9c02f62621666dfe88ec29cc6c52d292f76093a07b037b"
-    },
-    {
-      "path": "src/classifier_preview.py",
-      "sha256": "b6958a58b82b2038afb5b117a13bd3bf824f3ef03ea192fa5b56a7cfdb96dbe0"
-    },
-    {
-      "path": "src/calibrate_classifier.py",
-      "sha256": "40766c8b6b8cc325ec5bdffb1533c39f09f7313a894cdfc1ad712df1e14b6ceb"
-    },
-    {
-      "path": "src/core/audio_classifier.py",
-      "sha256": "af91f3cbc3e7a26c919e1f6b28a0b9bfdc2378cc3725f8aad5e98dec394f2d37"
-    },
-    {
-      "path": "tests/test_classifier_preview.py",
-      "sha256": "144db7e9bba42830b929605635fc64680bc026acbc34641a07514ae6ca74d8a3"
     },
     {
       "path": "tests/test_preview_remediations.py",
       "sha256": "81eabe8383bb063d165d8f30a2db5f03e555b5a258d31e8a9905bdf30268883e"
     },
     {
-      "path": "src/core/local_paths.py",
-      "sha256": "168fe5167530b081199b578fe0531b8447fe84b17171377a951f2669bc52f3c0"
+      "path": "tests/test_research_worktree_cwd.py",
+      "sha256": "38b2897aaf7b52a5df725909b3a542b10467e4c78a82b99ebe3609889d442c43"
     },
     {
-      "path": "src/core/runtime_support.py",
-      "sha256": "de017ab78a745b22db5bff4452eb10a4ac7fdf9498d483e46221cc04f247db6d"
-    },
-    {
-      "path": "tests/test_coverage_and_paths.py",
-      "sha256": "28450b5afa6d3c985d9b98cb08b41fa239eba9fe5664be94aaab15fe16f54c2c"
+      "path": "tests/test_runtime.py",
+      "sha256": "19477e6affb27ef1ec498754344d03bdee9f29954ed4bf6bed554f9e13edca5e"
     },
     {
       "path": "tests/test_runtime_support.py",
       "sha256": "7791cf9b961670a5a01f0c29f4d5034014a0208ca616fad33d0fb3c6bd6f69a8"
     },
     {
-      "path": "tests/test_full_mode_limits.py",
-      "sha256": "be7f15c15e829f5f13c8a256684789a1855489684189d3cbb7758737e83a5ab0"
+      "path": "tests/test_selection_evidence.py",
+      "sha256": "443b97d3da915f84ee9c02f62621666dfe88ec29cc6c52d292f76093a07b037b"
     },
     {
-      "path": "src/core/tag_inventory.py",
-      "sha256": "e9691c1ffcb94d5f488a0a769f14a10585e0906b9a39bf675ee5dec9cb6b63b1"
-    },
-    {
-      "path": "src/core/tag_writer.py",
-      "sha256": "25358fd30c938d505399a58eb5afe6373ae547faccd73a297c7f3b38996186d1"
-    },
-    {
-      "path": "src/core/tag_preflight.py",
-      "sha256": "a831272da5a1bf5cbe10a2ab6abdbebedf45555fd3ac043312bacdb990f24bf4"
-    },
-    {
-      "path": "src/tag_completion.py",
-      "sha256": "a5bcfbb528ef917856ea423402bbe81a7faf489cec4ec21d514cdc7c54108d03"
-    },
-    {
-      "path": "src/research_wave.js",
-      "sha256": "264351108b86fcbf2e8bc5935bf3f0e169d093ce5e8262f7134aa3f206387351"
+      "path": "tests/test_staging_security.py",
+      "sha256": "b153c0160a5c39d2058cca2705afca6bb3878a604a0c230dcdef5e0bf528944f"
     },
     {
       "path": "tests/test_tag_completion.py",
-      "sha256": "bbb629c4c2e5d8f17b3c385ed1152ab25ceb228565efd235ca28fad320fd90bc"
+      "sha256": "d994f9b15201d83aa77adde5988b0c636447077d1bd12bc02b2756f7cb9d5e03"
     },
     {
-      "path": "references/tag-completion.md",
-      "sha256": "9431e7ac386b633f925cf22dc9f85f5f759cf1e5d3b9b6a1ac0ffea6116a4a13"
+      "path": "tests/test_tag_preview.py",
+      "sha256": "b891d7d195c35ffa5fa1dc9d279ca4255781f51f42edc5a7163477321bbb56e3"
     },
     {
-      "path": "vendor-tag-metadata/vendor-manifest.json",
-      "sha256": "d5ba341aa6a489758fbe86cd5c66b2a16ded331f2eb43b1abd9d351b617dd5f4"
+      "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/mid3cp.1",
+      "sha256": "7fc66175ca544b6001741891e574ccffe5d4c30554e0f4c3747b3e51452f4f9d"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/mid3iconv.1",
+      "sha256": "dc61e0f83c04c531ac8d1349df0c255f064ba91a60ccc338411a5868e45894e4"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/mid3v2.1",
+      "sha256": "1dd9474b0eff1d8d9cb7be8c3082b3f4b667113fe03d64989d92e0ade8a7443c"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/moggsplit.1",
+      "sha256": "6fe0e31881553aecd7793d3dd48e2dd18ac83dab0373dc537a9db244eb5c7b56"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/mutagen-inspect.1",
+      "sha256": "fb055854f8276cfebd1b4bd283e34d8e60e7401a7258de84cf01824e466ee9ea"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/mutagen-pony.1",
+      "sha256": "a3dac63866c23359c759088e0b959749fe50db5e8bba0cec3b6f595f3130f3d7"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/entry_points.txt",
+      "sha256": "4a5e44748adcf34c63a42358cd507327d2e5b5d4cf1ac590d680cbb2fa41348f"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/licenses/COPYING",
+      "sha256": "189b1af95d661151e054cea10c91b3d754e4de4d3fecfb074c1fb29476f7167b"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/METADATA",
+      "sha256": "eb09eba9fa279bfbeac65da84ff92f7e4b770a0a210579d481ca1049565bc839"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/RECORD",
+      "sha256": "58ed36bd7a8fab3373e798af9fe19bdb960d3f48987338276b864c36b2a47941"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/top_level.txt",
+      "sha256": "63cc183f07cd1c62c527c05cb907c8cf2110e143c358c371e34784183a6b9144"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/WHEEL",
+      "sha256": "e4d420e73bd68281a553a64686a99f6eebd4fe13d5273658642ca513c5ed6e2c"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/__init__.py",
+      "sha256": "f8c44c4715a9f67b7b0787431a7e8fda824ec9374282f2ca9064d77fac11c763"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_constants.py",
+      "sha256": "aebc2d5fec122335c69838134a429ab3168fc234b978197de5c5a3a641349394"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_file.py",
+      "sha256": "e42673164c304fe6a43b6c3c32207511d27ef6e2dea66cd20586c43801c01174"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_iff.py",
+      "sha256": "3fda8ef7b9be03a7c9cbf884023477bcfcfc98da580d32d1a1f5a232bb2d9a21"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_riff.py",
+      "sha256": "e6ef0f2030d31983769ed0a62d11a9515ff87e1a6ce4ef4fc44885b30cb9e502"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_tags.py",
+      "sha256": "f667c8fd8c00791f097f84db643037c1a004c1beb6935d58d533ebdc59612b5d"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_tools/__init__.py",
+      "sha256": "4dceaa58d9365f08b68b1076400595b07fe9cf44483f09360730e3e883806ad2"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_tools/_util.py",
+      "sha256": "3fd9c4218a8e9d06a507c57f82233280a67604757d9ab340a2ecc3f11e80dfba"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_tools/mid3cp.py",
+      "sha256": "ec1f948590fd5e46999f7c6abfa4d984eb434f0e1c5cc0d2b2b8daa89e853cd4"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_tools/mid3iconv.py",
+      "sha256": "862697af7e69a8b53fef405204953b07fee06eba662f687c425c2636394f5379"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_tools/mid3v2.py",
+      "sha256": "447b09b30a891bd8aff29dafead88307ba0f31d581000d6ad7a95e2aab00939d"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_tools/moggsplit.py",
+      "sha256": "da892afde1dd1ace05ea26ba610cec4b737109be75d557624e7d6d14444bab24"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_tools/mutagen_inspect.py",
+      "sha256": "55e3bf31d0c4c663b2ec146967f7a4610c03f3b7ec960f9fb7306e30993ac3b5"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_tools/mutagen_pony.py",
+      "sha256": "32d7b3daba7984aab50751ae03cf9d69b88880a0849bcec852eed277ebba8d4c"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_util.py",
+      "sha256": "da7e9709b2c13d1af25698566bf6d5a5ecf6de59b6baa3dd6a571564651ffae5"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/_vorbis.py",
+      "sha256": "93e433a06e6560f75f705756e675f975cbe149b5923a11639ff3109e58128f52"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/aac.py",
+      "sha256": "258b46481b29520e0fb62dbc0d1c1c58bd800c84ed4062cb8c0c8889e420d58a"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/ac3.py",
+      "sha256": "967749018219dabf5909ee183a4ac7b519e4fdace1e0efe31cb74c404e32a945"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/aiff.py",
+      "sha256": "95c300384956abebc8266717879c9190288bb217d0713dde0ce18ec5fab6143c"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/apev2.py",
+      "sha256": "01990a9ef7e386c0335608079dd3279a61e1aaf8e667638a9a2a17e6634526a0"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/asf/__init__.py",
+      "sha256": "fa3bd2172908e78685e488e9366ca32fd8708a83ec78ad9db704fc6f3dfc0681"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/asf/_attrs.py",
+      "sha256": "5538e6afdacf4f05fcdfa90fb47e9eb78e312bc2e6b404dabfad8164ff22b896"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/asf/_objects.py",
+      "sha256": "d88d6b1998a9c19b78c25c09f7d4243a88bf15269e5e8c9f95e939d8543b9dad"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/asf/_util.py",
+      "sha256": "d6c128e46569f216d2a479b1266bdacae7396833320388b4ae752871e48fe0e7"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/dsdiff.py",
+      "sha256": "f7b8b9e08af2e86bba6b076aaf4943507dec6c78116971bf272349f7e9d91f5d"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/dsf.py",
+      "sha256": "b5481cf70ac65dc7486322d49d37f240a6ee49a0acf8d3e433459e42b29e7781"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/easyid3.py",
+      "sha256": "59788d6919c9f9efd3dff8b0cfc93898c55d573112bb45be5691c180bdf66358"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/easymp4.py",
+      "sha256": "4f0900217d75e8faf7735ab7caf6d74b10dd6d969e0932558c9b45cec4a9370a"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/flac.py",
+      "sha256": "78977ec3c9e45d16725981ed6ee1085586f199c80c779a76f12c83400c023526"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/id3/__init__.py",
+      "sha256": "c5eb23fc63f2a8b0c906d1fe0f1ff0f8b22a15028e36b525dc6e6a4bc767efae"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/id3/_file.py",
+      "sha256": "ced34e810ede589c06cf809b5a7ea58053fc9d373aa46ee7b5c2d6c06ef6013e"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/id3/_frames.py",
+      "sha256": "07d5a7f66bfa486a029e5bec89605912facb43d59fd4b3f026f4971c65939b84"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/id3/_id3v1.py",
+      "sha256": "ff84a1824dd575ca3f55955b5dae3c1786786634a6f20f3969a8f2634400bdc3"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/id3/_specs.py",
+      "sha256": "0026057bfadc3bd62acce96e55ebba45cdce085f729e070dab53c2a6dcf0ae4e"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/id3/_tags.py",
+      "sha256": "1a0cba19ce5fdd33f4fe4c5b98b5af606b82e435790d853580ba4a94d2c70372"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/id3/_util.py",
+      "sha256": "fc989105d334cda302630bd39078a9d7f0ec84b57233262be03e94e1232540a2"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/m4a.py",
+      "sha256": "1da3b8bff7d479af47187a89083ccaed90990b67b65305f892e9f6d0c8368054"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/monkeysaudio.py",
+      "sha256": "d87d1d2ef6ca2f965be50a7af902b82d35c5fdcdca76ac17d0c6c47f7851acec"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/mp3/__init__.py",
+      "sha256": "e57ffbb1ae3e860eb7ec6d664a4d8adee64748c02965a64302dd025f356b705a"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/mp3/_util.py",
+      "sha256": "0e774aac7a03361674f1933978791f422728bbf4644c3a00c5c98af12913c2a8"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/mp4/__init__.py",
+      "sha256": "fd36125c10d914496441c20426c6451ef156b21ae5d8f5da5d75ba1fd52ec34b"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/mp4/_as_entry.py",
+      "sha256": "d4e19255c7883220cd0e680e1b0f631d533b33fd0f934d03b100ff722eaee69f"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/mp4/_atom.py",
+      "sha256": "87c322fd8c3fe52989449b35c7462e732310d5891601f62e198ac246b28c47e8"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/mp4/_util.py",
+      "sha256": "54e43d3f537ae6ff758cf1e3301c79017ac4611cc6c78a6e343ca5671d91218d"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/musepack.py",
+      "sha256": "b18a9d332ea5feca263f72c792f45f9c829fba6e8cb43048c96a81735c4e4faa"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/ogg.py",
+      "sha256": "56472a612d90bad6adf4ad5a1cde585ccc7678cedeaefeb7615703884c3e68bb"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/oggflac.py",
+      "sha256": "829ac931c252fa118e3b82aa8bbc6a4d3d902959c5943ae4224aa22b46cc63cb"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/oggopus.py",
+      "sha256": "e5ff45fdc189fb6d2ec9da853371f339ffc50699685bb11ccdfc45ac0453f7a5"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/oggspeex.py",
+      "sha256": "1b14e7aa53407167c6b23ec4ec0867a953f7ced89ef34c68328f3d25a4e0d909"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/oggtheora.py",
+      "sha256": "a60cf4bacf7d89809ce3c5bc2703539a8d817037207e5d5b2cbdbd41428db740"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/oggvorbis.py",
+      "sha256": "72e404ab44c8255c25224ce433da45f308334e2094996c8781730fb9de2bccf5"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/optimfrog.py",
+      "sha256": "214710840ffd4b9bccc41948ab1e494b0a4993f162c68cc988493d69a1c214ec"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/smf.py",
+      "sha256": "a80634234996ed8f8b00e7591bf3ffcc45572083f9aa588f117d8dd5492eaf18"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/tak.py",
+      "sha256": "da10cb2814ab47b019d5d6382a3a5fe478b235fe311aeb457ae07ecdf3088b69"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/trueaudio.py",
+      "sha256": "be86c843985784c1a12e3819ca604e4a80da1722876913742eb4a59db26f2936"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/wave.py",
+      "sha256": "ca46076503e652edd78476414a38f386d98695c0f6a9aad53ea759d2f9d5445a"
+    },
+    {
+      "path": "vendor-tag-metadata/mutagen/wavpack.py",
+      "sha256": "e0792e71ed3ddc2cd73c1ce34b4cf3f669f008a2e78a4db624b1304503d03f13"
     },
     {
       "path": "vendor-tag-metadata/osv-audit.json",
       "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
     },
     {
-      "path": "tests/test_audit_remediations.py",
-      "sha256": "d756f212aab5a05d194f6ec47f3488cd873e4196af9191b646b2285e53a4cb7d"
-    },
+      "path": "vendor-tag-metadata/vendor-manifest.json",
+      "sha256": "d5ba341aa6a489758fbe86cd5c66b2a16ded331f2eb43b1abd9d351b617dd5f4"
+    }
+  ],
+  "declared_local_dependencies": [
     {
-      "path": "templates/musicbee-tags.md",
-      "sha256": "94d62b9dc5bb0658ff26f6a148248728a6be2299e7b7e6c07c5f0a9e3e9d4eff"
+      "path": "references/evaluation.md",
+      "exists": true,
+      "resolved_path": "personal-musicbee-dj/references/evaluation.md",
+      "sha256": "204f194c508f6dd56c7fab14886ed9eb8bfeaaa3867992e2ad194cd3039a5497"
     },
     {
       "path": "references/MUSICBEE_SETUP.md",
-      "sha256": "2bb415ae110c579af721f7d6e31ea26f7eeca78e3c14ebc2b129c7b585cd4991"
+      "exists": true,
+      "resolved_path": "personal-musicbee-dj/references/MUSICBEE_SETUP.md",
+      "sha256": "6606e5cde30f44592ba44c0b84917c409ee6bc574cc064e4238de62504036228"
     },
     {
-      "path": "references/evaluation.md",
-      "sha256": "204f194c508f6dd56c7fab14886ed9eb8bfeaaa3867992e2ad194cd3039a5497"
+      "path": "references/tag-completion.md",
+      "exists": true,
+      "resolved_path": "personal-musicbee-dj/references/tag-completion.md",
+      "sha256": "e33c7d3b32d95b2707304d74a9f01f1fec2a26abd98aeccc21e35232f0200630"
     }
   ],
-  "declared_local_dependencies": [{"name": "mutagen", "version": "1.48.1", "scope": "vendor-tag-metadata", "integrity_manifest": "vendor-tag-metadata/vendor-manifest.json", "global_install": false, "license": "GPL-2.0-or-later"}],
-  "missing_declared_dependencies": [],
-  "missing_resource_files": [
-    "MUSICBEE_SETUP.md",
-    "AUDIO_PREVIEW.md",
-    "requirements-audio-win313.lock",
-    "CLASSIFIER_PREVIEW.md",
-    "classifier-models.json",
-    "classifier-prompts.json",
-    "requirements-classifier-win313.lock",
-    "RUNTIME.md",
-    "requirements-runtime-win313.lock"
-  ],
-  "maintenance_note": "Audit MB-01..12: supported playlist/tag lane updated and regression-checked; original missing resources are preserved as explicit unsupported or superseded entries. No real-library writes, model-effectiveness or player validation claimed.",
-  "unsupported_resource_files": [
-    "AUDIO_PREVIEW.md",
-    "requirements-audio-win313.lock",
-    "CLASSIFIER_PREVIEW.md",
-    "classifier-models.json",
-    "classifier-prompts.json",
-    "requirements-classifier-win313.lock",
-    "RUNTIME.md",
-    "requirements-runtime-win313.lock"
-  ],
-  "superseded_resources": {
-    "MUSICBEE_SETUP.md": "references/MUSICBEE_SETUP.md"
-  }
+  "missing_declared_dependencies": []
 }

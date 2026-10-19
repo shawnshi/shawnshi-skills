@@ -4,6 +4,7 @@ import json
 import math
 import subprocess
 import sys
+from process_budget import run as run_process
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -700,7 +701,7 @@ def _fetch_histories(
         "--interval",
         interval,
     ]
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    result = run_process(command, capture_output=True, text=True, timeout=300, check=False)
     if result.returncode != 0 or not result.stdout.strip():
         raise RuntimeError(f"yf.py failed: {result.stderr.strip()}")
     market_data = json.loads(result.stdout)

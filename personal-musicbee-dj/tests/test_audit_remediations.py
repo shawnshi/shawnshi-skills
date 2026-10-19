@@ -53,7 +53,7 @@ def test_optimized_python_preserves_result_validation():
     namespace = {"__name__": "audit_optimized", "__file__": tag_writer.__file__}
     exec(compile(source, tag_writer.__file__, "exec", optimize=1), namespace)
     path = "synthetic.flac"
-    row = {"file": path, "Tempo": "", "mood": "INVALID", "DJ_VOCALS": "",
+    row = {"file": path, "Tempo": "", "mood": "INVALID", "Genre": "", "DJ_VOCALS": "",
            "DJ_ENERGY": "", "DJ_SCENE": "", "confidence": "high", "unresolved": [],
            "evidence": [{"url": "https://example.org/fixture", "supports": ["mood"],
                          "note": "Synthetic fixture", "kind": "inference"}]}

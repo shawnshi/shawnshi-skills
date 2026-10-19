@@ -18,6 +18,23 @@ HEAD = """# 数字健康周报｜2000年1月3日—9日
 出刊日期：2000-01-09
 生成时点：2000-01-10T00:00:00+08:00
 报告时区：Asia/Shanghai
+地区：中国为主，补充国际公开研究
+受众：医疗机构管理层
+
+## 本周结论
+合成结论。
+## 政策和市场影响
+合成影响。
+## 技术落地信号与证据限制
+合成限制。
+## 对医疗信息化业务的传导影响
+合成条件。
+## 建议动作与验证节点
+合成验证。
+## 信息缺口
+合成缺口。
+## 来源清单
+合成来源说明。
 
 """
 SECTION = "## 关键事件与来源\n\n"
@@ -116,7 +133,8 @@ class AuditRegressions(unittest.TestCase):
 
     def test_late_header_partial_notice_accepted(self):
         head = HEAD.replace("2000-01-10T00:00:00+08:00", "2000-01-09T12:00:00+08:00")
-        content = head + "\n" * 20 + "> 截至上述时点，本周尚未结束。\n" + SECTION + TABLE + ROW
+        preamble, body = head.split("## 本周结论", 1)
+        content = preamble + "\n" * 20 + "> 截至上述时点，本周尚未结束。\n## 本周结论" + body + SECTION + TABLE + ROW
         self.assertEqual([], self.check_content(content, cutoff=datetime.fromisoformat("2000-01-09T12:00:00+08:00")))
 
     def test_body_notice_does_not_replace_header_notice(self):

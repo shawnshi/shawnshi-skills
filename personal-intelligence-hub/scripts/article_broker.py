@@ -1104,7 +1104,7 @@ def validate_fetch_receipt(receipt, ledger, reservation, recorded_at):
         "truncated",
         "parent_attestation",
     }
-    if not isinstance(receipt, dict) or set(receipt) - {"responseId", "text_coverage"} != required:
+    if not isinstance(receipt, dict) or set(receipt) - {"responseId", "text_coverage", "native_capture"} != required:
         _fail("native receipt schema invalid")
     coverage = receipt.get("text_coverage")
     if coverage is not None and coverage not in {"full", "bounded_excerpt"}:
@@ -1281,7 +1281,7 @@ def validate_native_access(access):
     if (
         not isinstance(b["gap_id"], str)
         or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", b["gap_id"])
-        or not re.fullmatch(r"fetch-[1-4]", str(b["reservation_id"]))
+        or not re.fullmatch(r"fetch-[1-8]", str(b["reservation_id"]))
         or b["invocation_id"]
         != b["request_sha256"] + ":" + b["gap_id"] + ":" + b["reservation_id"]
     ):
@@ -1520,6 +1520,11 @@ def validate_ledgers(manifest, request):
                         proof.get("access"), 0, require_machine_classification=True
                     )
                     if kind == "fetch_recorded":
+                        from native_capture import validate_capture
+                        try:
+                            validate_capture(proof.get("receipt"), request, Path(manifest["artifacts"]["supplement_request"]["artifact_path"]))
+                        except (ValueError, OSError, KeyError, TypeError) as exc:
+                            _fail(f"native capture invalid: {exc}")
                         if proof != native_proof(
                             proof.get("receipt"),
                             ledger,
@@ -2387,6 +2392,9 @@ def operate(
 ):
     rc = _rc()
     _, request, packet, gap, lane, _ = _bound(request_path, gap_id)
+    if operation in {"checkpoint", "reserve-query", "reserve-fetch", "http"}:
+        from supplement_agent import validate_canary_delivery
+        validate_canary_delivery(request_path, gap_id)
     manifest_path = packet["run_manifest_path"]
     with rc.locked_manifest(manifest_path) as (manifest, sha):
         ledger = manifest["article_broker_evidence"][gap_id]
@@ -2532,6 +2540,11 @@ def operate(
             ):
                 _fail("native fetch must be reserved; duplicate receipt denied")
             reserved = events[-1]
+            from native_capture import validate_capture
+            try:
+                validate_capture(receipt, request, Path(request_path))
+            except (ValueError, OSError, KeyError, TypeError) as exc:
+                _fail(f"native capture invalid: {exc}")
             proof = native_proof(receipt, ledger, reserved, now, lane=lane)
             assert isinstance(receipt, dict)
             if receipt.get("responseId") and any(

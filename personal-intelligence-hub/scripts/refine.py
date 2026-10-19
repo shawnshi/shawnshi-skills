@@ -186,10 +186,11 @@ def heuristics(
     qualified_candidates = [
         candidate for candidate in scored if candidate["heuristic_rank"] >= min_score
     ]
+    from collection_quality import candidate_reading_priority
     ranked_candidates = sorted(
         qualified_candidates,
         key=lambda candidate: (
-            -int(candidate.get("heuristic_rank", 0)),
+            -candidate_reading_priority(candidate),
             -int(candidate.get("source_preference", 0)),
             str(candidate.get("title") or ""),
             str(candidate.get("url") or ""),

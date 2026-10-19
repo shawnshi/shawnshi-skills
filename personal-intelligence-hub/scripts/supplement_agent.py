@@ -182,10 +182,53 @@ def _load_bound_packet(
     return (*result, manifest) if include_manifest else result
 
 
+def validate_canary_delivery(request_path: str | Path, gap_id: str) -> None:
+    """New native requests require a durable worker canary before later source work."""
+    request_file, request, packet, _, _, _ = _load_bound_packet(request_path, gap_id)
+    version = request.get("worker_delivery_version")
+    if version is None:
+        return
+    if type(version) is not int or version != 1 or request.get("article_broker_version") != 3:
+        raise RunContractError("unsupported worker delivery policy")
+    plan = request.get("launch_plan")
+    if not isinstance(plan, list) or not plan or len(plan[0].get("workers", [])) != 1:
+        raise RunContractError("worker delivery requires one canary")
+    canary_id = plan[0]["workers"][0]["gap_id"]
+    if gap_id == canary_id:
+        return
+    _, _, canary_packet, _, _, _ = _load_bound_packet(request_path, canary_id)
+    manifest = load_manifest(packet["run_manifest_path"])
+    parent_receipt = manifest.get("parent_supplement_finalizations", {}).get(canary_id)
+    if parent_receipt is not None and request.get("collection_quality_version") == 1:
+        from collection_quality import shared_infrastructure_failure
+        raw = _validate_parent_receipt(request_file, request, canary_packet, canary_id, parent_receipt)
+        result = json.loads(raw)
+        if result.get("status") not in {"completed", "no_increment", "degraded"} or shared_infrastructure_failure(result, manifest.get("article_broker_evidence", {}).get(canary_id)): 
+            raise RunContractError("shared canary infrastructure failure cannot open later waves")
+        return
+    if parent_receipt is not None:
+        raise RunContractError("canary requires worker delivery; parent fallback cannot open later waves")
+    receipt = manifest.get("worker_supplement_finalizations", {}).get(canary_id)
+    if receipt is None:
+        raise RunContractError("canary worker delivery is not registered")
+    raw = _validate_parent_receipt(
+        request_file, request, canary_packet, canary_id, receipt, worker=True
+    )
+    result = json.loads(raw)
+    from collection_quality import shared_infrastructure_failure
+    shared_failure = (shared_infrastructure_failure(result, manifest.get("article_broker_evidence", {}).get(canary_id)) if request.get("collection_quality_version") == 1 else result.get("failure_kind") == "infrastructure")
+    if result.get("status") not in {"completed", "no_increment", "degraded"} or shared_failure:
+        raise RunContractError("canary infrastructure failure cannot open later waves")
+    paths = [Path(canary_packet["output_paths"][key]) for key in ("draft", "result")]
+    if not any(path.is_file() and _read_parent_draft_bytes(path) == raw for path in paths):
+        raise RunContractError("canary worker draft is missing or changed")
+
+
 def preflight_launch(
     request_path: str | Path, gap_id: str, launch_options: dict[str, Any]
 ) -> dict[str, Any]:
     request_file, request, packet, _, _, _ = _load_bound_packet(request_path, gap_id)
+    validate_canary_delivery(request_path, gap_id)
     options = bind_subagent_launch_options(packet, launch_options)
     return {
         "status": "launch_binding_valid",
@@ -209,6 +252,7 @@ def build_agent_context(
     request_file, request, packet, gap, lane_slice, prompt_config = _load_bound_packet(
         request_path, gap_id
     )
+    validate_canary_delivery(request_path, gap_id)
     lane = str(gap["lane"])
     role = (prompt_config.get("supplement_agents") or {}).get(lane)
     common = prompt_config.get("common_contract")
@@ -882,8 +926,13 @@ def _guard_parent_finalization(
     ):
         raise RunContractError("parent finalization source time is invalid")
     receipt = manifest.get("parent_supplement_finalizations", {}).get(gap_id)
+    worker_receipt = manifest.get("worker_supplement_finalizations", {}).get(gap_id)
+    if receipt is not None and worker_receipt is not None:
+        raise RunContractError("supplement finalization author conflict")
+    if receipt is None:
+        receipt = worker_receipt
     if receipt is not None:
-        _validate_parent_receipt(request_path, request, packet, gap_id, receipt)
+        _validate_parent_receipt(request_path, request, packet, gap_id, receipt, worker=worker_receipt is not None)
         finalized = _aware_datetime(receipt.get("finalized_at"), "finalized_at")
         accepted = {receipt["final_draft_sha256"]}
         if _allow_pending:
@@ -895,6 +944,8 @@ def _guard_parent_finalization(
             or finalized > current
         ):
             raise RunContractError("parent finalization receipt draft/time mismatch")
+    elif _registration_source is not None and request.get("worker_delivery_version") == 1:
+        raise RunContractError("worker delivery requires a finalization journal before registration")
     elif current > completed + timedelta(seconds=grace):
         raise RunContractError(
             "parent finalization grace expired; the sealed ledger and the draft are retained — "
@@ -930,14 +981,17 @@ def _decode_parent_draft(encoded: str) -> bytes:
     return _validate_parent_draft_bytes(raw)
 
 
-def _validate_parent_receipt(request_path, request, packet, gap_id, receipt):
-    """Trusted-parent journal, not provider authentication or evidence of old execution."""
+def _validate_parent_receipt(request_path, request, packet, gap_id, receipt, *, worker=False):
+    """Role-path journal, not OS authentication, provider proof or independent review."""
+    if worker and (type(request.get("worker_delivery_version")) is not int or request["worker_delivery_version"] != 1):
+        raise RunContractError("unsupported worker delivery policy")
+    author = "worker" if worker else "parent"
     if (
         request.get("article_broker_version") != 3
         or packet["finalization"].get("parent_receipt_version") != 1
         or not isinstance(receipt, dict)
-        or receipt.get("contract_version") != "parent-supplement-finalization/1.0"
-        or receipt.get("parent_attestation") != "validated_within_source_grace"
+        or receipt.get("contract_version") != f"{author}-supplement-finalization/1.0"
+        or receipt.get(f"{author}_attestation") != "validated_within_source_grace"
         or receipt.get("run_id") != request["run_id"]
         or receipt.get("request_sha256") != file_sha256(request_path)
         or receipt.get("gap_id") != gap_id
@@ -1036,15 +1090,88 @@ def _fillable_parent_derived(path: str) -> bool:
     )
 
 
-def _finalize_with_receipt(request_path, gap_id):
+def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_path: Path) -> None:
+    from article_broker import evidence
+    data = evidence(request_path, gap_id)
+    if data.get("completed_at") is None and data.get("next_action", {}).get("stop_eligible"):
+        from article_broker import operate
+        data = operate(request_path, gap_id, "seal")
+    if data.get("completed_at") is None:
+        raise RunContractError(f"cannot auto-generate parent draft for unsealed broker gap {gap_id}")
+
+    _, request, packet, gap, lane_slice, _ = _load_bound_packet(request_path, gap_id)
+    access_log = data.get("access_log", [])
+    access_by_url = {
+        normalize_url(str(a.get("requested_url") or "")): a.get("status")
+        for a in access_log
+        if isinstance(a, dict)
+    }
+
+    required_ids = set(lane_slice.get("required_bound_candidate_ids", []))
+    bound_candidate_decisions = []
+    for c in lane_slice.get("candidates", []):
+        cid = c.get("candidate_ref")
+        if cid not in required_ids:
+            continue
+        curl = normalize_url(str(c.get("url") or ""))
+        st = access_by_url.get(curl)
+        if st == "blocked":
+            bound_candidate_decisions.append({
+                "candidate_id": cid,
+                "decision": "access_blocked",
+                "reason": "Candidate URL was blocked or lacked recognizable document content",
+            })
+        else:
+            bound_candidate_decisions.append({
+                "candidate_id": cid,
+                "decision": "date_disqualified",
+                "reason": "Document access succeeded, but publication date evidence is missing, unknown, invalid, or outside the requested window.",
+            })
+
+    failed = sum(1 for a in access_log if isinstance(a, dict) and a.get("status") == "blocked")
+    status = "degraded" if failed > 0 else "no_increment"
+    failure_kind = "source_access" if failed > 0 else None
+    failure_reason = "One or more candidate URLs were blocked or lacked recognizable document content" if failed > 0 else None
+    confidence = "low"
+
+    dynamic = {
+        "status": status,
+        "confidence": confidence,
+        "turns_used": 1,
+        "halt_condition_met": True,
+        "started_at": data["started_at"],
+        "completed_at": data["completed_at"],
+        "executed_queries": deepcopy(data.get("executed_queries", [])),
+        "access_log": deepcopy(access_log),
+        "broker_evidence_sha256": data["broker_evidence_sha256"],
+        "bound_candidate_decisions": bound_candidate_decisions,
+        "candidates": [],
+    }
+    if failure_kind:
+        dynamic["failure_kind"] = failure_kind
+        dynamic["failure_reason"] = failure_reason
+
+    atomic_dump_json(draft_path, dynamic)
+
+
+def _finalize_with_receipt(request_path, gap_id, *, worker=False):
     _, request, packet, _, _, _ = _load_bound_packet(request_path, gap_id)
+    if worker:
+        validate_canary_delivery(request_path, gap_id)
+        if type(request.get("worker_delivery_version")) is not int or request["worker_delivery_version"] != 1:
+            raise RunContractError("worker finalization is not enabled for this request")
+    author = "worker" if worker else "parent"
+    receipt_key = f"{author}_supplement_finalizations"
     if (
         request.get("article_broker_version") != 3
         or packet["finalization"].get("parent_receipt_version") != 1
     ):
         raise RunContractError("unsupported parent finalization receipt version")
     draft_path = Path(packet["output_paths"]["draft"])
+    if not draft_path.exists() and author == "parent" and "article_broker" in packet:
+        _ensure_parent_broker_draft(request_path, gap_id, draft_path)
     with locked_manifest(packet["run_manifest_path"]) as (manifest, sha):
+
         if (
             manifest.get("stages", {}).get("supplemental", {}).get("status")
             in STAGE_FINAL
@@ -1059,10 +1186,14 @@ def _finalize_with_receipt(request_path, gap_id):
         _guard_parent_finalization(
             request_path, gap_id, draft, raw, _allow_pending=True
         )
-        prior = manifest.get("parent_supplement_finalizations", {}).get(gap_id)
+        parent_prior = manifest.get("parent_supplement_finalizations", {}).get(gap_id)
+        worker_prior = manifest.get("worker_supplement_finalizations", {}).get(gap_id)
+        if worker and parent_prior is not None:
+            raise RunContractError("parent fallback cannot be relabelled as worker delivery")
+        prior = worker_prior or parent_prior
         if prior is not None:
             final_raw = _validate_parent_receipt(
-                request_path, request, packet, gap_id, prior
+                request_path, request, packet, gap_id, prior, worker=worker_prior is not None
             )
             if raw != final_raw:
                 _materialize_parent_draft(draft_path, final_raw)
@@ -1115,8 +1246,8 @@ def _finalize_with_receipt(request_path, gap_id):
                 "aggregate with run_daily.py reconcile-supplement --progress-state <that state path>"
             )
         receipt = {
-            "contract_version": "parent-supplement-finalization/1.0",
-            "parent_attestation": "validated_within_source_grace",
+            "contract_version": f"{author}-supplement-finalization/1.0",
+            f"{author}_attestation": "validated_within_source_grace",
             "run_id": request["run_id"],
             "request_sha256": file_sha256(request_path),
             "gap_id": gap_id,
@@ -1128,7 +1259,7 @@ def _finalize_with_receipt(request_path, gap_id):
             "final_draft_sha256": hashlib.sha256(final_raw).hexdigest(),
             "final_draft_base64": base64.b64encode(final_raw).decode("ascii"),
         }
-        manifest.setdefault("parent_supplement_finalizations", {})[gap_id] = receipt
+        manifest.setdefault(receipt_key, {})[gap_id] = receipt
         commit_manifest(packet["run_manifest_path"], manifest, sha)
         _materialize_parent_draft(draft_path, final_raw)
         return draft_path, "already_assembled" if assembled else "assembled"
@@ -1147,6 +1278,8 @@ def finalize_parent_draft(request_path: str | Path, gap_id: str) -> tuple[Path, 
     if packet["finalization"].get("parent_receipt_version") is not None:
         return _finalize_with_receipt(request_path, gap_id)
     draft_path = Path(packet["output_paths"]["draft"])
+    if not draft_path.exists() and "article_broker" in packet:
+        _ensure_parent_broker_draft(request_path, gap_id, draft_path)
     raw = (
         _read_parent_draft_bytes(draft_path)
         if request.get("article_broker_version") == 3
@@ -2014,11 +2147,13 @@ def main() -> int:
                 )
             )
             return 0
-        _, _, packet, _, _, _ = _load_bound_packet(args.request, args.gap_id)
+        _, request, packet, _, _, _ = _load_bound_packet(args.request, args.gap_id)
         draft_path = Path(str(packet["output_paths"]["draft"])).resolve()
         assembly = "assembled"
         if args.parent:
             output_path, assembly = finalize_parent_draft(args.request, args.gap_id)
+        elif request.get("worker_delivery_version") is not None:
+            output_path, assembly = _finalize_with_receipt(args.request, args.gap_id, worker=True)
         else:
             dynamic = load_json(draft_path, {})
             output_path, _ = assemble_result(args.request, args.gap_id, dynamic)

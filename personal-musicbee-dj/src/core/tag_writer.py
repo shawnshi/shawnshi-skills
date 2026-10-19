@@ -26,6 +26,7 @@ from src.core.tag_inventory import (
 mutagen = codec()
 ID3 = importlib.import_module("mutagen.id3").ID3
 TMOO = importlib.import_module("mutagen.id3").TMOO
+TCON = importlib.import_module("mutagen.id3").TCON
 TXXX = importlib.import_module("mutagen.id3").TXXX
 FLAC = importlib.import_module("mutagen.flac").FLAC
 MP3 = importlib.import_module("mutagen.mp3").MP3
@@ -36,24 +37,62 @@ def check_deadline(deadline):
         raise TimeoutError("Commit deadline exceeded; inspect recovery receipts before retry")
 
 
-def digest(path, offset=0, deadline=None):
+def retry_on_sharing_violation(action, max_attempts=3, delay=0.2, deadline=None):
+    """Retry on Windows sharing violation (WinError 32 / ERROR_SHARING_VIOLATION)."""
+    last_error = None
+    for attempt in range(max_attempts):
+        check_deadline(deadline)
+        try:
+            return action()
+        except OSError as exc:
+            is_sharing_violation = (
+                getattr(exc, "winerror", None) == 32
+                or (isinstance(exc, PermissionError) and getattr(exc, "winerror", None) == 32)
+            )
+            if not is_sharing_violation or attempt == max_attempts - 1:
+                raise
+            last_error = exc
+            time.sleep(delay)
+    if last_error:
+        raise last_error
+
+
+def payload_range(path):
+    path = Path(path)
+    start = header_end(path)
+    size = path.stat().st_size
+    if path.suffix.lower() == ".mp3" and size >= start + 128:
+        with path.open("rb") as f:
+            f.seek(-128, 2)
+            if f.read(3) == b"TAG":
+                return start, size - 128
+    return start, size
+
+
+def digest(path, offset=0, length=None, deadline=None):
     check_deadline(deadline)
     h = hashlib.sha256()
     with Path(path).open("rb") as source:
         source.seek(offset)
-        for block in iter(lambda: source.read(1024 * 1024), b""):
+        remaining = length
+        while True:
             check_deadline(deadline)
+            chunk_size = 1024 * 1024
+            if remaining is not None:
+                if remaining <= 0:
+                    break
+                chunk_size = min(chunk_size, remaining)
+            block = source.read(chunk_size)
+            if not block:
+                break
             h.update(block)
+            if remaining is not None:
+                remaining -= len(block)
     return h.hexdigest()
 
 
-def security_digest(path):
-    """Read only owner/group/DACL; do not expose principal values or change permissions."""
-    if os.name != "nt":
-        info = Path(path).stat()
-        return hashlib.sha256(
-            str((info.st_uid, info.st_gid, info.st_mode)).encode()
-        ).hexdigest()
+def windows_security_descriptor(path):
+    """Read owner/group/DACL bytes locally; never log or change source security."""
     import ctypes
     from ctypes import wintypes
 
@@ -78,7 +117,55 @@ def security_digest(path):
     buffer = ctypes.create_string_buffer(needed.value)
     if not api(name, 7, buffer, needed.value, ctypes.byref(needed)):
         raise ctypes.WinError(ctypes.get_last_error())
-    return hashlib.sha256(buffer.raw[: needed.value]).hexdigest()
+    return buffer.raw[: needed.value]
+
+
+def security_digest(path):
+    """Read only owner/group/DACL; preserve the existing exact-digest contract."""
+    if os.name == "nt":
+        return hashlib.sha256(windows_security_descriptor(path)).hexdigest()
+    info = Path(path).stat()
+    return hashlib.sha256(str((info.st_uid, info.st_gid, info.st_mode)).encode()).hexdigest()
+
+
+def staging_file(source, prefix=".music-tag-stage-", deadline=None):
+    """Create a new exclusive slot using source security, not token default owner."""
+    check_deadline(deadline)
+    source = local_regular_file(Path(source).absolute())
+    if prefix not in (".music-tag-stage-", ".music-tag-restore-"):
+        raise ValueError("Invalid staging purpose")
+    if os.name != "nt":
+        fd, name = tempfile.mkstemp(prefix=prefix, suffix=source.suffix, dir=source.parent)
+        os.close(fd)
+        return Path(name)
+    import ctypes
+    from ctypes import wintypes
+
+    class SecurityAttributes(ctypes.Structure):
+        _fields_ = [("nLength", wintypes.DWORD), ("lpSecurityDescriptor", wintypes.LPVOID), ("bInheritHandle", wintypes.BOOL)]
+
+    descriptor = ctypes.create_string_buffer(windows_security_descriptor(source))
+    attributes = SecurityAttributes(ctypes.sizeof(SecurityAttributes), ctypes.cast(descriptor, wintypes.LPVOID), False)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    create = kernel.CreateFileW
+    create.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.POINTER(SecurityAttributes), wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    create.restype = wintypes.HANDLE
+    close = kernel.CloseHandle
+    close.argtypes = [wintypes.HANDLE]
+    close.restype = wintypes.BOOL
+    stage = source.parent / (prefix + uuid.uuid4().hex + source.suffix)
+    # CREATE_NEW cannot overwrite a collision or an existing library file.
+    handle = create("\\\\?\\" + str(stage.absolute()), 0xC0000000, 0, ctypes.byref(attributes), 1, 0x80, None)
+    if handle == ctypes.c_void_p(-1).value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    if not close(handle):
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        check_deadline(deadline)
+    except TimeoutError:
+        stage.unlink()
+        raise
+    return stage
 
 
 def copy_for_commit(source, target, deadline=None):
@@ -94,8 +181,12 @@ def copy_for_commit(source, target, deadline=None):
         api.restype = wintypes.BOOL
         source_name = "\\\\?\\" + str(Path(source).absolute())
         target_name = "\\\\?\\" + str(Path(target).absolute())
-        if not api(source_name, target_name, False):
-            raise ctypes.WinError(ctypes.get_last_error())
+
+        def _do_copy():
+            if not api(source_name, target_name, False):
+                raise ctypes.WinError(ctypes.get_last_error())
+
+        retry_on_sharing_violation(_do_copy, deadline=deadline)
     else:
         shutil.copy2(source, target)
     check_deadline(deadline)
@@ -153,7 +244,13 @@ def header_end(path):
                 raise ValueError('Malformed ID3 size')
             size = sum(b << (7 * (3 - i)) for i, b in enumerate(magic[6:10]))
             return 10 + size + (10 if magic[3] == 4 and magic[5] & 16 else 0)
-        source.seek(0)
+        if magic[:3] == b"ID3":
+            if not (all((x < 128 for x in magic[6:10]))):
+                raise ValueError('Malformed ID3 size')
+            size = sum(b << (7 * (3 - i)) for i, b in enumerate(magic[6:10]))
+            source.seek(10 + size + (10 if magic[3] == 4 and magic[5] & 16 else 0))
+        else:
+            source.seek(0)
         if not (source.read(4) == b'fLaC'):
             raise ValueError('Unsupported FLAC prefix')
         while True:
@@ -174,7 +271,7 @@ def protected(audio):
             k: repr(frame)
             for k, frame in audio.tags.items()
             if not (
-                frame.FrameID == "TMOO"
+                frame.FrameID in {"TMOO", "TCON"}
                 or (frame.FrameID == "TXXX" and frame.desc.casefold() in targets)
             )
         }
@@ -184,6 +281,14 @@ def protected(audio):
 def flac_blocks(path):
     kept = []
     with Path(path).open("rb") as source:
+        magic = source.read(10)
+        if magic[:3] == b"ID3":
+            if not (all((x < 128 for x in magic[6:10]))):
+                raise ValueError('Malformed ID3 size')
+            size = sum(b << (7 * (3 - i)) for i, b in enumerate(magic[6:10]))
+            source.seek(10 + size + (10 if magic[3] == 4 and magic[5] & 16 else 0))
+        else:
+            source.seek(0)
         if not (source.read(4) == b'fLaC'):
             raise ValueError('Metadata safety check failed')
         while True:
@@ -217,11 +322,15 @@ def mutate(path, changes):
         for k, v in changes.items():
             for key, frame in list(tags.items()):
                 if (frame.FrameID == "TMOO" and k == "mood") or (
+                    frame.FrameID == "TCON" and k == "Genre"
+                ) or (
                     frame.FrameID == "TXXX" and frame.desc.casefold() == k.casefold()
                 ):
                     del tags[key]
             if k == "mood" and version == 4:
                 tags.add(TMOO(encoding=3, text=[v]))
+            elif k == "Genre":
+                tags.add(TCON(encoding=3, text=[v]))
             else:
                 tags.add(TXXX(encoding=1 if version == 3 else 3, desc=k, text=[v]))
         tags.save(path, v1=1, v2_version=version, v23_sep=None)
@@ -249,6 +358,15 @@ def public_source_url(value):
         return ipaddress.ip_address(host).is_global
     except ValueError:
         return "." in host
+
+
+def valid_evidence_url(value):
+    """Allow public web sources or controlled internal model-prior identifiers."""
+    if not isinstance(value, str):
+        return False
+    if value in {"model://prior", "urn:model:prior"} or value.startswith("model://"):
+        return True
+    return public_source_url(value)
 
 
 def read_results(result_path, inputs):
@@ -279,9 +397,14 @@ def validate_results(result, inputs):
         raise ValueError("Invalid research summary counts/limitations")
     confidence_levels = {"high", "medium", "low"}
     required = {"file", "confidence", "unresolved", "evidence", *FIELDS}
-    subjective = {"mood", "DJ_ENERGY", "DJ_SCENE"}
+    subjective = {"mood", "DJ_ENERGY", "DJ_SCENE", "Genre"}
     changes = {}
     for row in rows:
+        if "Genre" not in row:
+            row["Genre"] = ""
+        field_confidence = row.get("field_confidence", {field: row["confidence"] for field in FIELDS})
+        if "Genre" not in field_confidence:
+            field_confidence["Genre"] = row.get("confidence", "low")
         if not required <= set(row) or set(row) - required - {"field_confidence"}:
             raise ValueError("Invalid research row schema")
         if row["confidence"] not in confidence_levels:
@@ -309,6 +432,8 @@ def validate_results(result, inputs):
                 raise ValueError("Subjective fields require inference evidence")
             if "Tempo" in item["supports"] and item["kind"] != "source_fact":
                 raise ValueError("Tempo requires source_fact evidence")
+            if "Tempo" in item["supports"] and not public_source_url(item["url"]):
+                raise ValueError("Tempo requires a public source URL, not model prior")
         update = {}
         for field in FIELDS:
             value = row[field]
@@ -319,7 +444,7 @@ def validate_results(result, inputs):
                 or not value or value == "unknown" or field in unresolved
                 or field_confidence[field] == "low"):
                 continue
-            if any(field in item["supports"] and public_source_url(item["url"])
+            if any(field in item["supports"] and valid_evidence_url(item["url"])
                    and item["note"].strip() for item in items):
                 update[field] = value
         changes[row["file"]] = update
@@ -350,7 +475,7 @@ def validate_review(result, inputs, review, result_sha256):
         seen.add(pair)
         if decision["decision"] == "approve":
             url = decision.get("url")
-            if (decision.get("recording_match") is not True or not public_source_url(url)
+            if (decision.get("recording_match") is not True or not valid_evidence_url(url)
                 or not any(item["url"] == url and pair[1] in item["supports"]
                            for item in rows[pair[0]]["evidence"])):
                 raise ValueError("Approval must bind a matching recording and result evidence URL")
@@ -383,7 +508,9 @@ def update_one(source, changes, baseline, backup_dir, library_root, deadline=Non
         raise ValueError('Tag baseline drift')
     old_hash = digest(source, deadline=deadline)
     offset = header_end(source)
-    payload_hash = digest(source, offset, deadline=deadline)
+    start_offset, end_offset = payload_range(source)
+    payload_len = end_offset - start_offset
+    payload_hash = digest(source, start_offset, length=payload_len, deadline=deadline)
     backup_dir = Path(backup_dir)
     backup_dir.mkdir(exist_ok=True)
     local_path(backup_dir)
@@ -409,11 +536,7 @@ def update_one(source, changes, baseline, backup_dir, library_root, deadline=Non
         "status": "prepared",
     }
     save_json(receipt_path, receipt)
-    fd, name = tempfile.mkstemp(
-        prefix=".music-tag-stage-", suffix=source.suffix, dir=source.parent
-    )
-    os.close(fd)
-    stage = Path(name)
+    stage = staging_file(source, deadline=deadline)
     try:
         copy_for_commit(source, stage, deadline=deadline)
         if not (mapped(mutagen.File(stage)) == baseline['tags']):
@@ -428,7 +551,8 @@ def update_one(source, changes, baseline, backup_dir, library_root, deadline=Non
         if isinstance(current, FLAC):
             if not (flac_blocks(source) == flac_blocks(stage)):
                 raise ValueError('Non-comment FLAC metadata changed')
-        if not (digest(stage, header_end(stage), deadline=deadline) == payload_hash):
+        stage_start, stage_end = payload_range(stage)
+        if not (digest(stage, stage_start, length=stage_end - stage_start, deadline=deadline) == payload_hash):
             raise ValueError('Audio payload or trailing tags changed')
         if not (digest(source, deadline=deadline) == old_hash and source.stat().st_mtime_ns == st.st_mtime_ns):
             raise ValueError('Concurrent drift before commit')
@@ -440,7 +564,7 @@ def update_one(source, changes, baseline, backup_dir, library_root, deadline=Non
         receipt["after_sha256"] = digest(stage, deadline=deadline)
         save_json(receipt_path, receipt)
         check_deadline(deadline)
-        os.replace(stage, source)
+        retry_on_sharing_violation(lambda: os.replace(stage, source), deadline=deadline)
         receipt["status"] = "committed"
         save_json(receipt_path, receipt)
         if not (digest(source) == receipt['after_sha256']):
@@ -466,24 +590,20 @@ def restore(source, receipt_path, header_path, library_root):
         raise ValueError('Metadata safety check failed')
     if not (digest(source) == receipt['after_sha256']):
         raise ValueError('Post-write drift; do not overwrite')
-    offset = header_end(source)
-    if not (digest(source, offset) == receipt['payload_sha256']):
+    start_offset, end_offset = payload_range(source)
+    if not (digest(source, start_offset, length=end_offset - start_offset) == receipt['payload_sha256']):
         raise ValueError('Metadata safety check failed')
     header = Path(header_path).read_bytes()
     if not (hashlib.sha256(header).hexdigest() == receipt['header_sha256']):
         raise ValueError('Metadata safety check failed')
-    fd, name = tempfile.mkstemp(
-        prefix=".music-tag-restore-", suffix=source.suffix, dir=source.parent
-    )
-    os.close(fd)
-    stage = Path(name)
+    stage = staging_file(source, prefix=".music-tag-restore-")
     try:
         copy_for_commit(source, stage)
         # Opening with wb uses CREATE_ALWAYS on Windows and would discard ADS.
         with stage.open("r+b") as out, source.open("rb") as inp:
             out.seek(0)
             out.write(header)
-            inp.seek(offset)
+            inp.seek(header_end(source))
             shutil.copyfileobj(inp, out, length=1024 * 1024)
             out.truncate()
         if not (digest(stage) == receipt['before_sha256']):
@@ -495,7 +615,7 @@ def restore(source, receipt_path, header_path, library_root):
             raise ValueError('Concurrent file security change before restore')
         if not (security_digest(stage) == before_security):
             raise ValueError('Recovery stage file security changed')
-        os.replace(stage, source)
+        retry_on_sharing_violation(lambda: os.replace(stage, source))
         os.utime(source, ns=(source.stat().st_atime_ns, receipt["original_mtime_ns"]))
         receipt["status"] = "restored"
         save_json(receipt_path, receipt)

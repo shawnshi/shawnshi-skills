@@ -20,12 +20,14 @@
 保存前必须满足以下断言：
 
 - 起始日不晚于结束日；默认同一周周一至周日，出刊日等于结束日及文件名日期；自定义须用户明确指定。
-- 规范标题与周期一致；首个二级标题前各一次未加粗字段：`报告周期`、`出刊日期`、`生成时点`、`报告时区`。精确格式及标题跨月/跨年规则见填充说明，不以代码围栏或缩进代码块提供元数据/有效事件，正式文件不保留 HTML 注释。
+- 规范 H1 标题去除前导/末尾空白后须字面一致，不接受尾部闭合哈希，以保持共享归档身份门一致；正文 H2–H6 可使用合法 ATX 闭合标记，空子标题不算正文。首个二级标题前各一次未加粗字段：`报告周期`、`出刊日期`、`生成时点`、`报告时区`，以及非空 `地区`、`受众`；模板八个必需二级章节均唯一并有可见非空正文。精确格式及标题跨月/跨年规则见填充说明，不以代码围栏或缩进代码块提供元数据/有效事件，正式文件不保留 HTML 注释。
 - cutoff 为带偏移 ISO-8601，不晚于真实系统当前时间；与正文生成时点表示同一时刻。默认 `Asia/Shanghai`，日历日期及完结判断按报告时区换算，cutoff 日期不早于起始日。未完结声明须位于头部，不可被正文替代。
 - 唯一 `## 关键事件与来源` 收纳全部本期日期行，六列非空且直接 URL。当有事件行存在时，必须包含唯一合法的六列表头及紧随其后的分隔行；无合格事件时仅一次独立行写 `本周期未发现符合纳入标准的事件`，可留表头，不与事件行并存。其他节的旧事件标背景，不替代本期结果。
 - 本期事件日期须在起始日、结束日及截止日交集内；历史补刊 cutoff 可晚于结束日，但不得扩大事件窗口。校验器仅核日期/结构；原始来源时刻、可访问性、真实性及证据门仍须人工核验，结构通过不等于研究完成。
 
 使用绝对路径：自有 `scripts/validate_weekly_brief.py`、`scripts/test_validate_weekly_brief.py` 从本技能绝对目录 `skill_dir` 解析；共享脚本 `report_archive.py`、`report_archive_windows.py`、`test_report_archive.py` 从 `skill_dir.parent / "shared/scripts"` 解析，共享文档从 `skill_dir.parent / "shared/references/report_archive.md"` 解析，不依赖 cwd。归档前必须读 [共享契约](../../shared/references/report_archive.md)。
+
+只读结构合同先用 `python -B "$validator" --describe-contract` 获取，无日期参数、报告读取、网络或归档副作用；该模式独立使用，不能与验证参数混合。它不替代完整模板或事实门。字段/章节检查只适用于新源，既有目标仍沿用身份核对，不自动重验或迁移正文。
 
 ```powershell
 python -B "$validator" --file "$draft" --period-start YYYY-MM-DD --period-end YYYY-MM-DD --issue-date YYYY-MM-DD --cutoff "带偏移ISO-8601时间" --report-timezone Asia/Shanghai

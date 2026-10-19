@@ -2,7 +2,7 @@
 
 工具是人类意志的延伸。
 
-当前包含 51 个一级用户技能，覆盖学术与认知研究、医疗数字化、视觉与系统流程、个人工作流及文档工具。本目录是 Pi 的本地安装库，不是独立 Git 工作树。
+当前库存为 51 个用户技能，覆盖学术与认知研究、医疗数字化、视觉与系统流程、个人工作流及文档工具。本目录是 Pi 的本地安装库，不是独立 Git 工作树。
 
 - [技能目录](#5-skill-inventory)：按交付物查找入口，点击技能名查看 `SKILL.md`。
 - [触发分工](#6-trigger-ownership)：区分相近入口，避免重复启动流程。
@@ -81,7 +81,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | Skill | 构成写入授权的请求 | 封闭目标集合 | 只读退出条件 |
 |---|---|---|---|
 | `personal-cognitive-auditor` | 生成当前自然周、月或季度的精确 canonical 个人日志审计请求 | `personal-diary-writer` 权威入口返回的 canonical 季度个人日志内同周期审计区块 | 草稿、预览、只读、不保存、日度、年度、自定义路径或第二处存储 |
-| `personal-diary-writer` | 生成通过受保护 `personal-diary-request-v1` 与内容门的完整个人日记，承接 `mentat-insight-diary` 的 canonical Mentat 请求，或承接 `personal-cognitive-auditor` 的当前自然周、月、季度审计请求 | 对应权威入口返回的 canonical 季度个人日志或 canonical Mentat 季度档案 | 草稿、预览、只读、不保存、跨日期复用、自定义路径或第二处存储 |
+| `personal-diary-writer` | 生成通过受保护 `personal-diary-request-v1` 与内容门的完整个人日记，或承接 `personal-cognitive-auditor` 的当前自然周、月、季度审计请求 | 对应权威入口返回的 canonical 季度个人日志 | 草稿、预览、只读、不保存、专用操作日志写入、自定义路径或第二处存储 |
 | `personal-health-analysis` | 明确启用 Garmin 自动同步 | 绑定的 GarminDB 本地数据库、一个当前用户计划任务及单一脱敏运行状态文件 | 仅诊断、预览、试运行、不同步、禁用、移除自动同步或自定义第二处存储 |
 | `personal-intelligence-hub` | 生成正式日简报 | 正式新闻文件及新闻目录内的去重索引 | 预览或明确不保存时不归档；生产预览仍产生运行中间态 |
 | `hit-weekly-brief` | 生成正式数字健康周报 | DigitalHealthWeeklyBrief 本地归档 | 草稿、预览或明确不保存 |
@@ -138,8 +138,8 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | [`image-prompt-gen`](image-prompt-gen/SKILL.md) | 将简短主题或现有视觉要求转化为原创、可执行的平面设计图像提示词，也可在用户明确要求时直接生成或编辑图片 |
 | [`image-studio-architect`](image-studio-architect/SKILL.md) | 使用当前图像生成能力创建或编辑海报、封面、插画、概念图、社交媒体图片和其他视觉资产，并根据输入完整度补足构图、色彩、光线、材质与画幅 |
 | [`magazine-illustrator`](magazine-illustrator/SKILL.md) | 为文章、博客、公众号、报告和演示文稿设计并直接生成杂志式位图插画，包括头图、封面、章节插图、系列配图和可复制的图像生成提示词 |
-| [`mentat-collaboration-audit`](mentat-collaboration-audit/SKILL.md) | 基于真实会话、日志、工具调用和遥测审计执行效率与协作摩擦，按需生成 Markdown 报告或 HTML 面板；默认只读，不自动修改或持久化 |
-| [`mentat-skill-creator`](mentat-skill-creator/SKILL.md) | 仅在用户显式调用时维护当前 Pi 本地技能库的根治理合同、资源清单、触发所有权、批量迁移与发布门禁；通用新技能、无关单技能更新及插件打包不触发 |
+| [`reson-collaboration-audit`](reson-collaboration-audit/SKILL.md) | 基于真实会话、日志、工具调用和遥测审计执行效率与协作摩擦，按需生成 Markdown 报告或 HTML 面板；默认只读，不自动修改或持久化 |
+| [`reson-skill-creator`](reson-skill-creator/SKILL.md) | 仅在用户显式调用时维护当前 Pi 本地技能库的根治理合同、资源清单、触发所有权、批量迁移与发布门禁；通用新技能、无关单技能更新及插件打包不触发 |
 
 ### Personal workflows
 
@@ -147,7 +147,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 |---|---|
 | [`personal-cognitive-auditor`](personal-cognitive-auditor/SKILL.md) | 基于授权日志、日历与 Garmin 数据进行日、周、月、季、年事实复盘；受控补齐当前周期健康数据，精确个人周、月、季度请求过门后保存 canonical 日志 |
 | [`personal-cognitive-prescription`](personal-cognitive-prescription/SKILL.md) | 从用户提供的近期问题、决策或复盘材料中识别认知盲区，并给出可核验到具体章节的跨领域阅读处方 |
-| [`personal-diary-writer`](personal-diary-writer/SKILL.md) | 生成并保存个人日记、周期审计或 Mentat 日志；完整日记通过内容门后保存到 canonical 季度日志，周期审计及 Mentat 走受保护请求门，纯当次草稿不读取私人数据、不保存 |
+| [`personal-diary-writer`](personal-diary-writer/SKILL.md) | 生成并保存个人日记或周期审计；完整日记通过内容门后保存到 canonical 季度日志，周期审计走受保护请求门。历史Reson操作日志仅按授权日期只读，专用写入已退役；纯当次草稿不读取私人数据、不保存 |
 | [`personal-health-analysis`](personal-health-analysis/SKILL.md) | 本地优先分析 Garmin 睡眠、HRV、心率、压力和健康趋势，生成非诊断报告或零外联面板；登录、同步及轨迹下载需独立授权 |
 | [`personal-intelligence-hub`](personal-intelligence-hub/SKILL.md) | 生成基线优先、跨技术与医疗数字化且带历史去重的日资讯简报；正式简报自动保存，生产预览仍产生运行中间态 |
 | [`personal-investment-advisor`](personal-investment-advisor/SKILL.md) | 开展证券财报与估值研究、授权持仓及未购观察清单审计、Daily Sync、主动研究与判断复盘；默认免费公开来源，支持 `research_only` / `advisory` / `actionable` 产出标注，不下单或执行订单 |
@@ -205,7 +205,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 写作按主任务而非医疗名词分流：纯语言请求不启动完整医疗写作项目；混合请求仅按需组合，不强制串联三个入口。矩阵新增 `faithful_controlled_editing` 表达 S46 的忠实编辑所有权，保留既有类 ID；`secondary_skills` 只表示可选协作，不要求加载。研究入口收窄自动触发，不禁止用户显式要求的合法深研。
 
-当前 `SKILL.md` 声明 `disable-model-invocation: true` 的手动入口为：`automate-github-issues`、`image-prompt-gen`、`image-studio-architect`、`mentat-skill-creator`、`personal-travel-research`、`tencent-meeting-mcp`、`tool-blogger-publisher`、`tool-tts`、`tool-tuanbiao-downloader`。此清单只描述 Pi 入口声明，不证明外部消费者的调用策略或实际模型选路。
+当前 `SKILL.md` 声明 `disable-model-invocation: true` 的手动入口为：`automate-github-issues`、`image-prompt-gen`、`image-studio-architect`、`reson-skill-creator`、`personal-travel-research`、`tencent-meeting-mcp`、`tool-blogger-publisher`、`tool-tts`、`tool-tuanbiao-downloader`。此清单只描述 Pi 入口声明，不证明外部消费者的调用策略或实际模型选路。
 
 `hit-customer-analyst` 已启用受限自动触发；当前候选版本为 2.6.3，进入完整流程仍须满足实名 RACI 与授权门。下列历史 Gate 和测试记录保持原日期，不作为当前验证结果。
 
@@ -293,20 +293,20 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
   - 新增估算 token 指标（`CharCount`、`EstimatedTokens`、`OversizedByEstimatedTokens`、`MaxEstimatedTokens`、`-TokenThreshold`）；纯行数口径看不出一份 85 行、每行 118 字节的中文正文。
   - 新增调用策略一致性检查：`disable-model-invocation` 与 `allow_implicit_invocation` 矛盾时阻断，仅声明一侧时警告。
   - 新增 `scripts/gate.sh`，使门禁有可被第三方复现的跨平台入口。
-  - `mentat-skill-creator`：夹具从 8 条扩到 12 条并标明宿主表面（`pi` 用 `/skill:` 入口，`codex-openai` 用 `$<skill>`）；新增 `references/host-routing-eval.md` 定义宿主路由与档位评测的责任人、判据和运行记录格式；`SKILL.md` 增加门禁判定表，并按维护豁免把基线制品降为按需。
+  - `reson-skill-creator`：夹具从 8 条扩到 12 条并标明宿主表面（`pi` 用 `/skill:` 入口，`codex-openai` 用 `$<skill>`）；新增 `references/host-routing-eval.md` 定义宿主路由与档位评测的责任人、判据和运行记录格式；`SKILL.md` 增加门禁判定表，并按维护豁免把基线制品降为按需。
   - 独立修复（与本轮修改无关的既有漂移）：`scripts/test_autonomy_contracts.py` 的 `a02` 断言沿用 `pai/coding.md` 改词前的字面串，自 2026-09-24 起失败；已改为当前子句 `验收集合内存在不可归因的失败测试`。同步注意：该契约现允许可归因的既有失败单列披露，与 §10 既有段落一致。
 - 未运行：宿主级路由与档位评测（本宿主未配置上游档位，夹具只证明合同完整）；`scripts/gate.sh` 的 POSIX 分支仅在 Windows Git Bash 下验证，未在 Linux/macOS 实测。
 - 声明：上述结果只证明静态合同、资源一致性与单元测试通过，不代表所有技能已在新会话中端到端验证。
 
 ### 8.3 Historical validation (2026-09-09)
 
-- 按本地一级 `SKILL.md` 盘点为 51 个技能；`mentat-dream-cycle`、`mentat-insight-diary` 当前不在本目录，已从库存表移除。
+- 按当时本地一级 `SKILL.md` 盘点为 51 个技能；两个已退役后台/专用日志技能不在本目录，已从库存表移除。
 - 自动持久化例外表保留 7 项现存技能合同；移除缺失技能的独立条目，不改变其他技能入口中已有的受保护写入边界。
-- 已清理 `shared/trigger-ownership-matrix.json` 中对缺失技能 `mentat-insight-diary` 的 3 处引用：移除其独占触发类别及两处辅助技能引用，不把相关请求转派给其他技能。触发所有权由 19 类调整为 18 类。
+- 已清理 `shared/trigger-ownership-matrix.json` 中对缺失专用日志技能的 3 处引用：移除其独占触发类别及两处辅助技能引用，不把相关请求转派给其他技能。触发所有权由 19 类调整为 18 类。
 - 全库 `repair_skills.ps1 -Mode Gate` 通过：51 个技能、7 项自动持久化例外、18 类触发所有权，阻断项为 0。此结果仅证明静态合同与资源一致性，不代表所有技能已在新会话中端到端验证。
 - 本地安装目录不含 `.git`；源码发布目标为 [shawnshi/shawnshi-skills](https://github.com/shawnshi/shawnshi-skills) 的 `main` 分支，通过独立 Git 工作副本同步，排除缓存、运行产物及敏感信息。发布副本按实际文件和 Git 字节表示生成资源清单，不保留空目录或运行日志的清单条目。
-- 发布副本全库 Gate 通过。测试分别在适用环境运行：本地安装目录根测试 94 项通过；日记测试运行 63 项，跳过 4 项缺少已移除 Mentat 技能的可选集成，其余通过；发布副本资讯测试运行 337 项，跳过 1 项，其余通过。发布副本单独复验日记写入器 36 项，跳过相同 4 项，其余通过。
-- 新增缺失 Mentat 证据门时拒绝写入且不创建目标目录的回归测试，未放宽生产写入门。依赖宿主目录布局的根合同及日记入口测试在本地安装目录验证，不将独立克隆中的路径不匹配写成代码通过。
+- 发布副本全库 Gate 通过。测试分别在适用环境运行：本地安装目录根测试 94 项通过；日记测试运行 63 项，跳过 4 项缺少已退役专用日志技能的可选集成，其余通过；发布副本资讯测试运行 337 项，跳过 1 项，其余通过。发布副本单独复验日记写入器 36 项，跳过相同 4 项，其余通过。
+- 新增缺失专用日志证据门时拒绝写入且不创建目标目录的回归测试，未放宽生产写入门。依赖宿主目录布局的根合同及日记入口测试在本地安装目录验证，不将独立克隆中的路径不匹配写成代码通过。
 
 ### 8.4 Historical validation (2026-09-07)
 
@@ -319,6 +319,6 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 ### 8.5 Historical baseline (2026-09-05)
 
 - 此前记录：全库 Gate 通过，53 个技能、8 项自动持久化例外、19 类触发所有权，阻断项为 0。
-- 此前记录：`mentat-insight-diary/scripts/test_skill_contract.py` 的 14 项测试通过；本次未重跑该回归。
+- 此前记录：已退役专用日志技能的 14 项测试当时通过；本次未重跑已移除模块。
 
 Last updated: 2026-10-09

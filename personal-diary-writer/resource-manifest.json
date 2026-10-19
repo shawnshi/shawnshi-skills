@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-diary-writer",
-  "generated_at": "2026-09-27T19:36:02+08:00",
+  "generated_at": "2026-10-18T21:02:29+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "a54e326a0d0ca1eaad9ed4b29bb9a29b891aab939c0e344d11964edd1e5f2339",
+  "skill_md_sha256": "5fbb595c4e51bddea3dabac781303c43e7e711dee14b489d093dd58ac7f441ea",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "a54e326a0d0ca1eaad9ed4b29bb9a29b891aab939c0e344d11964edd1e5f2339"
+      "sha256": "5fbb595c4e51bddea3dabac781303c43e7e711dee14b489d093dd58ac7f441ea"
     }
   ],
   "top_level_directories": [
@@ -32,27 +32,27 @@
   "resource_file_hashes": [
     {
       "path": "references/personal-diary-template.md",
-      "sha256": "b7d1a1d9b963b40ed942cc69f127118993bd5bcad099eeb949b8a33d9f686a61"
+      "sha256": "c1fbfc51ea5eadf8dd045e5420ae4acbe0f29f63769071f368859c04748e8c13"
     },
     {
       "path": "references/private-data-read.md",
-      "sha256": "bb770449a9b54869d3d4006c9d596e3f2043f94cd7451ecb8fe40a0378deb867"
+      "sha256": "a691380af9140a84498915c9fb01351bb179df215c8ea9705dc0a72feeb0401c"
     },
     {
       "path": "references/write-protocol.md",
-      "sha256": "495efcd98653649cb6a201e7db366def0500d2c32324c2260410f2ba1063fc79"
+      "sha256": "616012f55ef1dc6231e509d72d3893b0c5122b24ee94b29f806e292f693dd3e1"
     },
     {
       "path": "scripts/diary_ops.py",
-      "sha256": "75470d8eb516076a8b1667ec714f1c8361ccfd9d43c3aecb790e2dd4adf6e211"
+      "sha256": "34f2022198805c1682cafaace021a8a2aea4ec396972132fbd3e23b3c3147af1"
     },
     {
       "path": "scripts/test_default_read_contract.py",
-      "sha256": "df65c3c1f0480cb381d7b3638bac24a014bdc2770f468d334ad20dfdc81993b4"
+      "sha256": "2886b96e90bf33eed27d137762aee593c81ad894c61ebf04a55532103b61ee5e"
     },
     {
       "path": "scripts/test_diary_ops.py",
-      "sha256": "fbb908a23d8ac37c65712cbb0314845fcd59d6e2fa81c03314982776b61725bd"
+      "sha256": "0f28d2bc0df6caec1438b01aae5be188a885a252603bf54620d448c8cf3984af"
     }
   ],
   "declared_local_dependencies": [
@@ -60,25 +60,25 @@
       "path": "references/personal-diary-template.md",
       "exists": true,
       "resolved_path": "personal-diary-writer/references/personal-diary-template.md",
-      "sha256": "b7d1a1d9b963b40ed942cc69f127118993bd5bcad099eeb949b8a33d9f686a61"
+      "sha256": "c1fbfc51ea5eadf8dd045e5420ae4acbe0f29f63769071f368859c04748e8c13"
     },
     {
       "path": "references/private-data-read.md",
       "exists": true,
       "resolved_path": "personal-diary-writer/references/private-data-read.md",
-      "sha256": "bb770449a9b54869d3d4006c9d596e3f2043f94cd7451ecb8fe40a0378deb867"
+      "sha256": "a691380af9140a84498915c9fb01351bb179df215c8ea9705dc0a72feeb0401c"
     },
     {
       "path": "references/write-protocol.md",
       "exists": true,
       "resolved_path": "personal-diary-writer/references/write-protocol.md",
-      "sha256": "495efcd98653649cb6a201e7db366def0500d2c32324c2260410f2ba1063fc79"
+      "sha256": "616012f55ef1dc6231e509d72d3893b0c5122b24ee94b29f806e292f693dd3e1"
     },
     {
       "path": "scripts/diary_ops.py",
       "exists": true,
       "resolved_path": "personal-diary-writer/scripts/diary_ops.py",
-      "sha256": "75470d8eb516076a8b1667ec714f1c8361ccfd9d43c3aecb790e2dd4adf6e211"
+      "sha256": "34f2022198805c1682cafaace021a8a2aea4ec396972132fbd3e23b3c3147af1"
     }
   ],
   "missing_declared_dependencies": []

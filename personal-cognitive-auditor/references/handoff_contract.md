@@ -11,7 +11,7 @@
   "audit_body_markdown": "string",
   "next_tactics": ["string"],
   "followup_flags": ["string"],
-  "requires_mentat_diary": false
+  "requires_reson_diary": false
 }
 ```
 
@@ -22,7 +22,7 @@
 - `audit_body_markdown`：要交接的完整 Markdown 正文，不包含 `Handoff Payload` 自身。
 - `next_tactics`：至少一个非空动作；没有可支持动作时不生成交接。
 - `followup_flags`：可为空，只包含用户可见且与本次复盘相关的标签。
-- `requires_mentat_diary`：默认且通常为 `false`。只有用户明确要求另行生成 Mentat 日志时才可设为 `true`；该值不授权写入。
+- `requires_reson_diary`：默认且通常为 `false`；`true` 只是未满足需求，不授权另行写入，已退役的专用操作日志写入不可用。兼容读取旧输入字段 `requires_mentat_diary`，不改写原 payload 或既有 hash；两字段并存时必须都是布尔值且一致，否则拒绝。新生成的 payload 只使用新字段。
 
 ## Handoff Rules
 

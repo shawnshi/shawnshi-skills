@@ -41,7 +41,7 @@ $DeprecatedPatterns = [ordered]@{
     ask_question = '(?i)\bask_question\b'
     mcp_vector_lake = '(?i)\bmcp_vector-lake\b'
     vector_lake_mcp = '(?i)\bvector-lake-mcp\b'
-    mentat_mind_mcp = '(?i)\bmentat-mind-mcp\b'
+    legacy_knowledge_server_alias = '(?i)\bmentat-mind-mcp\b'
     request_feedback = '(?i)RequestFeedback\s*='
 }
 

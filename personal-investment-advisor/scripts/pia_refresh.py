@@ -26,6 +26,8 @@ import math
 import os
 import subprocess
 import sys
+from process_budget import run as run_process
+from artifact_io import atomic_bytes
 from pathlib import Path
 from typing import Any
 
@@ -176,7 +178,7 @@ def fetch_fx_capture(symbol: str, cache_dir: Path | None, *, attempts: int = 1) 
     ]
     if cache_dir is not None:
         command.extend(["--cache-dir", str(cache_dir)])
-    completed = subprocess.run(
+    completed = run_process(
         command, capture_output=True, timeout=FX_PROBE_TIMEOUT_SECONDS, check=False,
     )
     if completed.returncode == 0 and completed.stdout.strip():
@@ -219,9 +221,9 @@ def write_new_file(path: Path, payload: dict[str, Any], force: bool) -> str:
 
     path.parent.mkdir(parents=True, exist_ok=True)
     rendered = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
-    mode = "wb" if force else "xb"
-    with path.open(mode) as stream:
-        stream.write(rendered)
+    if not force and path.exists():
+        raise FileExistsError(str(path))
+    atomic_bytes(path, rendered)
     return sha256_bytes(rendered)
 
 
@@ -426,7 +428,7 @@ def main(argv: list[str] | None = None) -> int:
         receipt["status"] = "failed"
         receipt["errors"] = ["positions file changed during the refresh"]
     receipt_path.parent.mkdir(parents=True, exist_ok=True)
-    receipt_path.write_bytes(json.dumps(receipt, ensure_ascii=False, indent=2).encode("utf-8"))
+    atomic_bytes(receipt_path, json.dumps(receipt, ensure_ascii=False, indent=2).encode('utf-8'))
     print(json.dumps(receipt, ensure_ascii=False, indent=2))
     return 0 if receipt["status"] == "complete" else 3
 

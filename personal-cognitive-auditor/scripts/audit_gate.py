@@ -16,7 +16,7 @@ REQUIRED_HANDOFF_FIELDS = {
     "audit_body_markdown",
     "next_tactics",
     "followup_flags",
-    "requires_mentat_diary",
+    "requires_reson_diary",
 }
 
 PLACEHOLDER_PATTERNS = [
@@ -617,9 +617,15 @@ def extract_handoff_payload(text: str) -> tuple[dict[str, Any] | None, list[str]
     return payload, errors
 
 
+LEGACY_DIARY_REQUIREMENT_FIELD = "requires_mentat_diary"
+
+
 def validate_handoff_payload(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    missing = sorted(REQUIRED_HANDOFF_FIELDS - payload.keys())
+    present = set(payload)
+    if LEGACY_DIARY_REQUIREMENT_FIELD in payload:
+        present.add("requires_reson_diary")
+    missing = sorted(REQUIRED_HANDOFF_FIELDS - present)
     if missing:
         errors.append("Handoff Payload missing fields: " + ", ".join(missing))
 
@@ -648,8 +654,13 @@ def validate_handoff_payload(payload: dict[str, Any]) -> list[str]:
     ):
         errors.append("followup_flags must be an array of non-empty strings")
 
-    if not isinstance(payload.get("requires_mentat_diary"), bool):
-        errors.append("requires_mentat_diary must be a boolean")
+    requirement = payload.get("requires_reson_diary", payload.get(LEGACY_DIARY_REQUIREMENT_FIELD))
+    if not isinstance(requirement, bool):
+        errors.append("requires_reson_diary must be a boolean")
+    if "requires_reson_diary" in payload and LEGACY_DIARY_REQUIREMENT_FIELD in payload:
+        legacy = payload[LEGACY_DIARY_REQUIREMENT_FIELD]
+        if not isinstance(legacy, bool) or legacy is not requirement:
+            errors.append("legacy diary requirement must be boolean and match requires_reson_diary")
 
     return errors
 
@@ -685,9 +696,9 @@ def validate(
     errors.extend(handoff_errors)
     if payload is not None:
         errors.extend(validate_handoff_payload(payload))
-        if payload.get("requires_mentat_diary") is True:
+        if payload.get("requires_reson_diary", payload.get(LEGACY_DIARY_REQUIREMENT_FIELD)) is True:
             warnings.append(
-                "requires_mentat_diary=true still requires separate explicit user authorization"
+                "requires_reson_diary=true does not authorize the retired dedicated journal writer"
             )
 
     energy_errors, energy_warnings = validate_energy_contract(

@@ -61,6 +61,25 @@ def _parse_json_output(text: str) -> dict:
     raise ValueError("command did not return one terminal JSON object")
 
 
+class CommandFailure(RuntimeError):
+    """A child failure with bounded metadata, never raw output or health values."""
+
+    def __init__(self, returncode: int, payload: dict | None = None):
+        payload = payload or {}
+        status = payload.get("status")
+        if not isinstance(status, str) or not SAFE_ERROR_CODE.fullmatch(status.lower()):
+            status = "command_failed"
+        self.metadata = {"upstream_returncode": returncode, "upstream_status": status.lower()}
+        for source, target in (("stage", "upstream_stage"), ("error", "upstream_error_code")):
+            value = payload.get(source)
+            if isinstance(value, str) and SAFE_ERROR_CODE.fullmatch(value):
+                self.metadata[target] = value
+        retry_after = payload.get("retry_after_seconds")
+        if isinstance(retry_after, int) and not isinstance(retry_after, bool) and 0 <= retry_after <= 2147483647:
+            self.metadata["retry_after_seconds"] = retry_after
+        super().__init__(status.lower())
+
+
 def _run_json(command: list[str], timeout: int) -> dict:
     environment = os.environ.copy()
     environment["PYTHONUTF8"] = "1"
@@ -77,9 +96,15 @@ def _run_json(command: list[str], timeout: int) -> dict:
         timeout=timeout,
         env=environment,
     )
+    try:
+        payload = _parse_json_output(completed.stdout)
+    except ValueError:
+        if completed.returncode != 0:
+            raise CommandFailure(completed.returncode) from None
+        raise ValueError("command_json_invalid") from None
     if completed.returncode != 0:
-        raise RuntimeError(f"command_exit_{completed.returncode}")
-    return _parse_json_output(completed.stdout)
+        raise CommandFailure(completed.returncode, payload)
+    return payload
 
 
 def _run_bounded(
@@ -200,6 +225,9 @@ def _stale_components(component_dates: dict, end: str) -> list[str]:
     stale = []
     for name in COMPONENTS:
         observation = component_dates.get(name)
+        if not isinstance(observation, str):
+            stale.append(name)
+            continue
         try:
             observed = date.fromisoformat(observation)
         except (TypeError, ValueError):
@@ -275,7 +303,7 @@ def run_scheduled_sync(
             _atomic_json(state_output, state)
             live_preflight = _run_bounded(runner, [str(python), "-B", str(preflight_script), "--mode", "live"], 60, deadline)
             if not live_preflight.get("ok"):
-                raise RuntimeError("live_preflight_failed")
+                raise CommandFailure(0, live_preflight)
 
             stage = "plan"
             state.update({"stage": stage, "updated_at": datetime.now(timezone.utc).isoformat()})
@@ -293,7 +321,9 @@ def run_scheduled_sync(
                 PLAN_TIMEOUT_SECONDS,
                 deadline,
             )
-            if dry_run.get("status") != "dry_run" or not plan_path.exists():
+            if dry_run.get("status") != "dry_run":
+                raise CommandFailure(0, dry_run)
+            if not plan_path.exists():
                 raise RuntimeError("sync_plan_failed")
 
             stage = "sync_execution"
@@ -316,22 +346,22 @@ def run_scheduled_sync(
                 deadline,
             )
             if sync_result.get("status") != "sync_completed":
-                raise RuntimeError("sync_execution_failed")
+                raise CommandFailure(0, sync_result)
 
             stage = "database_fingerprint_after"
             state.update({"stage": stage, "updated_at": datetime.now(timezone.utc).isoformat()})
             _atomic_json(state_output, state)
             after_fingerprint = database_fingerprinter()
             state["database_fingerprint_changed"] = before_fingerprint != after_fingerprint
-            if not state["database_fingerprint_changed"]:
-                raise RuntimeError("database_fingerprint_unchanged")
+            # An already complete window may import idempotently. Freshness is
+            # proved by the local coverage check below, not by bytes changing.
 
             stage = "local_preflight"
             state.update({"stage": stage, "updated_at": datetime.now(timezone.utc).isoformat()})
             _atomic_json(state_output, state)
             local_preflight = _run_bounded(runner, [str(python), "-B", str(preflight_script), "--mode", "local"], 60, deadline)
             if not local_preflight.get("ok"):
-                raise RuntimeError("local_preflight_failed")
+                raise CommandFailure(0, local_preflight)
             stage = "local_coverage"
             state.update({"stage": stage, "updated_at": datetime.now(timezone.utc).isoformat()})
             _atomic_json(state_output, state)
@@ -371,6 +401,8 @@ def run_scheduled_sync(
         return 0, {"schema": SCHEMA, "status": "skipped_already_running"}
     except (RuntimeError, ValueError, OSError, UnicodeError, subprocess.TimeoutExpired) as exc:
         error_code = _safe_error_code(stage, exc)
+        if isinstance(exc, CommandFailure):
+            state.update(exc.metadata)
         state.update(
             {
                 "status": "failed",

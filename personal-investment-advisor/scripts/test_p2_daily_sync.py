@@ -298,25 +298,22 @@ class CompleteOfflineSyncTests(DailySyncTestCase):
         self.assertEqual(len(first["input_bindings"]["quote_package"]["sha256"]), 64)
         self.assertEqual(len(first["input_bindings"]["quote_snapshot"]["sha256"]), 64)
 
-    def test_primary_evidence_package_can_complete_the_workflow(self):
+    def test_declaration_package_cannot_complete_the_workflow(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             positions_path, quotes_path = self.write_inputs(tmpdir)
             evidence_path = self.write_thesis_evidence(tmpdir, positions_path)
             report = self.evaluate(positions_path, quotes_path, evidence_path)
 
-        self.assertEqual(report["status"], "complete")
+        self.assertEqual(report["status"], "incomplete")
         self.assertTrue(report["completeness"]["complete"])
-        self.assertTrue(report["completeness"]["thesis_assessment_complete"])
-        self.assertEqual(report["thesis_red_team"]["status"], "complete")
-        self.assertEqual(
-            report["thesis_red_team"]["fatal_event_status"],
-            "no_fatal_breach_verified",
-        )
+        self.assertFalse(report["completeness"]["thesis_assessment_complete"])
+        self.assertEqual(report["thesis_red_team"]["verification_status"], "declaration_only")
+        self.assertEqual(report["thesis_red_team"]["fatal_event_status"], "not_assessed")
         self.assertEqual(
             len(report["input_bindings"]["thesis_evidence"]["sha256"]), 64
         )
 
-    def test_fatal_breach_is_complete_and_preserves_the_alert(self):
+    def test_submitted_fatal_breach_is_not_a_verified_alert(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             positions_path, quotes_path = self.write_inputs(tmpdir)
             evidence_path = self.write_thesis_evidence(
@@ -326,12 +323,10 @@ class CompleteOfflineSyncTests(DailySyncTestCase):
             )
             report = self.evaluate(positions_path, quotes_path, evidence_path)
 
-        self.assertEqual(report["status"], "complete")
-        self.assertEqual(
-            report["thesis_red_team"]["fatal_event_status"],
-            "fatal_breach_detected",
-        )
-        self.assertEqual(report["thesis_red_team"]["fatal_symbols"], ["AAPL"])
+        self.assertEqual(report["status"], "incomplete")
+        self.assertEqual(report["thesis_red_team"]["fatal_event_status"], "not_assessed")
+        self.assertEqual(report["thesis_red_team"]["fatal_symbols"], [])
+        self.assertEqual(report["thesis_red_team"]["submitted_claims"][0]["conclusion"], "fatal_breach")
 
     def test_inline_repeated_batch_audit_is_rejected(self):
         records = quote_records()

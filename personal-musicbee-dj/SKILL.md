@@ -1,6 +1,6 @@
 ---
 name: personal-musicbee-dj
-description: 管理本地 MusicBee 歌单与播放；明确补全标签请求使用专用 JSON 研究角色串行研究并受控回写五字段。歌单缺标签时仅在已有明确授权覆盖后研究当次必要字段；支持只生成不播放、只读预览和配置分析，不改其他标签、播放统计或 MusicBee 设置。
+description: 管理本地 MusicBee 歌单与播放；明确补全标签请求使用专用 JSON 研究角色受控回写六字段（Tempo, mood, Genre, DJ_VOCALS, DJ_ENERGY, DJ_SCENE）。歌单缺标签时仅在已有明确授权覆盖后研究当次必要字段；支持只生成不播放、只读预览和配置分析，不改其他标签、播放统计或 MusicBee 设置。
 disable-model-invocation: false
 ---
 
@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 ## 入口路由
 
-- “补全歌曲标签 / 补全曲库标签”：读取 [标签补全流程](references/tag-completion.md)，按当前或可核验的既有明确授权范围扫描、输出十列 CSV；专用 musicbee-tags 串行研究，默认每批 10 首、最多 25 首。主控逐字段核验来源、固定审核回执后串行回写；已有合法值不覆盖，无法确认不编造。仅扫描/CSV 不写音乐文件。
+- “补全歌曲标签 / 补全曲库标签”：读取 [标签补全流程](references/tag-completion.md)，按当前或可核验的既有明确授权范围扫描、输出十一列 CSV；支持 Model-First 极速分析与多子代理受控并发。子代理完成产出后由主模型自动执行 auto-commit 审核入库与对账，并在批次完成后全自动连续滚动拉取后续批次继续推进，无需人工每批干预或手动确认。已有合法值不覆盖，无法确认不编造。仅扫描/CSV 不写音乐文件。
 - “生成歌单”：使用 `src/cli.py --generate-only`，不等于播放或标签回写。缺标签而调用方未核验补全权限时返回退出码 3、`tag_completion_authorization_required`，不建补全任务；已有明确授权覆盖时直接加 `--allow-tag-completion`，接纳 `needs_tag_completion` 后按上述流程执行，不重复确认。只研究当次场景/能量/人声/情绪要求需要的字段。审核、回写或明确无可写值，并 verify 对账后才携 `--completion-task` 续跑。单次累计最多 100 首，不静默研究全库。
 - 只读/预览/`--dry-run`/`--check`：不派发 researcher、不改标签、不创建补全任务。
 - 播放/追加：仍遵守下列播放器和队列授权规则；既有歌单不自动改写或重排。

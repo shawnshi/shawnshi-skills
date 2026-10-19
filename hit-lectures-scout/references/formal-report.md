@@ -28,7 +28,9 @@
 - `shared/scripts/test_report_archive.py`
 - `shared/references/report_archive.md`
 
-先使用已解析的绝对脚本路径运行（示意变量均须替换）：
+编制前先使用已解析的绝对脚本路径运行 `python -B "$validator" --describe-contract`，读取真实表头、评审枚举、来源编号英文逗号规则及零结果例外。该模式独立使用，无参数报告读取、联网或落盘，不与验证参数混合；不代替本合同、DOI/版本/诚信核查或事实门。主标题去除 0–3 前导空格后仍须与规范字面标题一致，不接受尾部闭合哈希（共享归档身份门按字面对比）；四列缩进代码不提供标题；只有首个二级标题结束元数据头部，三级至六级标题不提前截断。
+
+随后运行结构门（示意变量均须替换）：
 
 ```powershell
 python -B "$validator" --file "$draft" --period-start YYYY-MM-DD --period-end YYYY-MM-DD --issue-date YYYY-MM-DD --cutoff "带偏移ISO-8601" --window-mode explicit --report-timezone Asia/Shanghai

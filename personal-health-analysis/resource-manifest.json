@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-10-09T11:06:23+08:00",
+  "generated_at": "2026-10-18T21:02:29+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -37,7 +37,7 @@
     },
     {
       "path": "requirements.txt",
-      "sha256": "151907161646bdd0718c2ba6ddc4e83d795fcc9dfb2a3ef61f26395fbba7901e"
+      "sha256": "3dfdeca497bc8a7ea4b8a5de72f6238d384985068c851fd545b8b87e53eb20d2"
     }
   ],
   "top_level_directories": [
@@ -50,7 +50,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 57
+      "file_count": 60
     },
     {
       "name": "references",
@@ -84,7 +84,7 @@
     },
     {
       "path": "references/api.md",
-      "sha256": "2a441a331b5cd3a9598066767a085d43692e06cc80760e96215cdb138b53aeaa"
+      "sha256": "a1cf3a37924d755cb5bfe52e1b70397295f0302f111291a8225b81b6aac00ae8"
     },
     {
       "path": "references/external_acceptance.md",
@@ -100,11 +100,11 @@
     },
     {
       "path": "references/runtime_compatibility.md",
-      "sha256": "c8ef5aca87d8b8e68dfc41e933cc2d30f16db01d18002b38298d5c520b52ed91"
+      "sha256": "08432ab2d04c1b66a5074b7a73e3f6f30a3944e70b298b59a0236f499d296e73"
     },
     {
       "path": "references/sync_contract.md",
-      "sha256": "4142679e9e1c33ce8cddaddc09f69b813f8acbdd9daf40f3df313417230816cc"
+      "sha256": "d2f4f970d8e44569d25672f6cec937ec45debc65eb6437d9a42b5e52796025aa"
     },
     {
       "path": "references/workflow_contract.md",
@@ -124,7 +124,7 @@
     },
     {
       "path": "scripts/freshness_task_gate.py",
-      "sha256": "390620d66197c570f12d1fd5f2521a54d45569a4743ea3aaef12fddb240d647d"
+      "sha256": "d8c1750293e842f7df40ccdd291421616a44bafc1080decff30994d106b12083"
     },
     {
       "path": "scripts/garmin_activity_files.py",
@@ -132,15 +132,15 @@
     },
     {
       "path": "scripts/garmin_auth.py",
-      "sha256": "9fa9885a48884598e51a09aeb6a4f0107646b9dd3b36358b9ae91a63910072d6"
+      "sha256": "8289f60e47f2585908412a0a2381013d9286110d33aefac0bc9866faf29062b5"
     },
     {
       "path": "scripts/garmin_auto_sync.py",
-      "sha256": "80fb4e0eab0fd3fd1c71ee54266d6e48d583363462e0411fa1be742e0ed88323"
+      "sha256": "e348fb259089a358b87140d8a36ce9dc38f0bdb0d09a3568d4258e30700ca012"
     },
     {
       "path": "scripts/garmin_bounded.py",
-      "sha256": "a3dbcbccbeaff35b7f07bd90c38be8230f22f29d453ec1fc19bb95cee298b30e"
+      "sha256": "9c842c9f32281d3f264a4bc87caf3891142b15283c79b81e618b7f837d64b9a2"
     },
     {
       "path": "scripts/garmin_capabilities.py",
@@ -204,11 +204,11 @@
     },
     {
       "path": "scripts/scheduled_task_probe.ps1",
-      "sha256": "1dea36c42b1e1467019925dd7efedc1d8d552468d7e3b77cf537ccf073917e98"
+      "sha256": "6b6d20a2dd0501996bfe109e07421ce7609b0afb3be42f328af491ad5530797f"
     },
     {
       "path": "scripts/sync_health_data.py",
-      "sha256": "cb9a7f5ae6931ec219ced9995831afa0a800deb834cae067eb635fee39bba884"
+      "sha256": "e529effa851ee6225a16c85c37be7c8628b6e225e0bfde63f6ade9fd222b47f4"
     },
     {
       "path": "scripts/test_bounded_read_integrity.py",
@@ -236,7 +236,11 @@
     },
     {
       "path": "scripts/test_garmin_auth_cli.py",
-      "sha256": "1eee5a36ff5eb5511f70182de147f3b3cdb74813b75f457ec8f8d58dcf201f09"
+      "sha256": "4c3746930fe9da910b0aa56d775b1feb5c9fc38431cda57fca3ede814aa4bb23"
+    },
+    {
+      "path": "scripts/test_garmin_auth_failfast.py",
+      "sha256": "1a65abeb473480a80ef8c99b2e24b0b1d3702f6e9d2e14e7e51a025048a5f5ab"
     },
     {
       "path": "scripts/test_garmin_auto_sync.py",
@@ -283,6 +287,10 @@
       "sha256": "bb1507b9afd2b52e99359c1aca77092fc777939a6ecebeea272988f956dabaab"
     },
     {
+      "path": "scripts/test_garmin_plan_a.py",
+      "sha256": "ea4e464af93d752edb0db62b017e909294f89f09d197e32350e3c12f97fd1100"
+    },
+    {
       "path": "scripts/test_garmin_query.py",
       "sha256": "b0603817e18aea255bc84378de80b51f39829601ea90dc3265689ae8b0c496a3"
     },
@@ -324,11 +332,15 @@
     },
     {
       "path": "scripts/test_skill_contract.py",
-      "sha256": "28c950e334680d8d728f546e9e499fcb08251ffe4c638136559d86084c0ac587"
+      "sha256": "bcaaafeda0bdb0fe52a5b7e7126ecaa85dc5bf8989e70f36fa22a440f68b8a42"
     },
     {
       "path": "scripts/test_sync_health_data.py",
-      "sha256": "7fc22822f9370e6f2fac3e64802fa11304a86c9dcdce2723b5474723d1d9cd3c"
+      "sha256": "e5a3e456d2168037afd9989e6e226aeaa65412605ab53333a2aa6207c763e5a4"
+    },
+    {
+      "path": "scripts/test_sync_runner_compatibility.py",
+      "sha256": "0351c3e8bcc7c919f21045af246b79270b40d89b3e6c71c25cadd69fd75b2841"
     },
     {
       "path": "scripts/test_sync_task_policy.py",
@@ -354,7 +366,7 @@
       "path": "references/api.md",
       "exists": true,
       "resolved_path": "personal-health-analysis/references/api.md",
-      "sha256": "2a441a331b5cd3a9598066767a085d43692e06cc80760e96215cdb138b53aeaa"
+      "sha256": "a1cf3a37924d755cb5bfe52e1b70397295f0302f111291a8225b81b6aac00ae8"
     },
     {
       "path": "references/external_acceptance.md",
@@ -375,22 +387,22 @@
       "sha256": "7789be914477e330a83fc9e6a3d759dab3443920fee4b2d061dd836f3558da21"
     },
     {
-      "path": "references/workflow_contract.md",
+      "path": "references/runtime_compatibility.md",
       "exists": true,
-      "resolved_path": "personal-health-analysis/references/workflow_contract.md",
-      "sha256": "562dc466e65cd2cfb7804910159c806ee761736977b405db211196a48e8b0d17"
+      "resolved_path": "personal-health-analysis/references/runtime_compatibility.md",
+      "sha256": "08432ab2d04c1b66a5074b7a73e3f6f30a3944e70b298b59a0236f499d296e73"
     },
     {
       "path": "references/sync_contract.md",
       "exists": true,
       "resolved_path": "personal-health-analysis/references/sync_contract.md",
-      "sha256": "4142679e9e1c33ce8cddaddc09f69b813f8acbdd9daf40f3df313417230816cc"
+      "sha256": "d2f4f970d8e44569d25672f6cec937ec45debc65eb6437d9a42b5e52796025aa"
     },
     {
-      "path": "references/runtime_compatibility.md",
+      "path": "references/workflow_contract.md",
       "exists": true,
-      "resolved_path": "personal-health-analysis/references/runtime_compatibility.md",
-      "sha256": "c8ef5aca87d8b8e68dfc41e933cc2d30f16db01d18002b38298d5c520b52ed91"
+      "resolved_path": "personal-health-analysis/references/workflow_contract.md",
+      "sha256": "562dc466e65cd2cfb7804910159c806ee761736977b405db211196a48e8b0d17"
     }
   ],
   "missing_declared_dependencies": []

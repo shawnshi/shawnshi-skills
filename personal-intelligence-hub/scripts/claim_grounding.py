@@ -16,12 +16,17 @@ def requires_grounding(item: dict[str, Any]) -> bool:
 
 
 def validate_registered_claims(
-    item: dict[str, Any], read_span: Callable[[int, int], dict[str, Any]]
+    item: dict[str, Any], read_span: Callable[[int, int], dict[str, Any]],
+    *, policy_version: int = 2,
 ) -> None:
-    """Verify source bytes and numeric coverage; semantic entailment still needs review."""
+    """Bind factual claims to source spans; semantic entailment still needs review."""
+    if type(policy_version) is not int or policy_version not in {2, 3}:
+        raise ValueError("unsupported claim grounding policy")
+    required = policy_version == 3 or requires_grounding(item)
+    allowed_kinds = KINDS | {"fact"} if policy_version == 3 else KINDS
     ledger = item.get("claim_grounding")
     if ledger is None:
-        if requires_grounding(item):
+        if required:
             raise ValueError("critical item requires registered claim_grounding")
         return
     if not isinstance(ledger, dict) or not isinstance(ledger.get("basis"), str) or not ledger["basis"].strip():
@@ -31,8 +36,9 @@ def validate_registered_claims(
         raise ValueError("claim_grounding.claims must be nonempty")
     fact = str(item.get("fact") or "")
     bound_numbers: set[str] = set()
+    fact_bound = False
     for claim in claims:
-        if not isinstance(claim, dict) or claim.get("kind") not in KINDS:
+        if not isinstance(claim, dict) or claim.get("kind") not in allowed_kinds:
             raise ValueError("invalid claim kind")
         statement = claim.get("statement")
         if not isinstance(statement, str) or not statement.strip():
@@ -58,11 +64,17 @@ def validate_registered_claims(
             or span.get("excerpt_truncated") is not False
         ):
             raise ValueError("claim evidence does not match the registered source span")
+        if claim["kind"] == "fact":
+            if statement.strip() != fact.strip():
+                raise ValueError("fact claim must cover the complete published fact")
+            fact_bound = True
         if claim["kind"] == "number":
             value = str(claim.get("value") or "").strip()
             numbers = set(NUMBER.findall(value))
             if not numbers or value not in fact or not numbers.issubset(set(NUMBER.findall(quote))):
                 raise ValueError("claim number is not supported by fact and source quote")
             bound_numbers.update(numbers)
-    if requires_grounding(item) and set(NUMBER.findall(fact)) - bound_numbers:
+    if policy_version == 3 and not fact_bound:
+        raise ValueError("formal item requires a complete fact claim bound to source evidence")
+    if required and set(NUMBER.findall(fact)) - bound_numbers:
         raise ValueError("critical fact contains numbers without registered bindings")

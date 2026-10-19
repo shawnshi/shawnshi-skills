@@ -11,6 +11,9 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
+
+from artifact_io import atomic_bytes
 import json
 import time
 from pathlib import Path
@@ -140,16 +143,20 @@ def collect_symbol(
                 fetcher=fetcher, code=code, date_from=date_from, date_to=date_to))
     elif suffix == "HK":
         prefix = ec.hkex_stock_id(fetcher, code=code)
-        report["attempts"].append({"channel": "hkex_prefix", "health": prefix["health"],
-                                  "records": 0, "error": None, "url": None, "reused": None})
+        report['attempts'].append({'channel': 'hkex_prefix', 'health': prefix['health'],
+                                  'records': 0, 'error': prefix.get('error'),
+                                  'url': (prefix.get('meta') or {}).get('url'),
+                                  'reused': (prefix.get('meta') or {}).get('reused')})
         if prefix["health"] == ec.HEALTH_OK and prefix["stock_id"] is not None:
             listings.append(ec.hkex_news(fetcher, stock_id=prefix["stock_id"],
                                          date_from=date_from.replace("-", ""),
                                          date_to=date_to.replace("-", "")))
     else:
         lookup = ec.sec_ticker_cik(fetcher, ticker=code)
-        report["attempts"].append({"channel": "sec_ticker_lookup", "health": lookup["health"],
-                                   "records": 0, "error": None, "url": None, "reused": None})
+        report['attempts'].append({'channel': 'sec_ticker_lookup', 'health': lookup['health'],
+                                  'records': 0, 'error': lookup.get('error'),
+                                  'url': (lookup.get('meta') or {}).get('url'),
+                                  'reused': (lookup.get('meta') or {}).get('reused')})
         if lookup["health"] == ec.HEALTH_OK and lookup["cik"]:
             submissions = ec.sec_submissions(fetcher, cik=lookup["cik"])
             submissions["records"] = _material_forms(submissions["records"])
@@ -157,7 +164,7 @@ def collect_symbol(
                 submissions["health"] = ec.HEALTH_EMPTY
             listings.append(submissions)
 
-    best: tuple[float, dict[str, Any], dict[str, Any]] | None = None
+    candidates: list[tuple[float, dict[str, Any], dict[str, Any]]] = []
     for listing in listings:
         report["attempts"].append({
             "channel": listing["channel"], "health": listing["health"],
@@ -170,37 +177,56 @@ def collect_symbol(
         report["records_found"] += len(listing.get("records") or [])
         if listing["health"] != ec.HEALTH_OK:
             continue
-        chosen = _choose(listing["records"], window_start, window_end)
-        if chosen is None:
-            continue
-        stamp = _timestamp(str(chosen["published_at"]), "record.published_at")
-        if best is None or stamp > best[0]:
-            best = (stamp, chosen, listing)
+        for chosen in listing['records']:
+            try:
+                stamp = _timestamp(str(chosen.get('published_at')), 'record.published_at')
+            except ValueError:
+                continue
+            if not window_start <= stamp <= window_end:
+                continue
+            candidates.append((stamp, chosen, listing))
 
-    if best is None:
-        broken = [row for row in report["attempts"]
-                  if row["channel"] != "sec_ticker_lookup" and row["health"] == ec.HEALTH_BROKEN]
+    report['event_coverage_complete'] = False
+    report['coverage_limitations'] = [
+        'source lists are bounded: CNINFO page 1, SZSE/HKEX returned list, SEC recent filings only',
+        'pagination and material-event completeness not proven; no body extraction or value judgment']
+    report['records'] = []
+    if not candidates:
+        broken = [row for row in report['attempts'] if row['health'] == ec.HEALTH_BROKEN]
         report["reason"] = "channel_broken" if broken else "no_announcement_in_window"
         report["health"] = ec.HEALTH_BROKEN if broken else ec.HEALTH_EMPTY
         return report
 
-    _, chosen, listing = best
+    for _, chosen, listing in sorted(candidates, key=lambda entry: entry[0]):
+        captured = _capture_record(fetcher, symbol, chosen, listing, evidence_dir)
+        report['records'].append(captured)
+    latest = report['records'][-1]
+    report.update(latest)
+    report['latest'] = latest
+    return report
+
+
+def _capture_record(fetcher, symbol, chosen, listing, evidence_dir):
+    report = {'chosen': chosen, 'document_retrieval': None, 'body_retrieved': False,
+              'channel': listing['channel']}
     tier = {"cninfo_fulltext": "exchange", "szse_announcements": "exchange",
             "hkex_news": "exchange", "sec_edgar": "regulator"}[listing["channel"]]
     document_url = chosen.get("document_url")
     retrieved_epoch = float((listing.get("meta") or {}).get("fetched_at") or 0.0)
     artifact: Path | None = None
     if isinstance(document_url, str) and document_url.startswith("http"):
-        inline_key = f"{listing['channel']}_doc_{_symbol_key(symbol)}"
+        inline_key = f"{listing['channel']}_doc_{hashlib.sha256(document_url.encode()).hexdigest()}"
         fetched = ec.fetch_document(fetcher, url=document_url, key=inline_key,
-                                    referer="http://www.cninfo.com.cn/"
+                                    referer="https://www.cninfo.com.cn/"
                                     if listing["channel"] == "cninfo_fulltext" else None)
         report["document_retrieval"] = {"url": document_url, "health": fetched["health"],
-                                        "http_status": (fetched["meta"] or {}).get("http_status")}
+                                        "http_status": (fetched["meta"] or {}).get("http_status"),
+                                        'error': (fetched['meta'] or {}).get('transport_error')}
         if fetched["health"] == ec.HEALTH_OK:
             suffix_name = Path(document_url).name or "document.bin"
-            artifact = evidence_dir / f"{_symbol_key(symbol)}_{suffix_name}"
-            artifact.write_bytes(fetched["meta"]["body"])
+            artifact = evidence_dir / f"{_symbol_key(symbol)}_{hashlib.sha256(document_url.encode()).hexdigest()[:16]}_{suffix_name}"
+            atomic_bytes(artifact, fetched['meta']['body'])
+            report['body_retrieved'] = True
             retrieved_epoch = float((fetched["meta"] or {}).get("fetched_at") or retrieved_epoch)
             digest = fetched["content_sha256"]
             locator = document_url
@@ -209,8 +235,8 @@ def collect_symbol(
     if artifact is None:
         # The listing payload itself is the verifiable artifact: it carries the
         # platform's own announcement record and publication timestamp.
-        artifact = evidence_dir / f"{_symbol_key(symbol)}_{listing['channel']}_listing.json"
-        artifact.write_bytes(listing["meta"]["body"])
+        artifact = evidence_dir / f"{_symbol_key(symbol)}_{ec.sha256_bytes(listing['meta']['body'])[:16]}_{listing['channel']}_listing.json"
+        atomic_bytes(artifact, listing['meta']['body'])
         digest = ec.sha256_bytes(listing["meta"]["body"])
         locator = str((listing.get("meta") or {}).get("url") or "")
     report.update({"health": ec.HEALTH_OK, "chosen": chosen, "tier": tier,
@@ -228,20 +254,24 @@ def build_items(reports: list[dict[str, Any]], *, window_start: float, window_en
         if report.get("health") != ec.HEALTH_OK:
             unverified.append(f"{report['symbol']}:{report.get('reason', 'unverified')}")
             continue
-        chosen = report["chosen"]
-        channel = next((row["channel"] for row in report["attempts"]
-                        if row["channel"] not in {"sec_ticker_lookup"}), "unknown")
-        items.append({
-            "evidence_id": f"ev_{channel}_{_symbol_key(report['symbol'])}",
-            "source_tier": report["tier"],
-            "source_locator": report["source_locator"],
-            "published_at": chosen["published_at"],
-            "retrieved_at": report["retrieved_at"],
-            "content_sha256": report["content_sha256"],
-            "artifact": report["artifact"],
-            "claim": (f"{channel} 披露记录：{report['symbol']} {chosen['title']}"
-                      f"（发布于 {chosen['published_at']}）"),
-        })
+        seen_ids: dict[str, int] = {}
+        for record in report.get('records', [report]):
+            chosen = record['chosen']
+            channel = record.get('channel', 'unknown')
+            identity = str(chosen.get('document_url') or json.dumps(chosen, sort_keys=True))
+            suffix = '' if chosen == report['chosen'] else '_' + hashlib.sha256(identity.encode()).hexdigest()[:16]
+            evidence_id = f"ev_{channel}_{_symbol_key(report['symbol'])}{suffix}"
+            seen_ids[evidence_id] = seen_ids.get(evidence_id, 0) + 1
+            if seen_ids[evidence_id] > 1:
+                evidence_id += f"_alias{seen_ids[evidence_id]}"
+            items.append({
+                'evidence_id': evidence_id,
+                'source_tier': record['tier'], 'source_locator': record['source_locator'],
+                'published_at': chosen['published_at'], 'retrieved_at': record['retrieved_at'],
+                'content_sha256': record['content_sha256'], 'artifact': record['artifact'],
+                'claim': (f"{channel} 披露候选记录：{report['symbol']} {chosen['title']}"
+                          f"（发布于 {chosen['published_at']}；仅记录身份，正文语义与重大性未评估）"),
+            })
     for index, entry in enumerate(scope_entries, start=1):
         if entry.get("health") != ec.HEALTH_OK:
             unverified.append(f"scope:{entry['scope']}:{entry.get('health')}")
@@ -257,6 +287,10 @@ def build_items(reports: list[dict[str, Any]], *, window_start: float, window_en
             "claim": f"{entry['scope']} 一手原件：{entry['url']}（发布时间由调用方声明为 {entry['published_at']}）",
         })
     return items, unverified
+
+
+def scope_request_key(scope: str, url: str) -> str:
+    return f'scope_{scope}_{hashlib.sha256(url.encode("utf-8")).hexdigest()}'
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -297,7 +331,8 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = task_dir / "out"
     evidence_dir.mkdir(parents=True, exist_ok=True)
     out_dir.mkdir(parents=True, exist_ok=True)
-    fetcher = ec.ChannelFetcher(session=requests.Session(), cache_dir=cache_dir,
+    from secure_transport import anonymous_session
+    fetcher = ec.ChannelFetcher(session=anonymous_session(), cache_dir=cache_dir,
                                 max_cache_age_seconds=args.max_cache_age_seconds,
                                 timeout=args.timeout, user_agent=args.user_agent)
 
@@ -308,7 +343,7 @@ def main(argv: list[str] | None = None) -> int:
     scope_entries: list[dict[str, Any]] = []
     for spec in scope_specs:
         fetched = ec.fetch_document(fetcher, url=spec["url"],
-                                    key=f"scope_{spec['scope']}_{abs(hash(spec['url'])) % 10**10}")
+                                    key=scope_request_key(spec['scope'], spec['url']))
         entry = {"scope": spec["scope"], "url": spec["url"],
                  "published_at": spec["published_at"], "health": fetched["health"],
                  "http_status": (fetched["meta"] or {}).get("http_status")}
@@ -350,6 +385,8 @@ def main(argv: list[str] | None = None) -> int:
         "known_broken_channels": ec.KNOWN_BROKEN_CHANNELS,
         "evidence_items_file": str(items_path),
         "evidence_count": len(items),
+        'event_coverage_complete': False,
+        'completion_scope': 'candidate artifacts from returned source lists, not full material-event coverage',
         "errors": ([] if complete else
                    [f"unverified:{','.join(unverified)}"] if unverified else
                    [f"missing_scopes:{','.join(missing_scopes)}"]),

@@ -17,6 +17,16 @@
 
 串行模式仍须两个不同标的的系统性失败才能认定多标的提供方中断（单标的任务除外）。单标的异常不自动证明所有标的无数据。FX刷新外围只启动一次 `yf.py` 子进程，由提供方拥有传输重试及截止预算；外围 `attempts` 仅接受1，不叠加新的自动重试。不得因换脚本或换目录重置失败预算。
 
+## 截止预算与制品安全
+
+路由总预算仍为 300 秒，不靠扩大常数解除超时。`PIA_DEADLINE_MONOTONIC` 是单次调用继承的内部单调截止点（不是全局配置）；Daily 阶段、FX、行情、outcomes 与 provider 取剩余预算和本地上限的较小值，嵌套 I/O 留 2 秒回收余量。Windows 要求支持非阻塞管道的 Python 3.12+：子进程 suspended 启动、加入本调用私有 kill-on-close Job 后才恢复，正常、超时、取消和输出超限均回收该 Job 的子孙，不按进程名扫描或终止无关进程。Job 能力或赋值失败直接失败关闭。POSIX 使用独立 session/process group；不承诺回收主动逃逸该组的进程，当前 Windows 已用合成父/孙探针验证，其他平台须独立复测。仍使用 no-shell 参数列表及每个 stdout/stderr 32 MiB 有界管道。
+
+Summary、行情、Daily Sync、weights、FX 派生快照及流水线直接写出的阶段 JSON 使用同目录临时文件、fsync、os.replace；失败的行情子进程不覆盖既有 quotes。开始重跑前先提交前次关键制品的字节副本与摘要 manifest，成功后才允许动当前文件；manifest 入口见 summary.previous_run.recovery_manifest。这是逐文件原子替换，不是跨文件事务：中断可能留下本轮部分阶段，但原 summary 与 recovery 能定位恢复点。历史行和 summary 也不是共同事务；失败需人工核对，不自动重放或补偿。恢复资产按前次 summary 摘要命名且不可改写已提交快照；任务所有者可在不再需要对应历史后手工清理，不自动删除恢复点。
+
+每个 stage_elapsed_seconds 是相邻记录边界间的 monotonic 实测间隔（含阶段及之间的编排开销），run_elapsed_seconds 计到最后一次 summary 提交前；同一回执的 stdout 与磁盘值一致，失败同样保留。请求/重试数无法由阶段物理取得则写 unknown，不写 0；已证明的制品复用记 cache_reused=true，不推断底层 HTTP 缓存或重试。计时不使用注入的行情/evaluation clock，不声称加速，workers 默认不变。
+
+环境只读回执可运行 `python -B scripts/check_environment.py`，记录实际 Python/OS 和 requirements 包的已装版本及 requirements 摘要；不联网、不安装，元信息不是跨平台 lock。升级仍保持 requirements 原兼容范围，在新环境先运行任务内禁止外联的 unittest 模块回归并重测平台进程树；未通过前不要把该环境用于真实研究。升级依赖、迁移范围或生成 lock 需另行授权。
+
 ## FX与行情时点
 
 FX刷新优先绑定真实 `info.regularMarketPrice` 与 `info.regularMarketTime`；两字段齐全时检查有限正值并保留实际带时区时间。字段不足才采用日线Close及其观测日期，明确字段来源。未来观测、非有限值、布尔金额、过期值均失败关闭，不拿抓取时间重标观测时间。72小时FX门和15分钟当前报告龄门不放宽。

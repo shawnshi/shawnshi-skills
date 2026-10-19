@@ -2,6 +2,17 @@
 
 运行前先检查 `scripts/requirements.txt` 与命令 `--help`。不要自动安装依赖或修改全局环境。默认遵循 [free-data-policy.md](free-data-policy.md)，不把付费终端或机构数据库设为前置条件。
 
+## P1/P2 显式研究接线
+
+详见 [p1p2-research-workflow.md](p1p2-research-workflow.md)。原 `research-prepare` 四必需参数不变。
+
+- `pia.py edgar-fundamentals ... --artifact-dir <明确任务证据根>`：可选原始字节捕获，仅在已有公开网络授权下调用，不输出请求头。
+- `pia.py fact-prepare --input-file <原生捕获输入> --evidence-root <明确根> --task-dir <明确任务目录>`：离线 F 数值投影。
+- `pia.py fundamental-diagnostic --input-file <明确输入> --evidence-root <明确根>`：M 数学/情景/机会成本；不是 Alpha。
+- `pia.py expectation-feedback --input-file <明确输入> --evidence-root <明确根>`：J 描述性原预期/实际反馈；不是正式校准。
+- `pia.py research-workflow --input-file <明确清单> --evidence-root <捕获根> --task-dir <根内新目录>`：自动连接已知 F 来源及 M/J 引用，可选历史→原风险 compute/builders。无扫描、fetch、真实 journal append 或订单。
+- `report/readiness/review-pack` 保留组件真实状态、局部结论和来源/时序缺口；研究 complete 不产生交易 ready。
+
 ## 稳定入口
 
 优先运行 `python scripts/pia.py --help` 查看稳定子命令。该入口只做参数路由和状态归一，不绕过底层业务门禁。若某个子命令尚未接通，必须返回非零和结构化未完成状态。
@@ -16,9 +27,21 @@ stdout、stderr 各限 32 MiB（33,554,432 字节，含边界），轮流以最�
 
 原有 300 秒执行期限不变；超时、容量超限或取消时，最多等待 1 秒终止，再最多等待 1 秒强制结束并回收直接子进程，无法回收属于错误。路由不拥有任意后代进程树；直接子进程退出后只排空当前可读字节，不等待后代持有的管道 EOF。不新增读取线程或临时传输文件。已由明确命令创建的报告可能在失败后保留，失败不授权自动归档、删除或重跑。
 
+## 旧式原生报价的离线兼容
+
+`python scripts/legacy_quote_package.py --quotes-file <native-price-only-list.json> --positions-file <same-bound-positions.json> --output <new-quote-package.json>`：仅处理原生 `yf.py --price-only --with-portfolio` 的旧式列表。它从 `info` 中成对的报价/时点生成 quote-only 证据，保留历史来源与原件/记录绑定，重新调用现有批次审计；不使用 history Close 或 summary 代替报价，不访问网络，不覆盖输出，不修改持仓。
+
+转换要求原生历史列表的逐条批次审计一致且绑定同一持仓；只允许有来源的主源 Yahoo info，不将备用源改标为主源。转换后的包仍须通过 `daily_sync.py`，其结果再按原有合同交给 `rebalance_weights.py`。结构转换或 quote-only 成功不提升原历史研究、Thesis、P0 或交易就绪状态，缺价格/时点、身份不符、陈旧及超出既定未来容差的报价仍不可用。
+
+## 显式离线研究闭环
+
+`pia.py research-loop --input-file <bundle.json> --evidence-root <explicit-root> --task-dir <explicit-task> [--decisions-file <explicit-decisions.json>]`：仅 research_only 的列明事件/条件关联、补证任务与人工回执，不下载、不调用模型/真实Thesis写入，不接受 advisory/actionable 参数。先生成不可覆盖的proposal，再显式提供绑定proposal摘要的人工决定生成独立receipt；状态及退出码沿用统一合同。JSON规格、边界与合成示例见 [research-loop.md](research-loop.md)、[research_loop_schema.json](research_loop_schema.json)。不是其他研究的额外前置门。
+
 ## 主动研究的离线交接
 
-`pia.py` 的 stdout 是状态信封，下游输入需要信封中的原始 `result`，不能直接把整个 stdout 当作验证、扫描或构造报告。主动研究四个子命令没有 `--output`；`scenario --output` 是另一个命令的原始结果写出选项，不能用于这条链路。
+`pia.py` 的 stdout 是状态信封，下游输入需要信封中的原始 `result`，不能直接把整个 stdout 当作验证、扫描或构造报告。`alpha-validate`、`alpha-scan`、`portfolio-construct`、`rebalance-proposal` 均支持可选 `--output` 写出原始结果；stdout 仍是信封。以下显式交接示例仍可用，不能把文件生成当作研究验证通过。
+
+`daily-sync`、`daily-run` 与 `build thesis-pack` 增加可选 `--conditions-file`、`--evidence-root`，只消费调用者明确授权的原生条件台账与原件根。v1 声明包仍可读但不足；v2 数值原件绑定产生局部验证，不证明全局覆盖。`thesis-pack` 的制品生成成功与验证状态分离：`result.artifact_build_status=complete` 只表示文件已生成，未决证据门返回退出码 2（`status=insufficient_evidence`），不是构包失败 3。详见 [daily-sync.md](daily-sync.md#thesis-红队)。
 
 以下 Python 示例在调用者工作目录中运行四阶段，输入文件名见代码。仅当用户已逐项授权读取这五个输入和创建 `validation.json`、`scan.json`、`construction.json`、`proposal.json` 时运行；示例不增加自动保存权限。可将代码用于已授权的任务脚本，以 `python handoff.py <pia.py 的绝对路径>` 运行。输出采用独占创建，已有文件不覆盖；任何失败都停止下游，保留已完成的独立阶段。写出中断可能留下不完整文件，必须检查后另行授权清理或更换输出路径，不得直接重跑覆盖。
 

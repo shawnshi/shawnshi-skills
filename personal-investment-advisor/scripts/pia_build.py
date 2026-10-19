@@ -29,6 +29,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from thesis_evidence_gate import evaluate_thesis_evidence
+
 SCHEMA_VERSION = "pia_build_receipt_v1"
 DECISION_SCOPE = "advisory"
 TASK_PREFIX = "dataset://pia/tasks"
@@ -414,9 +416,19 @@ def build_inverse_vol(args: argparse.Namespace) -> dict[str, Any]:
 
     bucket_members = {"core": [symbol for symbol in core if symbol in resolved],
                       "satellite": [symbol for symbol in satellite if symbol in resolved]}
+    missing_fractions = [field for field in ("core_fraction", "satellite_fraction")
+                         if bucket_policy.get(field) is None]
+    if missing_fractions:
+        return {
+            "status": "insufficient_data",
+            "detail_status": "bucket_fractions_missing",
+            "decision_scope": DECISION_SCOPE,
+            "errors": ["confirmed bucket_policy requires " + ", ".join(missing_fractions)],
+            "non_executable": True,
+        }
     bucket_targets = {
-        "core": float(bucket_policy.get("core_fraction") or 0.8),
-        "satellite": float(bucket_policy.get("satellite_fraction") or 0.2),
+        "core": float(bucket_policy["core_fraction"]),
+        "satellite": float(bucket_policy["satellite_fraction"]),
     }
     excluded_policy_symbols: dict[str, str] = {}
     if use_non_cash_scope:
@@ -512,13 +524,28 @@ def build_thesis_pack(args: argparse.Namespace) -> dict[str, Any]:
     scopes, scopes_sha = read_json(Path(args.scope_coverage_file).expanduser().resolve(),
                                   "scope coverage file")
 
+    conditions_file = getattr(args, "conditions_file", None)
+    evidence_root = getattr(args, "evidence_root", None)
+    conditions_sha = None
+    if conditions_file:
+        _, conditions_sha = read_json(Path(conditions_file).expanduser().resolve(), "conditions file")
+    trusted_root = Path(evidence_root).expanduser().resolve() if evidence_root else None
     items: list[dict[str, Any]] = []
     for index, item in enumerate(evidence.get("evidence_items") or []):
         require(isinstance(item, dict), f"evidence_items[{index}] must be an object")
         artifact = item.get("artifact")
         require(isinstance(artifact, str) and artifact,
                 f"evidence_items[{index}] must name a local artifact to hash")
-        artifact_path = (task_dir / artifact).resolve()
+        relative = Path(artifact)
+        require(not relative.is_absolute() and ".." not in relative.parts,
+                f"evidence_items[{index}] artifact must remain below task directory")
+        selected_path = task_dir / relative
+        require(not any(path.is_symlink() or path.is_junction()
+                        for path in [selected_path, *selected_path.parents] if path != task_dir.parent),
+                f"evidence_items[{index}] artifact cannot traverse links")
+        artifact_path = selected_path.resolve()
+        require(artifact_path.is_relative_to(task_dir),
+                f"evidence_items[{index}] artifact escapes task directory")
         require(artifact_path.is_file(),
                 f"evidence_items[{index}] artifact not found: {artifact_path}")
         digest = sha256_bytes(artifact_path.read_bytes())
@@ -527,10 +554,21 @@ def build_thesis_pack(args: argparse.Namespace) -> dict[str, Any]:
             raise BuildError(
                 f"evidence_items[{index}] content_sha256 does not match {artifact}: "
                 f"declared {declared[:12]}… recomputed {digest[:12]}…")
-        items.append({key: value for key, value in item.items() if key != "artifact"} | {
-            "content_sha256": digest})
+        bound_item = {key: value for key, value in item.items() if key != "artifact"} | {
+            "content_sha256": digest}
+        if trusted_root is not None:
+            require(artifact_path.is_relative_to(trusted_root),
+                    f"evidence_items[{index}] artifact outside explicit evidence root")
+            local_path = artifact_path.relative_to(trusted_root).as_posix()
+            require(item.get("local_path", local_path) == local_path,
+                    f"evidence_items[{index}] local_path does not identify artifact")
+            bound_item["local_path"] = local_path
+        items.append(bound_item)
 
-    window_end = str(args.window_end or datetime.datetime.now(datetime.timezone.utc).isoformat())
+    epoch = getattr(args, "now_epoch", None)
+    generated = (datetime.datetime.now(datetime.timezone.utc) if epoch is None
+                 else datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc))
+    window_end = str(args.window_end or generated.isoformat())
     # ``x.get("k") or x`` would re-substitute the whole document when the key
     # holds an empty list, so resolve the wrapped form explicitly.
     scope_coverage = scopes.get("scope_coverage")
@@ -542,8 +580,8 @@ def build_thesis_pack(args: argparse.Namespace) -> dict[str, Any]:
     require(isinstance(scope_coverage, dict), "scope coverage must be an object")
     require(isinstance(assessment_list, list), "assessments must be a list")
     payload = {
-        "schema_version": "pia_thesis_red_team_v1",
-        "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "schema_version": "pia_thesis_red_team_v2" if conditions_sha else "pia_thesis_red_team_v1",
+        "generated_at": generated.isoformat(),
         "window_start": str(args.window_start),
         "window_end": window_end,
         "portfolio_snapshot_binding": binding,
@@ -551,6 +589,8 @@ def build_thesis_pack(args: argparse.Namespace) -> dict[str, Any]:
         "assessments": assessment_list,
         "evidence_items": items,
     }
+    if conditions_sha:
+        payload["conditions_sha256"] = conditions_sha
     bound_rows = binding.get("positions", []) if research_universe else binding.get("active_positions", [])
     if research_universe:
         require(binding.get("scope") == "unpurchased_research" and bool(bound_rows)
@@ -558,7 +598,6 @@ def build_thesis_pack(args: argparse.Namespace) -> dict[str, Any]:
                         and row["quantity"] == 0 and row.get("asset_type") != "cash" for row in bound_rows),
                 "research binding must contain zero-quantity non-cash securities")
     active = [entry["symbol"] for entry in bound_rows if entry.get("asset_type") != "cash"]
-    assessed = {entry.get("symbol") for entry in assessment_list if isinstance(entry, dict)}
     assessed = {entry.get("symbol") for entry in assessment_list if isinstance(entry, dict)}
     missing = sorted(set(active) - assessed)
     require(not missing, f"assessments do not cover: {', '.join(missing)}")
@@ -571,8 +610,14 @@ def build_thesis_pack(args: argparse.Namespace) -> dict[str, Any]:
         task_dir,
         [(quotes_relative, quotes_path), (pack_relative, out_path)],
     ))
+    verification = evaluate_thesis_evidence(
+        payload, expected_symbols=active, portfolio_snapshot_binding=binding,
+        evaluation_epoch=generated.timestamp(), conditions_file=conditions_file,
+        evidence_root=evidence_root)
     return {
-        "status": "complete",
+        "status": verification["status"],
+        "artifact_build_status": "complete",
+        "thesis_red_team": verification,
         "detail_status": "thesis_evidence_pack_built",
         "decision_scope": DECISION_SCOPE,
         "pack_file": str(out_path),
@@ -641,6 +686,9 @@ def main(argv: list[str] | None = None) -> int:
     pack.add_argument("--research-universe", action="store_true",
                       help="Bind the separate zero-quantity research quote packet; not actual holdings.")
     pack.add_argument("--evidence-file", required=True)
+    pack.add_argument("--conditions-file", help="Explicitly authorized native condition ledger.")
+    pack.add_argument("--evidence-root", help="Explicitly authorized source root; artifacts still belong to task-dir.")
+    pack.add_argument("--now-epoch", type=float)
     pack.add_argument("--assessments-file", required=True)
     pack.add_argument("--scope-coverage-file", required=True)
     pack.add_argument("--window-start", required=True)
@@ -655,9 +703,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         payload = BUILDERS[args.command](args)
-    except BuildError as exc:
+    except (BuildError, OSError, ValueError, OverflowError) as exc:
         print(json.dumps({"status": "failed", "detail_status": "build_input_invalid",
-                          "decision_scope": DECISION_SCOPE, "errors": [str(exc)]},
+                          "decision_scope": DECISION_SCOPE, "errors": [f"{type(exc).__name__}: {exc}"]},
                          ensure_ascii=False, indent=2))
         return 3
     print(json.dumps(payload, ensure_ascii=False, indent=2))

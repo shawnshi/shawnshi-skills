@@ -1,26 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-web-slide",
-  "generated_at": "2026-10-09T04:06:19.156Z",
+  "generated_at": "2026-10-19T09:59:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
   "skill_md_sha256": "b6afd27925b1354cae270ab838f7a037b7913c96c12dd41d3bba58b8be16080d",
   "top_level_files": [
-    "package-lock.json",
-    "package.json",
     "SKILL.md",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "package-lock.json",
+    "package.json"
   ],
   "top_level_file_hashes": [
-    {
-      "path": "package-lock.json",
-      "sha256": "ac9f6ea486e96f1d75b5f9736f5d8d1c43bac12253c53ad0de536f62b0fabaa7"
-    },
-    {
-      "path": "package.json",
-      "sha256": "3eb621af1691f2ae10d381aa12cb96ebc1fe783a0628a1ff7a4d43dcc57406a6"
-    },
     {
       "path": "SKILL.md",
       "sha256": "b6afd27925b1354cae270ab838f7a037b7913c96c12dd41d3bba58b8be16080d"
@@ -28,9 +20,18 @@
     {
       "path": "THIRD_PARTY_NOTICES.md",
       "sha256": "2ced3b954a2a7d04e62c6294885053ba093117c0206565e1c215aad308b29f3b"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "ac9f6ea486e96f1d75b5f9736f5d8d1c43bac12253c53ad0de536f62b0fabaa7"
+    },
+    {
+      "path": "package.json",
+      "sha256": "3eb621af1691f2ae10d381aa12cb96ebc1fe783a0628a1ff7a4d43dcc57406a6"
     }
   ],
   "top_level_directories": [
+    "agents",
     "assets",
     "built-in-skills",
     "references",
@@ -40,31 +41,27 @@
   ],
   "resource_directories": [
     {
-      "name": "assets",
-      "file_count": 6
-    },
-    {
-      "name": "built-in-skills",
-      "file_count": 4
+      "name": "scripts",
+      "file_count": 15
     },
     {
       "name": "references",
       "file_count": 4
     },
     {
-      "name": "scripts",
-      "file_count": 15
+      "name": "assets",
+      "file_count": 7
     },
     {
-      "name": "starter-components",
+      "name": "agents",
       "file_count": 1
-    },
-    {
-      "name": "tests",
-      "file_count": 6
     }
   ],
   "resource_file_hashes": [
+    {
+      "path": "agents/openai.yaml",
+      "sha256": "d74e5cc4b842e19fc288222e052f4b506c0f73b23cf61b5ba9e709bef3f67af1"
+    },
     {
       "path": "assets/core.css",
       "sha256": "d27fa34f55efb366f5f0e54f3946d9e42333d969d240a86638370e050da0fb7a"
@@ -72,6 +69,10 @@
     {
       "path": "assets/icon-runtime.js",
       "sha256": "22bdc6f362356bd399bae786462f54e4e623c0c93ab65f8718defe8d1fa9ed96"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "49315dda7125ec5fc77ef5f2b96126d8b2121c6e72944b4702972e90f321d3ee"
     },
     {
       "path": "assets/magazine.css",
@@ -211,30 +212,6 @@
     }
   ],
   "declared_local_dependencies": [
-    {
-      "path": "built-in-skills/style-magazine.md",
-      "exists": true,
-      "resolved_path": "tool-web-slide/built-in-skills/style-magazine.md",
-      "sha256": "8d2f7506bccbcd1c69a7c43db23d600e5e4072f31d6a1a75f677b7c06521e563"
-    },
-    {
-      "path": "built-in-skills/style-swiss.md",
-      "exists": true,
-      "resolved_path": "tool-web-slide/built-in-skills/style-swiss.md",
-      "sha256": "abc7574913efe9c44bdef307060924e783178179ffd4450ae992989d308b519d"
-    },
-    {
-      "path": "built-in-skills/style-winning-clinical.md",
-      "exists": true,
-      "resolved_path": "tool-web-slide/built-in-skills/style-winning-clinical.md",
-      "sha256": "d3da296a30d39d453700aeee74ff4b5ffc7de3c5f985b44f9ecbb1c6946ec71c"
-    },
-    {
-      "path": "built-in-skills/use-design-system.md",
-      "exists": true,
-      "resolved_path": "tool-web-slide/built-in-skills/use-design-system.md",
-      "sha256": "a76188fb29d0942c01410ecb997d5e9223ef00248c65da8b52a5a318977c0a68"
-    },
     {
       "path": "references/components.json",
       "exists": true,

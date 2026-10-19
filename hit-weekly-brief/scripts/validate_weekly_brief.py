@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from datetime import date, datetime, timezone
@@ -29,8 +30,9 @@ def visible_content(content: str) -> str:
             fence = marker[1]
             lines.append("")
         else:
-            # Four-space/tab indented Markdown is code, not report structure.
-            lines.append("" if line.startswith(("    ", "\t")) else line)
+            # Markdown tabs advance to four-column stops, including mixed prefixes.
+            indent = re.match(r"^[ \t]*", line)[0].expandtabs(4)
+            lines.append("" if len(indent) >= 4 else line)
     return "\n".join(lines)
 
 
@@ -78,6 +80,54 @@ PLACEHOLDER_RE = re.compile(
 
 
 EVENT_HEADER = ["事件日期", "主体与已核实动作", "事实或来源主张", "分析判断", "证据强度", "直接来源"]
+REQUIRED_SECTIONS = (
+    "## 本周结论", "## 关键事件与来源", "## 政策和市场影响",
+    "## 技术落地信号与证据限制", "## 对医疗信息化业务的传导影响",
+    "## 建议动作与验证节点", "## 信息缺口", "## 来源清单",
+)
+
+
+def markdown_heading(line: str) -> str:
+    match = re.fullmatch(r" {0,3}(#{1,6})(?:[ \t]+(.*?))?[ \t]*", line)
+    if not match:
+        return ""
+    text = match[2] or ""
+    text = "" if re.fullmatch(r"#+", text) else re.sub(r"[ \t]+#+$", "", text)
+    return (match[1] + " " + text).rstrip()
+
+
+def formal_section_errors(content: str) -> list[str]:
+    sections = {heading: [] for heading in REQUIRED_SECTIONS}
+    body = None
+    for line in content.splitlines():
+        heading = markdown_heading(line)
+        if heading == "##" or heading.startswith("## "):
+            body = [] if heading in sections else None
+            if body is not None:
+                sections[heading].append(body)
+        elif body is not None and line.strip() and not heading:
+            body.append(line)
+    errors = []
+    for heading, bodies in sections.items():
+        if len(bodies) != 1:
+            errors.append(f"exactly one {heading} section required")
+        elif not bodies[0]:
+            errors.append(f"visible nonempty body required: {heading}")
+    return errors
+
+
+def describe_contract() -> dict:
+    return {
+        "schema_version": 1, "skill": "hit-weekly-brief", "read_only": True,
+        "required_metadata": ["报告周期", "出刊日期", "生成时点", "报告时区", "地区", "受众"],
+        "required_sections": list(REQUIRED_SECTIONS),
+        "tables": {"## 关键事件与来源": EVENT_HEADER},
+        "empty_marker": EMPTY_EVENT_MARKER,
+        "period_rule": "Monday-to-Sunday; custom period only with explicit authorization",
+        "title_rule": "literal canonical H1 after whitespace trim; no closing hashes (shared archive identity)",
+        "row_source_rule": "direct HTTP(S) URL or Markdown URL, not S1 alone",
+        "limits": ["structure is not source access, factuality or research completeness", "no archive or network side effects"],
+    }
 
 
 def table_cells(line: str) -> list[str]:
@@ -255,7 +305,7 @@ def validate_report(
         (
             line.strip()
             for line in content.splitlines()
-            if line.strip().startswith("# ")
+            if (heading := markdown_heading(line)) == "#" or heading.startswith("# ")
         ),
         "",
     )
@@ -276,8 +326,13 @@ def validate_report(
             errors.append("生成时点 does not match aware cutoff")
         if metadata(content, "报告时区") != report_timezone:
             errors.append("报告时区 does not match report timezone")
+        for label in ("地区", "受众"):
+            if not metadata(content, label):
+                errors.append(f"nonempty header field required: {label}")
     except ValueError as exc:
         errors.append(f"invalid report metadata: {exc}")
+
+    errors.extend(formal_section_errors(content))
 
     is_partial_period = cutoff_date <= period_end
     if is_partial_period:
@@ -297,8 +352,8 @@ def validate_report(
     table_separator_count = 0
     table_state = "none"
     for line_number, line in enumerate(content.splitlines(), start=1):
-        line = line.strip()
-        if line.startswith("## "):
+        line = markdown_heading(line) or line.strip()
+        if line == "##" or line.startswith("## "):
             in_events = line == "## 关键事件与来源"
             section_count += int(in_events)
             if in_events:
@@ -398,6 +453,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    if (sys.argv[1:] if argv is None else argv) == ["--describe-contract"]:
+        print(json.dumps(describe_contract(), ensure_ascii=False, indent=2))
+        return 0
     args = build_parser().parse_args(argv)
     errors = validate_report(
         file_path=args.file,
@@ -413,7 +471,7 @@ def main(argv: list[str] | None = None) -> int:
         for error in errors:
             print(f"FAIL: {error}")
         return 1
-    print(f"OK: {args.file}")
+    print(f"OK: {args.file} (structural checks only; facts and source access not verified)")
     return 0
 
 

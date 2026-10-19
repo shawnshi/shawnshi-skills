@@ -71,7 +71,7 @@ def evaluate(pack: dict) -> dict:
 
 
 class ConditionNotDueTests(unittest.TestCase):
-    def test_all_conditions_not_due_is_complete_with_a_new_aggregate(self):
+    def test_unbound_future_declarations_are_insufficient(self):
         pack = build_pack([
             assessment("AAPL", "condition_not_due", "aapl", condition_ids=["aapl-aa"],
                        due_date="2027-09-09"),
@@ -80,10 +80,11 @@ class ConditionNotDueTests(unittest.TestCase):
         ])
         report = evaluate(pack)
         self.assertEqual(report["errors"], [])
-        self.assertEqual(report["status"], "complete")
-        self.assertEqual(report["fatal_event_status"], "no_condition_due_yet")
-        self.assertEqual(report["not_due_symbols"], ["AAPL", "159516.SZ"])
-        self.assertEqual(report["earliest_due_date"], "2027-03-01")
+        self.assertEqual(report["status"], "incomplete")
+        self.assertEqual(report["fatal_event_status"], "not_assessed")
+        self.assertEqual(report["verification_status"], "declaration_only")
+        self.assertEqual(report["not_due_symbols"], [])
+        self.assertIsNone(report["earliest_due_date"])
         self.assertEqual(report["fatal_symbols"], [])
 
     def test_missing_condition_ids_is_rejected(self):
@@ -113,27 +114,29 @@ class ConditionNotDueTests(unittest.TestCase):
         report = evaluate(pack)
         self.assertTrue(any("due_date_required" in error for error in report["errors"]))
 
-    def test_verified_symbol_outranks_not_due_in_the_aggregate(self):
+    def test_unbound_verified_claim_does_not_outrank_not_due(self):
         pack = build_pack([
             assessment("AAPL", "condition_not_due", "aapl", condition_ids=["aapl-aa"],
                        due_date="2027-09-09"),
             assessment("159516.SZ", "no_fatal_breach_verified", "fund"),
         ])
         report = evaluate(pack)
-        self.assertEqual(report["status"], "complete")
-        self.assertEqual(report["fatal_event_status"], "no_fatal_breach_verified")
-        self.assertEqual(report["not_due_symbols"], ["AAPL"])
+        self.assertEqual(report["status"], "incomplete")
+        self.assertEqual(report["fatal_event_status"], "not_assessed")
+        self.assertEqual(report["not_due_symbols"], [])
+        self.assertEqual(report["submitted_claims"][1]["conclusion"], "no_fatal_breach_verified")
 
-    def test_fatal_breach_still_outranks_everything(self):
+    def test_unbound_fatal_claim_is_not_a_verified_fatal_hit(self):
         pack = build_pack([
             assessment("AAPL", "fatal_breach", "aapl"),
             assessment("159516.SZ", "condition_not_due", "fund",
                        condition_ids=["fund-aa"], due_date="2027-03-01"),
         ])
         report = evaluate(pack)
-        self.assertEqual(report["status"], "complete")
-        self.assertEqual(report["fatal_event_status"], "fatal_breach_detected")
-        self.assertEqual(report["fatal_symbols"], ["AAPL"])
+        self.assertEqual(report["status"], "incomplete")
+        self.assertEqual(report["fatal_event_status"], "not_assessed")
+        self.assertEqual(report["fatal_symbols"], [])
+        self.assertEqual(report["submitted_claims"][0]["conclusion"], "fatal_breach")
 
     def test_insufficient_evidence_still_leaves_the_gate_incomplete(self):
         pack = build_pack([

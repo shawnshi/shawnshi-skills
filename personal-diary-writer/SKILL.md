@@ -1,6 +1,6 @@
 ---
 name: personal-diary-writer
-description: 生成并保存个人日记、个人周/月/季度审计或 Mentat 日志。用于用户要求写日记、保存周期审计或承接 canonical Mentat 写入；个人日记在完整正文通过内容门后自动保存到 canonical 季度日志，周期审计和 Mentat 走各自受保护请求门，纯当次文本草稿不读取私人数据、不保存；私人读取和保存分别进入授权门。
+description: 生成并保存个人日记或个人周/月/季度审计。用于用户要求写日记或保存周期审计；完整个人日记通过内容门后自动保存到 canonical 季度日志，周期审计走受保护请求门。历史Reson操作日志仅限授权日期只读，不承接已退役的专用写入；纯当次文本草稿不读取私人数据、不保存，私人读取与保存分别过门。
 metadata:
   version: "11.11.0"
   authority_role: standalone
@@ -16,7 +16,7 @@ metadata:
 - **私人数据读取**：正式个人日记默认必须读取日记日期及次日日历、含日记日期在内最近 3 天 Garmin 健康摘要；需要个人历史、日历或 Garmin 时，先完成下方执行前检查，再完整读取 `references/private-data-read.md`，按现有最小范围授权读取；草稿身份不豁免读取门。用户明确排除的来源不得读取。只读/不保存仍不进入 scope、approval 或保存确认。
 - **保存**：仅在命中下述 canonical 自动保存例外或用户另行明确要求保存时，先完成执行前检查，再完整读取 `references/write-protocol.md`。生成待保存个人日记的能量字段时，另读 `references/private-data-read.md` 的能量模板（含未采集时的缺口表达）；读模板本身不授权数据采集。读取授权不等于保存授权；从草稿转为保存必须重新判定请求与目标，不能复用草稿阶段同意。
 
-用户要求草稿、预览、只读或不保存时，不写入、不索取保存确认；若需要私人数据，仅进入读取分支。正式个人日记先执行默认读取，再进入保存分支；用户仅提供今日/明日事项不构成免采集指令。只有用户明确要求仅用当次文本或排除相应来源时才跳过对应读取；仅用当次文本的正式日记仍执行完整保存门。纯文本草稿不采集；Mentat 与周期审计不继承此默认。
+用户要求草稿、预览、只读或不保存时，不写入、不索取保存确认；若需要私人数据，仅进入读取分支。正式个人日记先执行默认读取，再进入保存分支；用户仅提供今日/明日事项不构成免采集指令。只有用户明确要求仅用当次文本或排除相应来源时才跳过对应读取；仅用当次文本的正式日记仍执行完整保存门。纯文本草稿不采集；历史Reson操作日志读取与周期审计不继承此默认。
 
 ## 执行前检查（仅私人读取或保存分支）
 
@@ -26,24 +26,24 @@ metadata:
 
 - 私人读取保留既有限定授权：个人日记日期及次日日历最小字段、最近 3 天 Garmin 摘要；日历先验证 Google Calendar OAuth 资格，禁止静默换源。Garmin 使用 canonical 健康技能的依赖预检和数据授权检查、本地优先；仅在未命中草稿、预览、只读、不保存、不同步、不联网或仅用本地数据等退出条件时，当前日末端陈旧才允许一次两阶段同步并重读，不重试。仅未尝试同步且本地 `no_data`、已授权联网并通过 preflight 时才允许一次同窗口实时回退。认证、Schema、完整性等错误失败关闭，不自行登录、刷新凭据、修复任务或扩展采集。完整限制见读取合同。
 - 日历只能证明安排，不能单独证明实际参加或任务完成。仅有“今日”和“明日”事项不得扩写为已交付、已验收或已有结论。健康指标仅作描述性背景，不生成能力分数、诊断、确定因果或强制日程干预；默认读取不能以事项已足够、未单独要求健康或模板可填缺口为由跳过；明确排除或读取门失败时才注明缺口，不强行绕过门禁。
-- Mentat 不自动读取日历或 Garmin；个人日记读取默认授权不外溢到其他日志。任何第二处持久化、自定义路径、知识库或外部系统均不受 canonical 例外授权；当前写入器拒绝非 canonical 目标，明确授权也不能绕过实现。
-- 保存一律 执行前授权范围检查 → scope → 独立 approval → `replace` → 复读。个人日记绑定受保护用户事件与正文 hash；Mentat 绑定证据输入并重跑门；周/月/季审计绑定事件、周期和 payload 并重跑门。不得自行伪造确认或仅信任 artifact 自声明。
+- 历史Reson操作日志读取不自动读取日历或 Garmin；个人日记读取默认授权不外溢到其他日志。任何第二处持久化、自定义路径、知识库或外部系统均不受 canonical 例外授权；当前写入器拒绝非 canonical 目标，明确授权也不能绕过实现。
+- 保存一律 执行前授权范围检查 → scope → 独立 approval → `replace` → 复读。个人日记绑定受保护用户事件与正文 hash；周/月/季审计绑定事件、周期和 payload 并重跑门。不得自行伪造确认或仅信任 artifact 自声明。
 - 同日原子替换、防重复、保留合法同日周期审计与非目标历史、排他锁、写前 hash 复核、不可变快照、同卷 `fsync`/`os.replace` 及失败清理全部保留；禁止纯追加与绕过 scope/approval 的直接写入。
 
 ## Canonical 目标与写入协议
 
 - canonical 个人日志：`C:/Users/shich/MEMORY/raw/privacy/Diary/YYYY-QN.md`。
-- canonical Mentat 日志：`C:/Users/shich/MEMORY/raw/privacy/Diary/mentat_audit/YYYY-QN_Audit.md`。
-- 日期按 `Asia/Shanghai` 计算，季度由目标日期确定；两类文件不可混写。周/月/季审计日期分别为 ISO 周星期日、自然月末、自然季末。
+- 历史Reson操作日志（仅读，保留旧目录名）：`C:/Users/shich/MEMORY/raw/privacy/Diary/mentat_audit/YYYY-QN_Audit.md`。不创建、不覆盖、不迁移，也不通过 `diary_ops.py` 写入。
+- 日期按 `Asia/Shanghai` 计算，季度由目标日期确定；个人日志不得与旧归档混写。周/月/季审计日期分别为 ISO 周星期日、自然月末、自然季末。
 - `scripts/diary_ops.py` 只提供受控 scope 与 replace；字段、授权矩阵、确认事件校验、周期标题拓扑和事务失败条件全部在保存前必读的 `references/write-protocol.md`，不得只凭本节摘要写入。
 
 ## Canonical personal-diary auto-save exception
 
 明确个人日记请求或已绑定日记上下文的事实勘误，在完整八章通过内容门后自动保存至当日 canonical 季度日志，无需再次确认；否定写入优先，裸事项、泛更正和修改技能等元请求不产生授权。保存前必须完整读取 [保存协议](references/write-protocol.md)，核验受保护请求事件和字段绑定。
 
-## Canonical Mentat auto-save exception
+## 已退役的专用操作日志写入
 
-通过 `mentat-insight-diary` 明确要求生成、更新、记录或写 Mentat 日志，且证据门允许保存时，原始请求授权 canonical Mentat 当日日期块，不再重复询问确认。草稿/预览不写入；不适用于个人日记、自定义路径或第二处存储。approval 绑定 evidence input SHA-256，写入器重跑固定证据门并要求 `save_allowed=true`；完整合同见保存协议。
+专用日志生成器与证据门均不存在，原自动保存分支已移除。只允许授权日期的历史归档读取；不得把专用日志请求转为个人日记、另建路径或绕过门禁。`diary_ops.py` 仅支持 `--kind personal`；旧类型及另造的品牌类型均拒绝。
 
 ## Canonical periodic personal-audit auto-save exception
 

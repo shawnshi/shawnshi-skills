@@ -121,6 +121,8 @@ class ReportTestCase(unittest.TestCase):
                       "upside_cost_multiple": 1.5},
             "positions": [
                 {"symbol": "X", "display_label": "X Corp", "current_weight": 0.7,
+                 "constraint_resolution": {"status": "resolved", "effective_max_weight": 0.3},
+                 "weight_compliance": {"status": "breached"},
                  "boundaries": [
                      {"role": "downside_boundary", "value": 85.0},
                      {"role": "upside_boundary", "value": 150.0},
@@ -196,13 +198,24 @@ class RenderTests(ReportTestCase):
         self.assertIn("| X | condition_not_due | 2027-03-01 | 2 |", text)
         self.assertIn("## 仓位限制（策略派生）（制品自带标签：observation_only；非 run 范围）", text)
         self.assertIn("单标的上限 0.3000", text)
-        self.assertIn("| X Corp | 0.7000 | 0.3000 | 85.0000 | 150.0000 |", text)
+        self.assertIn("| X Corp | 0.7000 | — | 0.3000 | 85.0000 | 150.0000 |", text)
+        self.assertIn("“总市值”分母含现金", text)
         self.assertIn("| 决策范围 | advisory（来源：daily_run_summary", text)
         self.assertIn("## 阶段状态（制品声明范围：advisory）", text)
         self.assertIn("## 当前权重（制品声明范围：advisory）", text)
         self.assertIn("## 行情覆盖与时效", text)
         self.assertIn("provider 回执：yfinance / daily_sync_quote_metadata", text)
         self.assertIn("- Y：skipped_circuit_open（provider 层未取得元数据，不等于无报价）", text)
+
+    def test_policy_denominator_weight_is_rendered_beside_the_total_weight(self):
+        self.seed_full_run()
+        limits_path = self.run_dir / "out" / "position_limits.json"
+        limits = json.loads(limits_path.read_text(encoding="utf-8"))
+        limits["positions"][0]["weight_compliance"]["current_weight_policy_denominator"] = 0.7778
+        limits_path.write_text(json.dumps(limits), encoding="utf-8")
+        code, text = self.render()
+        self.assertEqual(code, 0)
+        self.assertIn("| X Corp | 0.7000 | 0.7778 |", text)
 
     def test_weights_are_ordered_by_descending_weight(self):
         self.seed_full_run()

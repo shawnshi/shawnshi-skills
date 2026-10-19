@@ -13,7 +13,7 @@ from collections import Counter
 from src.core.local_paths import local_path, local_regular_file
 
 VENDOR = Path(__file__).resolve().parents[2] / "vendor-tag-metadata"
-FIELDS = ["Tempo", "mood", "DJ_VOCALS", "DJ_ENERGY", "DJ_SCENE"]
+FIELDS = ["Tempo", "mood", "Genre", "DJ_VOCALS", "DJ_ENERGY", "DJ_SCENE"]
 COLS = ["文件名", "标题", "演出者", "专辑 / 来源", "年份"] + FIELDS
 VALID = {
     "Tempo": {"Very Slow", "Slow", "Moderate", "Fast", "Very Fast"},
@@ -22,6 +22,15 @@ VALID = {
             "|"
         )
     ),
+    "Genre": {
+        "Pop", "Rock", "Ballad", "Folk", "Jazz", "Classical", "R&B", "Soul", "Hip-Hop",
+        "Rap", "Electronic", "EDM", "Dance", "Ambient", "Metal", "Punk", "Blues", "Country",
+        "Reggae", "Funk", "Disco", "Indie", "Alternative", "Soundtrack", "World Music",
+        "New Age", "Acoustic", "Chamber", "Opera", "Latin", "Traditional", "Pure Music",
+        "C-Pop", "Mandopop", "Cantopop", "J-Pop", "K-Pop", "流行", "摇滚", "民谣", "爵士",
+        "古典", "纯音乐", "电子", "轻音乐", "原声", "说唱", "金属", "蓝调", "乡村", "古风",
+        "中国风", "世界音乐", "unknown"
+    },
     "DJ_VOCALS": {"vocal", "instrumental", "unknown"},
     "DJ_ENERGY": {"low", "medium", "high", "unknown"},
     "DJ_SCENE": {"focus", "coding", "relax", "energy", "pop", "unknown"},
@@ -67,6 +76,13 @@ def acceptable(field, items):
             bool(parts)
             and len(parts) == len(set(parts))
             and set(parts) <= VALID[field]
+            and ("unknown" not in parts or parts == ["unknown"])
+        )
+    if field == "Genre":
+        parts = [v.strip() for item in items for v in item.split(";") if v.strip()]
+        return (
+            bool(parts)
+            and all(1 <= len(p) <= 40 and not any(c in p for c in "\r\n\t\0") for p in parts)
             and ("unknown" not in parts or parts == ["unknown"])
         )
     return len(items) == 1 and items[0].strip() in VALID[field]
@@ -221,7 +237,7 @@ def library_audio_paths(library_root, traversal_errors, coverage_notes):
                 )
 
 
-def scan_paths(paths, library_root):
+def scan_paths(paths, library_root, cache=None):
     records, errors, seen = [], [], set()
     module = codec()
     for path in paths:
@@ -230,7 +246,23 @@ def scan_paths(paths, library_root):
             continue
         seen.add(key)
         try:
-            records.append(inventory(path, library_root))
+            cached = cache.get(key) if isinstance(cache, dict) else None
+            if cached and isinstance(cached, dict):
+                p = Path(path)
+                st = p.stat()
+                if (
+                    st.st_size == cached.get("size")
+                    and st.st_mtime_ns == cached.get("mtime_ns")
+                    and cached.get("format")
+                    and isinstance(cached.get("tags"), dict)
+                    and isinstance(cached.get("row"), dict)
+                ):
+                    records.append(cached)
+                    continue
+            record = inventory(path, library_root)
+            records.append(record)
+            if isinstance(cache, dict):
+                cache[key] = record
         except (OSError, ValueError, module.MutagenError) as error:
             errors.append(
                 {

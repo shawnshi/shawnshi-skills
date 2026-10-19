@@ -10,6 +10,8 @@
 - 归档存在两代格式：2026-09-13 起的报告使用当前结构；此前的归档缺少当前七项元数据与规范标题，当前结构门对这类目标 fail closed。这类文件只读保留，修正须人工身份规范化/复核后按共享契约处理，不自动迁移、改写或改名。
 - CLI 保留 weekly/scout 的五个必需参数、`--report-timezone`、`--allow-custom-filename`；函数 `validate_report(...) -> list[str]`，错误非空、CLI 退出 1，成功退出 0，参数语法错误退出 2。`--window-mode` 默认 rolling7；不使用 weekly 专属的 `--allow-custom-period`。自定义文件名仅用户明确指定时允许，不豁免身份、日期或来源校验。
 
+编制前先运行 `python -B scripts/validate_industry_radar.py --describe-contract`，获取真实章节、表头、状态/窗口枚举及英文逗号分隔规则；只输出结构合同，不读取报告、联网、写文件或归档，必须独立使用，不能与验证参数混合。结构字段仍按下述文法填充，事实与访问须另行核验。
+
 从技能目录运行（这是合成示例，不是实际报告命令）：
 
 ```sh

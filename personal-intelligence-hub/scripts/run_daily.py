@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import sys
+
+# A resume invocation is an observer even when its caller forgot Python -B.
+if len(sys.argv) > 1 and sys.argv[1] in {"resume", "evaluate", "catalog"}:
+    sys.dont_write_bytecode = True
+
 import argparse
 import asyncio
 import json
@@ -107,7 +113,12 @@ def assess_supplement_gaps(
     source_rate = float(coverage.get("source_success_rate", 0.0) or 0.0)
     minimum_source = float(policy.get("minimum_source_success_rate", 0.7))
     source_coverage_degraded = source_rate < minimum_source
-    if source_coverage_degraded:
+    critical_health_gap = any(str(reason).startswith("strategic coverage china_") for reason in coverage.get("reasons", []))
+    if critical_health_gap:
+        for gap in gaps:
+            if gap["lane"] == "HealthcareRadar":
+                gap["query_scope"] += "；优先核验中国医保/卫健政策与 CHIMA 原始线索，记录未覆盖主题"
+    if source_coverage_degraded or critical_health_gap:
         existing_lanes = {str(gap["lane"]) for gap in gaps}
         for lane, gap_id, scope in (
             (
@@ -121,6 +132,10 @@ def assess_supplement_gaps(
                 "医疗数字化原始来源；修复基线来源失败或日期证据不足",
             ),
         ):
+            if lane == "TechRadar" and not source_coverage_degraded:
+                continue
+            if critical_health_gap and lane == "HealthcareRadar":
+                scope += "；中国医保/卫健政策与 CHIMA 原始线索"
             if lane not in existing_lanes:
                 gaps.append(
                     {
@@ -214,6 +229,12 @@ def assess_supplement_gaps(
                 "max_turns": min(int(gap["max_turns"]), max_turns),
             }
         )
+        if article_broker_version == 3 and gap["lane"] in {"TechRadar", "HealthcareRadar"}:
+            domain = "technology" if gap["lane"] == "TechRadar" else "healthcare_digital"
+            count = sum(domain == item.get("provisional_domain") for item in items)
+            cap = int(budget.get("max_urls_per_gap_cap", 8))
+            gap["max_urls"] = min(cap, max(max_urls, count))
+            gap["bound_reading_budget"] = max(2, gap["max_urls"] - max_queries)
         if article_broker_version in {2, 3}:
             # Use the request builder's lane slice and exact required-bound rule.
             _, required_ids = select_supplement_bound_candidates(
@@ -338,7 +359,7 @@ async def prepare_run(
         now=now,
         run_id=run_id,
         linked_from_run_id=linked_from_run_id,
-        claim_grounding_version=2,
+        claim_grounding_version=3 if article_broker_version == 3 else 2,
     )
     run_dir = Path(manifest["run_dir"])
     record_stage(
@@ -563,6 +584,7 @@ async def prepare_run(
             manifest_path,
             gaps,
             article_broker_version=article_broker_version,
+            worker_delivery_version=1 if article_broker_version == 3 else None,
             now=now,
         )
     else:
@@ -790,6 +812,7 @@ def main() -> None:
     archive.add_argument("--refined", type=Path, required=True)
     archive.add_argument("--news-dir", type=Path)
     archive.add_argument("--history-path", type=Path)
+    archive.add_argument("--no-runtime-state", action="store_true", help="Skip shared runtime telemetry writes; the bound archive and run receipt still commit.")
 
     preview = subparsers.add_parser(
         "preview",
@@ -806,6 +829,19 @@ def main() -> None:
     check_expansion.add_argument("--manifest", type=Path, required=True)
     check_expansion.add_argument("--refined", type=Path, required=True)
     check_expansion.add_argument("--semantic-receipt", type=Path, required=True)
+    check_expansion.add_argument(
+        "--allow-coverage-deficits",
+        action="store_true",
+        help="Allow expansion from 3 to 7 days even if baseline/supplement has coverage deficits",
+    )
+
+    resume = subparsers.add_parser("resume", help="Validate and project read-only recovery actions, handoff timing and usage gaps.")
+    resume.add_argument("--manifest", type=Path, required=True)
+
+    evaluate = subparsers.add_parser("evaluate", help="Read registered research funnels; no automatic learning or source expansion.")
+    evaluate.add_argument("--manifest", type=Path, required=True)
+    catalog_parser = subparsers.add_parser("catalog", help="Index explicit manifest metadata only; no recursive scan or completion claim.")
+    catalog_parser.add_argument("--manifest", dest="manifests", type=Path, action="append", required=True)
 
     status = subparsers.add_parser("status", help="Print a run manifest.")
     status.add_argument("--manifest", type=Path, required=True)
@@ -1026,7 +1062,6 @@ def main() -> None:
         print(json.dumps({"status": "registered"}, ensure_ascii=False))
     elif args.command == "check-expansion":
         import shlex
-        import sys
 
         from hub_utils import load_json
         from run_contract import (
@@ -1056,6 +1091,19 @@ def main() -> None:
         # The gate above verifies evidence, history dedupe, lineage and the funnel.
         # Count selected events, not retained source candidates (many may support one event).
         items_count = len(refined["top_10"])
+        request_record = manifest.get("artifacts", {}).get("supplement_request", {})
+        quality_request = load_json(Path(request_record["artifact_path"]), {}) if request_record.get("artifact_path") else {}
+        if quality_request.get("collection_quality_version") == 1:
+            from collection_quality import expansion_diagnostics
+            baseline_record = manifest["stages"]["baseline"]
+            baseline = load_json(Path(baseline_record["artifact_path"]), {})
+            supplement_record = manifest["stages"]["supplemental"]
+            supplemental = load_json(Path(supplement_record["artifact_path"]), {})
+            readiness = expansion_diagnostics(refined, baseline, supplemental)
+            if not readiness["allow_expansion"] and not getattr(args, "allow_coverage_deficits", False):
+                print(json.dumps({"status": "expansion_blocked_by_coverage", "allow_expansion": False,
+                                  "coverage_diagnostics": readiness, "manifest_path": str(args.manifest)}, ensure_ascii=False, indent=2))
+                return
 
         window_meta = manifest.get("window", {})
         window_days = window_meta.get("days", 3)
@@ -1142,22 +1190,22 @@ def main() -> None:
                 )
             )
         else:
-            reason = []
+            reasons = []
             if items_count >= 10:
-                reason.append(f"sufficient items ({items_count})")
+                reasons.append(f"sufficient items ({items_count})")
             if window_days != 3:
-                reason.append(f"window_days is {window_days}")
+                reasons.append(f"window_days is {window_days}")
             if explicit_window:
-                reason.append("explicit window requested")
+                reasons.append("explicit window requested")
             if linked_from:
-                reason.append(f"already expanded from {linked_from}")
+                reasons.append(f"already expanded from {linked_from}")
 
             print(
                 json.dumps(
                     {
                         "action": "continue",
-                        "reason": ", ".join(reason)
-                        if reason
+                        "reason": ", ".join(reasons)
+                        if reasons
                         else "no expansion criteria met",
                     },
                     ensure_ascii=False,
@@ -1175,15 +1223,36 @@ def main() -> None:
             else markdown,
             end="" if args.format == "markdown" else "\n",
         )
+    elif args.command in {"evaluate", "catalog"}:
+        from run_research import catalog, evaluate_run
+
+        try:
+            report = evaluate_run(args.manifest) if args.command == "evaluate" else catalog(args.manifests)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            parser.error(str(exc))
+    elif args.command == "resume":
+        from run_progress import inspect_run
+
+        try:
+            print(json.dumps(inspect_run(args.manifest), ensure_ascii=False, indent=2))
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            parser.error(str(exc))
     elif args.command == "forge":
         from forge import forge_briefing
 
         kwargs: dict[str, Any] = {}
+        if args.no_runtime_state:
+            kwargs["update_runtime_state"] = False
         if args.news_dir is not None:
             kwargs["news_dir"] = args.news_dir
         if args.history_path is not None:
             kwargs["history_path"] = args.history_path
-        result = forge_briefing(args.manifest, args.refined, **kwargs)
+        from contextlib import nullcontext, redirect_stdout
+
+        # Scoped recovery commands keep their control channel one JSON object.
+        with (redirect_stdout(sys.stderr) if args.no_runtime_state else nullcontext()):
+            result = forge_briefing(args.manifest, args.refined, **kwargs)
         print(
             json.dumps(
                 {

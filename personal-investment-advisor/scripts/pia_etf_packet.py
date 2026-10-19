@@ -427,7 +427,7 @@ CHANNEL_ADAPTERS: dict[str, dict[str, Any]] = {
     "cninfo": {
         "purpose": "A-share issuer disclosure (cninfo hisAnnouncement API)",
         "instrument_classes": {"stock"},
-        "locator": "http://www.cninfo.com.cn/new/hisAnnouncement/query",
+        "locator": "https://www.cninfo.com.cn/new/hisAnnouncement/query",
     },
     "nasdaq": {
         "purpose": "Exchange dividend feed for US listed funds and equities",
@@ -497,24 +497,25 @@ def _fetch_cninfo(code: str, task_dir: Path, window: str, *,
         request = urllib.request.Request(
             CHANNEL_ADAPTERS["cninfo"]["locator"],
             data=urllib.parse.urlencode(payload).encode(),
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                                   "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-                     "Referer": "http://www.cninfo.com.cn/new/commonUrl?url=disclosure/list/notice",
+            headers={"User-Agent": "PIA ETF evidence collector/1.0",
+                     "Referer": "https://www.cninfo.com.cn/new/commonUrl?url=disclosure/list/notice",
                      "X-Requested-With": "XMLHttpRequest"},
             method="POST",
         )
-        raw = urllib.request.urlopen(request, timeout=45).read()
+        from secure_transport import open_https
+        with open_https(request, timeout=45) as response:
+            raw = response.read()
         parsed = json.loads(raw.decode("utf-8", "replace"))
         total = parsed.get("totalRecordNum")
         announcements = parsed.get("announcements")
-        empty_shell = (total == 0 and announcements is None and len(raw) < 300)
+        empty_shell = (total == 0 and announcements is None)
         details["attempts"] = attempt
         details["empty_shell"] = empty_shell
         if not empty_shell:
             count = int(total) if isinstance(total, int) else len(announcements or [])
-            details["rows_parsed"] = isinstance(total, int) or isinstance(announcements, list)
+            details["rows_parsed"] = type(total) is int and total >= 0 and isinstance(announcements, list)
             return raw, count, details
-    details["rows_parsed"] = True
+    details["rows_parsed"] = False
     return raw, 0, details
 
 
@@ -522,9 +523,11 @@ def _fetch_nasdaq(symbol: str, task_dir: Path, window: str) -> tuple[bytes, int,
     import urllib.request
 
     url = CHANNEL_ADAPTERS["nasdaq"]["locator"].format(symbol=symbol)
-    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 dhls-scout/1.0",
+    request = urllib.request.Request(url, headers={"User-Agent": "PIA ETF evidence collector/1.0",
                                                    "Accept": "application/json"})
-    raw = urllib.request.urlopen(request, timeout=60).read()
+    from secure_transport import open_https
+    with open_https(request, timeout=60) as response:
+        raw = response.read()
     parsed = json.loads(raw.decode("utf-8", "replace"))
     rows = ((parsed or {}).get("data") or {}).get("dividends")
     rows = rows.get("rows") if isinstance(rows, dict) else rows

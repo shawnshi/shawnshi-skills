@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-digital-strategy-partner",
-  "generated_at": "2026-09-24T09:41:50+08:00",
+  "generated_at": "2026-10-19T09:59:43+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -96,7 +96,7 @@
     },
     {
       "path": "references/retrieval_specialist.md",
-      "sha256": "eb7adf79a2079c1178af17c6e33e25835cccd69900e12466cf33fa11dfd6d5a2"
+      "sha256": "337a69f0a85c78128d04e98d9feb6d89b594ee5efa15c6c51d3ffc26142c1547"
     },
     {
       "path": "references/workflows.md",
@@ -176,7 +176,7 @@
       "path": "references/retrieval_specialist.md",
       "exists": true,
       "resolved_path": "hit-digital-strategy-partner/references/retrieval_specialist.md",
-      "sha256": "eb7adf79a2079c1178af17c6e33e25835cccd69900e12466cf33fa11dfd6d5a2"
+      "sha256": "337a69f0a85c78128d04e98d9feb6d89b594ee5efa15c6c51d3ffc26142c1547"
     },
     {
       "path": "references/workflows.md",

@@ -13,6 +13,7 @@ from collections.abc import Mapping, MutableMapping
 from importlib.metadata import PackageNotFoundError, version as package_version
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import MethodType
 from typing import Sequence
 
 from garmin_capabilities import (
@@ -101,6 +102,7 @@ def _emit(payload: dict, *, stream=None) -> None:
 # dependency and credential failures apart.
 AUTH_FAILURE_STATUSES = (
     "rate_limited",
+    "provider_blocked",
     "tls_error",
     "connection_error",
     "mfa_required",
@@ -177,12 +179,101 @@ def _http_status(exc: BaseException) -> int | None:
     return None
 
 
+class _LoginTransportBlocked(BaseException):
+    """Owned hard-stop signal: the SDK's broad Exception handlers must not retry."""
+
+    def __init__(self, status_code: int, category: str):
+        self.status_code = status_code
+        self.category = category
+        super().__init__("authentication_transport_blocked")
+
+
+class _LoginRequestGuard:
+    """Per-login latch covering SSO/MFA sessions and DI/IT exchange transports."""
+
+    def __init__(self):
+        self.blocked: _LoginTransportBlocked | None = None
+        self.active = True
+        self.sessions: set[int] = set()
+
+    def check(self):
+        if self.blocked is not None:
+            raise self.blocked
+        if not self.active:
+            raise RuntimeError("authentication_scope_closed")
+
+    def reject(self, code: int, category: str):
+        self.blocked = _LoginTransportBlocked(code, category)
+        raise self.blocked
+
+    def wrap(self, request):
+        def guarded(*args, **kwargs):
+            self.check()
+            try:
+                response = request(*args, **kwargs)
+            except Exception as exc:
+                code = _http_status(exc)
+                if code in (403, 429):
+                    self.reject(code, "rate_limited" if code == 429 else "provider_blocked")
+                raise
+            code = getattr(response, "status_code", None)
+            if code in (403, 429):
+                self.reject(code, "rate_limited" if code == 429 else "provider_blocked")
+            headers = getattr(response, "headers", None)
+            header = getattr(headers, "get", None)
+            if callable(header) and header("cf-mitigated", "") == "challenge":
+                self.reject(code if isinstance(code, int) else 200, "provider_blocked")
+            # The pinned SDK also retries MFA when 429 is inside a 200 JSON
+            # body. Inspect only known error fields; never log response bodies.
+            decode = getattr(response, "json", None)
+            if callable(decode):
+                try:
+                    body = decode()
+                except ValueError:
+                    body = None
+                if isinstance(body, dict):
+                    error = body.get("error")
+                    embedded = error.get("status-code") if isinstance(error, dict) else None
+                    if embedded in (403, 429, "403", "429"):
+                        self.reject(code if isinstance(code, int) else 200,
+                                    "rate_limited" if str(embedded) == "429" else "provider_blocked")
+                    status = body.get("responseStatus")
+                    if isinstance(status, dict) and status.get("type") == "CAPTCHA_REQUIRED":
+                        self.reject(code if isinstance(code, int) else 200, "provider_blocked")
+            return response
+        return guarded
+
+    def session(self, session):
+        if id(session) in self.sessions:
+            return
+        request = getattr(session, "request", None)
+        if not callable(request):
+            raise RuntimeError("guarded_login_session_unsupported")
+        session.request = self.wrap(request)
+        self.sessions.add(id(session))
+
+    def bind(self, native):
+        post = getattr(native, "_http_post", None)
+        if not callable(post):
+            raise RuntimeError("guarded_login_exchange_unsupported")
+        native._http_post = self.wrap(post)
+        for name in ("cs", "_api_session"):
+            self.session(getattr(native, name, None))
+
+    def close(self):
+        self.active = False
+        if self.blocked is not None:
+            self.blocked.__traceback__ = None
+
+
 def _classify_auth_failure(exc: BaseException) -> str:
     """Map an upstream exception onto one stable failure category.
 
     Only the category and the exception type name are ever emitted; the
     upstream message is inspected in memory and never echoed.
     """
+    if isinstance(exc, _LoginTransportBlocked):
+        return exc.category
     name = type(exc).__name__.casefold()
     compact_name = name.replace(" ", "")
     message = str(exc).casefold()
@@ -190,6 +281,10 @@ def _classify_auth_failure(exc: BaseException) -> str:
     status_code = _http_status(exc)
     if status_code == 429:
         return "rate_limited"
+    if (status_code == 403 or "403" in haystack) and any(
+        marker in haystack for marker in ("cloudflare", "bot challenge", "cf-mitigated")
+    ):
+        return "provider_blocked"
     if status_code in (401, 403):
         return "authentication_failed"
     if status_code == 408 or (status_code is not None and status_code >= 500):
@@ -299,7 +394,25 @@ def _read_saved_token_bytes(token_file: Path) -> bytes | None:
 def _new_live_client(Garmin, *args, **kwargs):
     # The caller owns retries; neither SDK nor HTTP transport may replay a read.
     client = Garmin(*args, retry_attempts=0, **kwargs)
-    client.client.configure(retries=0)
+    transport = client.client
+    configure = getattr(transport, "configure", None)
+    if callable(configure):
+        configure(retries=0)
+    else:
+        # Native garminconnect 0.3.17 uses requests sessions rather than
+        # garth.Client.configure. Keep both SSO and API transports no-retry.
+        from requests import Session
+        from urllib3.util.retry import Retry
+
+        sessions = [getattr(transport, name, None) for name in ("cs", "_api_session")]
+        if not all(isinstance(session, Session) for session in sessions):
+            raise RuntimeError("garmin_transport_contract_mismatch")
+        for session in sessions:
+            assert session is not None  # narrowed after the all-Session contract check
+            for adapter in session.adapters.values():
+                adapter.max_retries = Retry(
+                    total=0, connect=0, read=0, redirect=0, status=0
+                )
     return client
 
 
@@ -332,6 +445,35 @@ def _restore_client_without_persistent_token_write(
         return client
 
 
+def _single_mobile_login_cffi(native, email: str, password: str) -> None:
+    """Use the pinned SDK's first existing profile once; never rotate on errors."""
+    from garminconnect import client as sdk
+
+    profiles = sdk.MOBILE_IMPERSONATIONS
+    if (
+        not sdk.HAS_CFFI
+        or not profiles
+        or not callable(getattr(native, "_do_mobile_login", None))
+    ):
+        raise RuntimeError("single_login_transport_contract_mismatch")
+    # Match SDK session ownership: MFA may retain this session until the
+    # enclosing native.login resolves its challenge. Do not close it early.
+    session = sdk.cffi_requests.Session(impersonate=profiles[0])
+    guard = getattr(native, "_bounded_login_guard", None)
+    if not isinstance(guard, _LoginRequestGuard):
+        raise RuntimeError("guarded_login_scope_required")
+    guard.session(session)
+    native._do_mobile_login(session, email, password)
+
+
+def _strict_verify_token(native) -> bool:
+    """An inconclusive provider response is a failure, never token acceptance."""
+    profile = native.connectapi("/userprofile-service/socialProfile")
+    if not isinstance(profile, dict) or not isinstance(profile.get("displayName"), str) or not profile["displayName"]:
+        raise RuntimeError("token_verification_identity_missing")
+    return True
+
+
 def login(
     email: str,
     password: str,
@@ -345,6 +487,8 @@ def login(
         network_capability=network_capability,
         request=request,
     )
+    native = None
+    request_guard = None
     try:
         consume_capability(
             token_write_capability,
@@ -360,11 +504,47 @@ def login(
             return input("Garmin MFA code: ")
 
         client = _new_live_client(Garmin, email, password, prompt_mfa=get_mfa)
-        client.login(tokenstore=str(TOKEN_DIR))
+        native = getattr(client, "client", None)
+        disabled = getattr(native, "skip_strategies", None)
+        if (
+            native is None
+            or not isinstance(disabled, set)
+            or not callable(getattr(native, "login", None))
+            or not callable(getattr(native, "dump", None))
+            or getattr(native, "_tokenstore_path", None) is not None
+        ):
+            raise RuntimeError("single_strategy_login_contract_mismatch")
+        # Explicit password login starts fresh: never first retry a rejected
+        # saved session. Keep only the SDK's existing first strategy, with no
+        # transport/fingerprint rotation after a 429 or provider challenge.
+        disabled.update({"mobile+requests", "widget+cffi", "portal+cffi", "portal+requests"})
+        # The remaining upstream strategy also rotates fingerprints internally,
+        # and its verifier accepts inconclusive failures. Override only this
+        # fresh instance; installed SDK modules and read-only clients stay intact.
+        request_guard = _LoginRequestGuard()
+        request_guard.bind(native)
+        native._bounded_login_guard = request_guard
+        native._mobile_login_cffi = MethodType(_single_mobile_login_cffi, native)
+        native._verify_token = MethodType(_strict_verify_token, native)
+        native.login(email, password, prompt_mfa=get_mfa)
+        request_guard.check()
+        # This is the existing explicitly authorized manual token-write path;
+        # SDK dump is atomic. Failed authentication never replaces old tokens.
+        native.dump(str(TOKEN_DIR))
         return True
+    except _LoginTransportBlocked as exc:
+        if native is not None:
+            clear = getattr(native, "_clear_auth_state", None)
+            if callable(clear):
+                clear(keep_tokenstore_path=True)
+        _emit_safe_failure("authentication_failed", exc)
+        return False
     except Exception as exc:
         _emit_safe_failure("authentication_failed", exc)
         return False
+    finally:
+        if request_guard is not None:
+            request_guard.close()
 
 
 def get_client(
@@ -452,6 +632,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    request: dict[str, object]
     args = build_parser().parse_args(argv)
     _LAST_FAILURE.clear()
     if args.command is None:

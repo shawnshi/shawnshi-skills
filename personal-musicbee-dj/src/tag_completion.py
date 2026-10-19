@@ -1,12 +1,15 @@
 """Prepare research jobs and apply reviewed results. No external API or player calls."""
 
 import argparse
+from contextlib import contextmanager
 import csv
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 import time
+import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.core.local_paths import local_path, local_regular_file
@@ -42,9 +45,38 @@ def task_manifest(work_dir):
     return work, manifest
 
 
-def prepare_jobs(work_dir, batch_size=10):
+@contextmanager
+def task_plan_lock(work_dir, timeout=10.0):
+    lock_file = Path(work_dir) / ".jobs.lock"
+    started = time.monotonic()
+    token = uuid.uuid4().hex
+    while True:
+        try:
+            fd = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "w", encoding="ascii") as h:
+                h.write(token)
+                h.flush()
+                os.fsync(h.fileno())
+            break
+        except (FileExistsError, OSError):
+            if time.monotonic() - started >= timeout:
+                raise TimeoutError("Timeout waiting for task plan lock")
+            time.sleep(0.05)
+    try:
+        yield
+    finally:
+        try:
+            if lock_file.is_file() and lock_file.read_text(encoding="ascii") == token:
+                lock_file.unlink()
+        except OSError:
+            pass
+
+
+def prepare_jobs(work_dir, batch_size=10, max_concurrency=1):
     if type(batch_size) is not int or not 1 <= batch_size <= 25:
         raise ValueError("Research batches must contain 1-25 tracks")
+    if type(max_concurrency) is not int or not 1 <= max_concurrency <= 5:
+        raise ValueError("Concurrency must be 1-5")
     work, manifest = task_manifest(work_dir)
     if (work / "jobs.json").exists():
         raise ValueError("Existing plan must not be overwritten")
@@ -88,7 +120,7 @@ def prepare_jobs(work_dir, batch_size=10):
         work / "jobs.json",
         {
             "schema_version": 1,
-            "concurrency": 1,
+            "concurrency": max_concurrency,
             "agent_sha256": hashlib.sha256(agent_data).hexdigest(),
             "schema_sha256": hashlib.sha256(schema_data).hexdigest(),
             "batch_size": batch_size,
@@ -100,45 +132,54 @@ def prepare_jobs(work_dir, batch_size=10):
         "batches": len(jobs),
         "tracks": len(records),
         "batch_size": batch_size,
-        "concurrency": 1,
+        "concurrency": max_concurrency,
     }
 
 
 def next_jobs(work_dir, count=1):
     work, _ = task_manifest(work_dir)
-    plan = read_json(work / "jobs.json")
-    if plan.get("blocked"):
-        raise ValueError("Research lane blocked: " + plan.get("blocker", "unknown"))
-    if count != 1:
-        raise ValueError("Research is serial until worktree/container isolation is authorized")
-    if any(j["state"] == "running" for j in plan["jobs"]):
-        return []
-    selected = [j for j in plan["jobs"] if j["state"] == "pending"][:count]
-    for job in selected:
-        batch_context(
-            work, job["key"]
-        )  # Check scope/CSV before sending any identities to a child.
-    return [{**{k: j[k] for k in ("key", "cwd", "input", "count")},
-             "schema": str(work / "tag-schema.json")} for j in selected]
+    with task_plan_lock(work):
+        plan = read_json(work / "jobs.json")
+        if plan.get("blocked"):
+            raise ValueError("Research lane blocked: " + plan.get("blocker", "unknown"))
+        max_allowed = plan.get("concurrency", 1)
+        if max_allowed == 1 and count != 1:
+            raise ValueError("Research is serial until worktree/container isolation is authorized")
+        if type(count) is not int or not 1 <= count <= 5:
+            raise ValueError("Requested count must be 1-5")
+        if count > max_allowed:
+            raise ValueError(f"Requested count ({count}) exceeds plan concurrency ({max_allowed})")
+        running = sum(1 for j in plan["jobs"] if j["state"] == "running")
+        if running:
+            return []
+        slots = max_allowed
+        selected = [j for j in plan["jobs"] if j["state"] == "pending"][:min(count, slots)]
+        for job in selected:
+            batch_context(
+                work, job["key"]
+            )  # Check scope/CSV before sending any identities to a child.
+        return [{**{k: j[k] for k in ("key", "cwd", "input", "count")},
+                 "schema": str(work / "tag-schema.json")} for j in selected]
 
 
 def mark_job(work_dir, batch, state, reason=""):
     work, _ = task_manifest(work_dir)
-    plan = read_json(work / "jobs.json")
-    matches = [j for j in plan["jobs"] if j["key"] == batch]
-    if len(matches) != 1 or state not in {"running", "blocked"}:
-        raise ValueError("Invalid job/state")
-    if state == "running" and (plan.get("blocked") or matches[0]["state"] != "pending"):
-        raise ValueError("Already claimed or blocked job")
-    matches[0]["state"] = state
-    if state == "blocked":
-        if not reason:
-            raise ValueError("Blocked jobs require observable failure evidence")
-        plan.update(blocked=True, blocker=reason)
-    from src.core.tag_writer import save_json
+    with task_plan_lock(work):
+        plan = read_json(work / "jobs.json")
+        matches = [j for j in plan["jobs"] if j["key"] == batch]
+        if len(matches) != 1 or state not in {"running", "blocked"}:
+            raise ValueError("Invalid job/state")
+        if state == "running" and (plan.get("blocked") or matches[0]["state"] != "pending"):
+            raise ValueError("Already claimed or blocked job")
+        matches[0]["state"] = state
+        if state == "blocked":
+            if not reason:
+                raise ValueError("Blocked jobs require observable failure evidence")
+            plan.update(blocked=True, blocker=reason)
+        from src.core.tag_writer import save_json
 
-    save_json(work / "jobs.json", plan)
-    return {"batch": batch, "state": state, "blocked": plan["blocked"]}
+        save_json(work / "jobs.json", plan)
+        return {"batch": batch, "state": state, "blocked": plan["blocked"]}
 
 
 def batch_context(work_dir, batch):
@@ -224,7 +265,7 @@ def reviewed_updates(work, job, records):
     return validate_review(result, records, review, checksum)
 
 
-def review_batch(work_dir, batch, reviewed_sha256, review_path):
+def review_batch(work_dir, batch, reviewed_sha256, review_path, expected_review_sha256=None):
     from src.core.tag_writer import validate_review, save_json
     work, _, plan, job, folder, records = batch_context(work_dir, batch)
     data, result = result_snapshot(folder / "result.json")
@@ -233,6 +274,8 @@ def review_batch(work_dir, batch, reviewed_sha256, review_path):
         or checksum != job.get("result_sha256") or checksum != reviewed_sha256):
         raise ValueError("Review requires accepted research and its exact SHA256")
     review_data, review = result_snapshot(review_path)
+    if expected_review_sha256 is not None and hashlib.sha256(review_data).hexdigest() != expected_review_sha256:
+        raise ValueError("Parent review changed before acceptance")
     updates = validate_review(result, records, review, checksum)
     destination = folder / "review.json"
     if destination.exists():
@@ -318,15 +361,24 @@ def apply_batch(work_dir, batch, reviewed_sha256, limit=5):
     return summary
 
 
-def verify_task(work_dir):
+def verify_task(work_dir, batch=None):
     from src.core.tag_writer import digest, save_json
 
     work, manifest = task_manifest(work_dir)
+    plan = read_json(work / "jobs.json")
+    jobs = plan["jobs"]
+    records_to_check = manifest["records"]
+    if batch is not None:
+        _, _, _, job, _, batch_records = batch_context(work, batch)
+        jobs = [job]
+        records_to_check = list(batch_records.values())
+    allowed = {record["path"] for record in records_to_check}
     receipts = list((work / "backups").glob("*.json"))
     verified, failures = 0, []
-    allowed = {r["path"] for r in manifest["records"]}
     for file in receipts:
         receipt = read_json(file)
+        if batch is not None and receipt.get("path") not in allowed:
+            continue
         if receipt.get("status") != "committed":
             failures.append({"receipt": file.name, "reason": "not committed"})
             continue
@@ -334,7 +386,9 @@ def verify_task(work_dir):
         if str(source) not in allowed:
             raise ValueError("Receipt outside frozen task write-set")
         actual = inventory(source, manifest["library_root"])
-        if digest(source) != receipt["after_sha256"] or any(
+        current_hash = digest(source)
+        hash_matched = (current_hash == receipt.get("after_sha256"))
+        if not hash_matched or any(
             values(actual["tags"], k) != [v] for k, v in receipt["changes"].items()
         ):
             failures.append(
@@ -343,16 +397,15 @@ def verify_task(work_dir):
         else:
             verified += 1
     records, errors = scan_paths(
-        [r["path"] for r in manifest["records"]], manifest["library_root"]
+        [r["path"] for r in records_to_check], manifest["library_root"]
     )
-    plan = read_json(work / "jobs.json")
-    baselines = {r["path"]: r for r in manifest["records"]}
+    baselines = {r["path"]: r for r in records_to_check}
     actual_records = {r["path"]: r for r in records}
     remaining = [record for record in records if set(record['needs']) &
                  set(baselines[record['path']].get('requested_fields', FIELDS))]
     unapplied = []
     research_reconciled = not plan.get("blocked")
-    for job in plan["jobs"]:
+    for job in jobs:
         if job["state"] != "researched" or not job.get("review_sha256"):
             research_reconciled = False
             continue
@@ -368,16 +421,18 @@ def verify_task(work_dir):
             )):
                 unapplied.append(path)
     research_reconciled = research_reconciled and not unapplied and not errors
-    with (work / "remaining_tags.csv").open("w", encoding="utf-8-sig", newline="") as h:
+    report_folder = work if batch is None else work / "batches" / batch
+    with (report_folder / "remaining_tags.csv").open("w", encoding="utf-8-sig", newline="") as h:
         writer = csv.DictWriter(h, fieldnames=COLS)
         writer.writeheader()
         writer.writerows(r["row"] for r in remaining)
     summary = {
+        "verification_scope": batch or "task",
         "verified_commits": verified,
         "receipt_failures": len(failures),
         "failure_samples": failures[:5],
         "remaining_incomplete_files": len(remaining),
-        "completion_scope": "requested_fields; not necessarily all five tags",
+        "completion_scope": "requested_fields; not necessarily all six tags",
         "read_errors": len(errors),
         "initial_read_errors": sum(
             e.get("scope") != "library_entry" for e in manifest["errors"]
@@ -387,15 +442,74 @@ def verify_task(work_dir):
         ),
         "research_reconciled": research_reconciled,
         "unapplied_files": len(unapplied),
-        "full_task_complete": research_reconciled and not failures
+        "full_task_complete": batch is None and research_reconciled and not failures
         and not remaining
         and not errors
         and not manifest["errors"],
         "all_checked_commits_valid": not failures and not errors,
-        "remaining_csv_sha256": digest(work / "remaining_tags.csv"),
+        "remaining_csv_sha256": digest(report_folder / "remaining_tags.csv"),
+        "player_refresh_hint": (
+            "In MusicBee, select updated tracks and press Shift+F5 or right-click 'Rescan Files' to update library UI from disk tags."
+            if verified > 0
+            else "No new file commits verified."
+        ),
     }
-    save_json(work / "verification_summary.json", summary)
+    save_json(report_folder / "verification_summary.json", summary)
     return summary
+
+
+def auto_commit_batch(work_dir, batch, result_path, run_reference, review_path):
+    from src.core.tag_writer import validate_results, validate_review
+
+    if not isinstance(run_reference, str) or not run_reference.strip():
+        raise ValueError("A successful settled research run reference is required")
+    work, _, plan, job, folder, records = batch_context(work_dir, batch)
+    data, result = result_snapshot(result_path)
+    incoming_sha256 = hashlib.sha256(data).hexdigest()
+    review_data, review = result_snapshot(review_path)
+    review_sha256 = hashlib.sha256(review_data).hexdigest()
+    approved = validate_review(result, records, review, incoming_sha256)
+    if review["run_reference"] != run_reference:
+        raise ValueError("Parent review run reference does not match")
+    changes = validate_results(result, records)
+    if job["state"] in {"pending", "running"}:
+        import_summary = import_result(work_dir, batch, result_path)
+        checksum = import_summary["result_sha256"]
+    elif job["state"] == "researched":
+        checksum = job["result_sha256"]
+        import_summary = read_json(folder / "research_summary.json")
+    else:
+        raise ValueError(f"Job {batch} in unresumable state: {job['state']}")
+
+    if incoming_sha256 != checksum:
+        raise ValueError("Accepted research SHA256 changed during automatic resume")
+    if (folder / "review.json").exists() and job.get("review_sha256"):
+        if review_sha256 != job["review_sha256"]:
+            raise ValueError("Parent review changed during automatic resume")
+        reviewed_updates(work, job, records)
+        review_summary = read_json(folder / "review_summary.json")
+    else:
+        review_summary = review_batch(work_dir, batch, checksum, review_path,
+                                      expected_review_sha256=review_sha256)
+    # One invocation has the same physical write budget as one apply call.
+    apply_res = apply_batch(work_dir, batch, checksum, limit=5)
+    verify_summary = verify_task(work_dir, batch=batch)
+    if not verify_summary["all_checked_commits_valid"]:
+        raise ValueError("Automatic verification failed: " + json.dumps(verify_summary["failure_samples"], ensure_ascii=False))
+    return {
+        "batch": batch,
+        "status": "auto_committed" if verify_summary["research_reconciled"] else "applying",
+        "eligible_files": import_summary["eligible_files"],
+        "eligible_fields": import_summary["eligible_fields"],
+        "approved_fields": review_summary["approved_fields"],
+        "rejected_fields": sum(len(fields) for fields in changes.values()) - sum(len(fields) for fields in approved.values()),
+        "applied_files": apply_res["applied_files"],
+        "applied_fields": apply_res["applied_fields"],
+        "verified_commits": verify_summary["verified_commits"],
+        "receipt_failures": verify_summary["receipt_failures"],
+        "all_checked_commits_valid": verify_summary["all_checked_commits_valid"],
+        "player_refresh_hint": verify_summary.get("player_refresh_hint", ""),
+    }
 
 
 def inspect_recovery(work_dir, receipt_path):
@@ -438,15 +552,17 @@ def main():
     scan.add_argument("--library-root", type=Path, required=True)
     scan.add_argument("--output-dir", type=Path, required=True)
     scan.add_argument("--paths-json", type=Path)
-    for name in ("plan", "next", "mark", "import-result", "review", "apply", "verify", "inspect-recovery"):
+    scan.add_argument("--cache-file", type=Path)
+    for name in ("plan", "next", "mark", "import-result", "review", "apply", "verify", "inspect-recovery", "auto-commit"):
         command = commands.add_parser(name)
         command.add_argument("--work-dir", type=Path, required=True)
-        if name in ("mark", "import-result", "review", "apply"):
+        if name in ("mark", "import-result", "review", "apply", "auto-commit"):
             command.add_argument("--batch", required=True)
         if name == "inspect-recovery":
             command.add_argument("--receipt", type=Path, required=True)
         if name == "plan":
             command.add_argument("--batch-size", type=int, default=10)
+            command.add_argument("--concurrency", type=int, default=1)
         if name == "next":
             command.add_argument("--count", type=int, default=1)
         if name == "mark":
@@ -454,8 +570,11 @@ def main():
                 "--state", choices=("running", "blocked"), required=True
             )
             command.add_argument("--reason", default="")
-        if name == "import-result":
+        if name in ("import-result", "auto-commit"):
             command.add_argument("--result", type=Path, required=True)
+        if name == "auto-commit":
+            command.add_argument("--run-reference", required=True)
+            command.add_argument("--review-file", type=Path, required=True)
         if name in ("review", "apply"):
             command.add_argument("--reviewed-result-sha256", required=True)
         if name == "review":
@@ -482,13 +601,24 @@ def main():
                 if args.paths_json
                 else library_audio_paths(root, traversal_errors, coverage_notes)
             )
-            records, errors = scan_paths(paths, root)
+            cache = {}
+            if args.cache_file and args.cache_file.exists():
+                try:
+                    cache_data = read_json(local_regular_file(args.cache_file.absolute()))
+                    if isinstance(cache_data, dict):
+                        cache = cache_data
+                except Exception:
+                    cache = {}
+            records, errors = scan_paths(paths, root, cache=cache)
+            if args.cache_file and cache:
+                from src.core.tag_writer import save_json
+                save_json(args.cache_file, cache)
             errors.extend(traversal_errors)
             result = write_inventory(
                 args.output_dir, root, records, errors, coverage_notes
             )
         elif args.command == "plan":
-            result = prepare_jobs(args.work_dir, args.batch_size)
+            result = prepare_jobs(args.work_dir, args.batch_size, args.concurrency)
         elif args.command == "next":
             result = {"jobs": next_jobs(args.work_dir, args.count)}
         elif args.command == "mark":
@@ -503,6 +633,8 @@ def main():
             )
         elif args.command == "inspect-recovery":
             result = inspect_recovery(args.work_dir, args.receipt)
+        elif args.command == "auto-commit":
+            result = auto_commit_batch(args.work_dir, args.batch, args.result, args.run_reference, args.review_file)
         else:
             result = verify_task(args.work_dir)
         print(json.dumps(result, ensure_ascii=False, indent=2))

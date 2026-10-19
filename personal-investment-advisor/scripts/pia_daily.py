@@ -26,6 +26,12 @@ import io
 import json
 import subprocess
 import sys
+import functools
+from contextvars import ContextVar
+from time import monotonic
+
+from artifact_io import atomic_bytes, atomic_text, snapshot_previous
+from process_budget import budgeted, remaining_seconds, run as run_process
 from pathlib import Path
 from typing import Any, Callable
 
@@ -56,6 +62,64 @@ REPLAY_HISTORY_FILENAME = "run_replay_history.jsonl"
 DECISION_SCOPE = "advisory"
 QUOTE_TIMEOUT_SECONDS = 900
 TERMINAL_COMPLETE = {"complete"}
+_RUN_STARTED = ContextVar('pia_run_started', default=None)
+_RUN_STAGES = ContextVar('pia_run_stages', default=None)
+
+
+class TimedStages(list):
+    """Stage intervals include orchestration since the previous recorded boundary."""
+    def __init__(self):
+        super().__init__()
+        self.mark = monotonic()
+        _RUN_STAGES.set(self)
+
+    def append(self, row):
+        now = monotonic()
+        row.setdefault('stage_elapsed_seconds', round(now - self.mark, 6))
+        row.setdefault('request_count', 'unknown')
+        row.setdefault('retry_count', 'unknown')
+        row.setdefault('cache_reused', row.get('reused') if type(row.get('reused')) is bool else 'unknown')
+        self.mark = now
+        super().append(row)
+
+
+def observed_run(function):
+    @functools.wraps(function)
+    def wrapped(*args, **kwargs):
+        started = monotonic()
+        token = _RUN_STARTED.set(started)
+        stages_token = _RUN_STAGES.set(None)
+        buffer = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buffer):
+                code = function(*args, **kwargs)
+            raw = buffer.getvalue().strip()
+            if raw:
+                payload = json.loads(raw)
+                payload.setdefault('run_elapsed_seconds', round(monotonic() - started, 6))
+                print(json.dumps(payload, ensure_ascii=False, indent=2))
+            return code
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+            # Storage failure must leave the old summary intact; emit a new failure
+            # receipt only to stdout, never attempt the failed commit again.
+            elapsed = round(monotonic() - started, 6)
+            stages = _RUN_STAGES.get()
+            if stages is None:
+                stages = []
+            mark = stages.mark if isinstance(stages, TimedStages) else started
+            failure = {'stage': 'runtime_failure', 'status': 'failed', 'exit_code': 3,
+                       'detail_status': 'pipeline_runtime_error',
+                       'stage_elapsed_seconds': round(monotonic() - mark, 6),
+                       'request_count': 'unknown', 'retry_count': 'unknown', 'cache_reused': 'unknown',
+                       'errors': [f'{type(exc).__name__}: {exc}']}
+            print(json.dumps({'status': 'failed', 'detail_status': 'pipeline_runtime_error',
+                              'run_elapsed_seconds': elapsed, 'stages': [*stages, failure],
+                              'errors': failure['errors']}, ensure_ascii=False, indent=2))
+            return 3
+        finally:
+            _RUN_STAGES.reset(stages_token)
+            _RUN_STARTED.reset(token)
+    return wrapped
 
 
 def sha256_file(path: Path) -> str | None:
@@ -80,6 +144,8 @@ def run_module(main: Callable[..., Any], argv: list[str]) -> tuple[int, dict]:
     buffer = io.StringIO()
     sys.argv = ["pia-stage", *argv]
     try:
+        if remaining_seconds(300, reserve=0) <= 0:
+            raise TimeoutError('daily stage deadline exhausted')
         with contextlib.redirect_stdout(buffer):
             result = main(argv) if accepts_argv else main()
         code = 0 if result is None else int(result)
@@ -112,14 +178,13 @@ def run_quotes(positions_file: Path, cache_dir: Path, symbols: list[str],
     if holiday_calendar is not None:
         command.extend(["--holiday-calendar-file", str(holiday_calendar)])
     try:
-        completed = subprocess.run(command, capture_output=True,
+        completed = run_process(command, capture_output=True,
                                    timeout=QUOTE_TIMEOUT_SECONDS, check=False)
     except subprocess.SubprocessError as exc:
         return 3, {"status": "failed", "detail_status": "quote_batch_unavailable",
                    "errors": [f"{type(exc).__name__}: {exc}"]}, None
     quotes_path = task_dir / "out" / "quotes.json"
     quotes_path.parent.mkdir(parents=True, exist_ok=True)
-    quotes_path.write_bytes(completed.stdout)
     payload = None
     try:
         payload = json.loads(completed.stdout.decode("utf-8"))
@@ -131,7 +196,8 @@ def run_quotes(positions_file: Path, cache_dir: Path, symbols: list[str],
             "status": "failed",
             "detail_status": "quote_batch_failed",
             "errors": [stderr or "quote batch did not return a JSON object"],
-        }, quotes_path
+        }, None
+    atomic_bytes(quotes_path, completed.stdout)
     audit = payload.get("portfolio_batch_audit") or {}
     complete = bool(audit.get("complete")) and bool(audit.get("coverage_complete"))
     return (0 if complete else 1), {
@@ -461,12 +527,17 @@ def capture_previous_run(task_dir: Path) -> dict[str, Any] | None:
     path = task_dir / "out" / "daily_run_summary.json"
     if not path.is_file():
         return None
+    raw = path.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    recovery = snapshot_previous(task_dir, digest)
     try:
-        raw = path.read_bytes()
-        payload = json.loads(raw.decode("utf-8"))
-    except (OSError, UnicodeError, ValueError):
-        return {"summary_sha256": None, "unreadable": True, "path": str(path)}
-    return {"summary_sha256": hashlib.sha256(raw).hexdigest(),
+        payload = json.loads(raw.decode('utf-8'))
+        if not isinstance(payload, dict):
+            raise ValueError('previous summary is not an object')
+    except (UnicodeError, ValueError):
+        return {'summary_sha256': digest, 'unreadable': True, 'path': str(path),
+                'recovery_manifest': str(recovery)}
+    return {"summary_sha256": digest, 'recovery_manifest': str(recovery),
             "generated_at": payload.get("generated_at"),
             "status": payload.get("status"),
             "detail_status": payload.get("detail_status")}
@@ -491,8 +562,9 @@ def append_replay_history(task_dir: Path, previous_run: dict[str, Any],
                              summary.get("reused_artifacts") or []],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as stream:
-        stream.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    entry['recovery_manifest'] = previous_run.get('recovery_manifest')
+    previous_bytes = path.read_bytes() if path.is_file() else b''
+    atomic_bytes(path, previous_bytes + (json.dumps(entry, ensure_ascii=False) + '\n').encode())
 
 
 def write_run_summary(task_dir: Path, summary: dict[str, Any],
@@ -526,17 +598,23 @@ def write_run_summary(task_dir: Path, summary: dict[str, Any],
             }
     path = task_dir / "out" / "daily_run_summary.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    started = _RUN_STARTED.get()
+    summary['run_elapsed_seconds'] = round(monotonic() - started, 6) if started is not None else 'unknown'
+    atomic_text(path, json.dumps(summary, ensure_ascii=False, indent=2))
     if previous_run is not None:
         append_replay_history(task_dir, previous_run, summary)
 
 
+@observed_run
+@budgeted(300)
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the pinned-epoch Daily Sync pipeline.")
     parser.add_argument("--positions-file", required=True)
     parser.add_argument("--task-dir", required=True)
     parser.add_argument("--cache-dir")
     parser.add_argument("--thesis-evidence-file")
+    parser.add_argument("--conditions-file", help="Authorized native ledger for held and unpurchased conditions.")
+    parser.add_argument("--evidence-root", help="Authorized source root for both lanes; no discovery from pack paths.")
     parser.add_argument("--scenario-assumptions")
     parser.add_argument("--scenario-portfolio")
     parser.add_argument("--dashboard-root", help="Explicitly authorized Dashboard root; no sibling-directory discovery.")
@@ -601,7 +679,7 @@ def main(argv: list[str] | None = None) -> int:
     positions_path = Path(args.positions_file).expanduser().resolve()
     task_dir = Path(args.task_dir).expanduser().resolve()
     # Read the run this invocation may replace *before* anything overwrites it.
-    previous_run_pending = capture_previous_run(task_dir)
+    previous_run_pending = capture_previous_run(task_dir) if not args.plan_only else None
     cache_dir = (Path(args.cache_dir).expanduser().resolve() if args.cache_dir
                  else task_dir / "cache")
     holiday_calendar = (Path(args.holiday_calendar_file).expanduser().resolve()
@@ -618,7 +696,7 @@ def main(argv: list[str] | None = None) -> int:
                              ensure_ascii=False, indent=2))
             return 3
     evaluation_epoch = args.now_epoch or datetime.datetime.now(datetime.timezone.utc).timestamp()
-    stages: list[dict[str, Any]] = []
+    stages: list[dict[str, Any]] = TimedStages()
     risk_histories: list[dict[str, str]] = []
     risk_fx_histories: list[dict[str, str]] = []
     if args.risk_history or args.risk_fx_history:
@@ -703,7 +781,7 @@ def main(argv: list[str] | None = None) -> int:
             "exit_code": code,
             "artifacts": artifacts or [],
             "errors": payload.get("errors") or [],
-            **{key: payload[key] for key in ("valid", "completeness", "coverage", "expected_symbols") if key in payload},
+            **{key: payload[key] for key in ("valid", "completeness", "coverage", "expected_symbols", "thesis_red_team") if key in payload},
         })
         return stages[-1]["status"] == "complete"
 
@@ -747,7 +825,8 @@ def main(argv: list[str] | None = None) -> int:
                 quotes_file=args.unpurchased_quotes_file,
                 thesis_file=args.unpurchased_thesis_evidence_file,
                 holiday_table=calendar, decision_scope=DECISION_SCOPE,
-                reuse=bool(args.reuse_artifacts))
+                reuse=bool(args.reuse_artifacts),
+                conditions_file=args.conditions_file, evidence_root=args.evidence_root)
             record("unpurchased_analysis", exit_code_for(research["status"]), research,
                    [str(task_dir / "out" / "unpurchased_analysis.json"),
                     str(task_dir / "out" / "unpurchased_quotes.json")])
@@ -904,10 +983,14 @@ def main(argv: list[str] | None = None) -> int:
     pack = Path(args.thesis_evidence_file).expanduser().resolve() if args.thesis_evidence_file else None
     if pack is not None and pack.is_file():
         replay_argv.extend(["--thesis-evidence-file", str(pack)])
+    for flag, value in (("--conditions-file", args.conditions_file),
+                        ("--evidence-root", args.evidence_root)):
+        if value is not None:
+            replay_argv.extend([flag, str(value)])
     code, payload = run_module(daily_sync.main, replay_argv)
     replay_code, replay_payload = code, payload
     replay_path = task_dir / "out" / "daily_sync.json"
-    replay_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_text(replay_path, json.dumps(payload, ensure_ascii=False, indent=2))
     quotes_complete = (payload.get("completeness") or {}).get("complete") is True
     record("daily_sync", code, payload, [str(replay_path)])
     if not quotes_complete or stages[-1]["status"] not in {"complete", "incomplete"}:
@@ -936,7 +1019,7 @@ def main(argv: list[str] | None = None) -> int:
     weight_names = instrument_labels.symbol_name_map(positions)
     instrument_labels.annotate_rows(payload.get("current_weights"), weight_names)
     weights_path = task_dir / "out" / "weights.json"
-    weights_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_text(weights_path, json.dumps(payload, ensure_ascii=False, indent=2))
     weights_ok = record("weights", code, payload, [str(weights_path)])
 
     summary: dict[str, Any] = {
@@ -983,8 +1066,8 @@ def main(argv: list[str] | None = None) -> int:
             "exit_code": code,
             "errors": catalog_payload["errors"],
         }]
-        (task_dir / "out" / "dashboard_catalog.json").write_text(
-            json.dumps(catalog, ensure_ascii=False, indent=2), encoding="utf-8")
+        atomic_text(task_dir / 'out' / 'dashboard_catalog.json',
+                    json.dumps(catalog, ensure_ascii=False, indent=2))
 
         # Policy-derived position limits (user thresholds -> bounds, never hand-typed).
         import position_limits  # noqa: E402
@@ -1004,13 +1087,16 @@ def main(argv: list[str] | None = None) -> int:
                                  "errors": [f"{type(exc).__name__}: {exc}"]}
             else:
                 derived_path = task_dir / "out" / "position_limits.json"
-                derived_path.write_text(json.dumps(derived_payload, ensure_ascii=False, indent=2),
-                                        encoding="utf-8")
+                atomic_text(derived_path, json.dumps(derived_payload, ensure_ascii=False, indent=2))
                 derived_block = {"status": "applied", "policy": str(policy_path),
                                  "path": str(derived_path),
                                  "policy_sha256": derived_payload["generated_from"]["policy_sha256"],
                                  "rules": derived_payload["rules"],
-                                 "positions": len(derived_payload["positions"])}
+                                 "positions": len(derived_payload["positions"]),
+                                 "constraint_resolution_status": derived_payload.get("constraint_resolution_status"),
+                                 "constraint_assessments": [
+                                     {key: row.get(key) for key in ("symbol", "constraint_resolution", "weight_compliance")}
+                                     for row in derived_payload["positions"]]}
         elif policy_path is not None:
             derived_block = {"status": "invalid", "policy": str(policy_path),
                              "errors": ["authorized risk bounds policy file is missing"]}
@@ -1037,8 +1123,7 @@ def main(argv: list[str] | None = None) -> int:
                        "market_state": (row.get("quote") or {}).get("market_state")}
             runtime_path = task_dir / "out" / f"runtime_quote_{symbol}.json"
             runtime_path.parent.mkdir(parents=True, exist_ok=True)
-            runtime_path.write_text(json.dumps(runtime, ensure_ascii=False, indent=2),
-                                    encoding="utf-8")
+            atomic_text(runtime_path, json.dumps(runtime, ensure_ascii=False, indent=2))
             # This limit was recomputed by the weight consumer from the verified
             # calendar and bound source quote; never trust a producer-declared age.
             age_limit = ((row.get("quote") or {}).get("freshness_policy") or {}).get("applied_max_age_seconds")
@@ -1049,14 +1134,16 @@ def main(argv: list[str] | None = None) -> int:
                 [entry["json_path"], "--quote-snapshot", str(runtime_path)]
                 + freshness_argv
                 + (["--derived-limits", str(derived_path)] if derived_path else []))
-            (task_dir / "out" / f"watchlist_{symbol}.json").write_text(
-                json.dumps(boundary, ensure_ascii=False, indent=2), encoding="utf-8")
+            atomic_text(task_dir / 'out' / f'watchlist_{symbol}.json',
+                        json.dumps(boundary, ensure_ascii=False, indent=2))
             categories = boundary.get("categories") or {}
             child_status = status_from_payload(boundary, code)
             results[symbol] = {"status": boundary.get("status"),
                                "detail_status": boundary.get("detail_status"),
                                "exit_code": code, "errors": boundary.get("errors") or [],
                                "verification_status": child_status,
+                               "constraint_resolution": boundary.get("constraint_resolution"),
+                               "weight_compliance": boundary.get("weight_compliance"),
                                "categories": categories}
             watchlist_children.append({
                 "stage": str(symbol), "status": child_status, "exit_code": code,
@@ -1065,24 +1152,54 @@ def main(argv: list[str] | None = None) -> int:
             })
             if child_status == "complete":
                 evaluated.add(symbol)
-                crossed.extend((categories.get("downside_boundary_crossed") or [])
-                               + (categories.get("upside_boundary_crossed") or []))
-        (task_dir / "out" / "watchlist_results.json").write_text(
-            json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+            crossed.extend((categories.get("downside_boundary_crossed") or [])
+                           + (categories.get("upside_boundary_crossed") or []))
+        for assessment in derived_block.get("constraint_assessments", []):
+            symbol = assessment["symbol"]
+            result = results.setdefault(symbol, {"status": "insufficient_data", "reason": "dashboard_missing"})
+            result.update({key: assessment[key] for key in ("constraint_resolution", "weight_compliance")})
+            if (assessment.get("weight_compliance") or {}).get("status") == "breached":
+                result.setdefault("categories", {})["weight_cap_breached"] = [symbol]
+        atomic_text(task_dir / 'out' / 'watchlist_results.json',
+                    json.dumps(results, ensure_ascii=False, indent=2))
         missing_boundaries = sorted(set(symbols) - evaluated)
         boundary_status = "complete" if not missing_boundaries else "insufficient_evidence"
-        boundary_errors: list[str] = (
-            [f"no gate-valid Dashboard found for: {', '.join(missing_boundaries)}"]
-            if missing_boundaries else [])
+        # A boundary that was not reached has a reason; naming every case
+        # "no gate-valid Dashboard" conflated a valid Dashboard whose verdict was
+        # unresolved with a missing file, and hid the real cause.  Keep the two
+        # apart so the report cannot blame the user's artifacts for a policy gap.
+        undetermined_reasons = {
+            symbol: str((results.get(symbol) or {}).get("detail_status")
+                        or (results.get(symbol) or {}).get("reason")
+                        or "not_evaluated")
+            for symbol in missing_boundaries}
+        dashboard_absent = sorted(symbol for symbol, reason in undetermined_reasons.items()
+                                  if reason in {"dashboard_missing", "quote_missing"})
+        boundary_errors: list[str] = []
+        if dashboard_absent:
+            boundary_errors.append(
+                f"no gate-valid Dashboard found for: {', '.join(dashboard_absent)}")
+        undetermined = sorted(symbol for symbol in missing_boundaries
+                              if symbol not in set(dashboard_absent))
+        if undetermined:
+            boundary_errors.append(
+                "watchlist boundary undetermined: " + ", ".join(
+                    f"{symbol} ({undetermined_reasons[symbol]})" for symbol in undetermined))
         if derived_block["status"] == "invalid":
             boundary_status = "insufficient_evidence"
             boundary_errors.append(
                 "risk bounds policy invalid: " + "; ".join(derived_block.get("errors") or []))
+        if derived_block.get("constraint_resolution_status") == "unresolved":
+            boundary_status = "insufficient_evidence"
+            boundary_errors.append("constraint_authority_unresolved")
+        weight_breaches = [row["symbol"] for row in derived_block.get("constraint_assessments", [])
+                           if (row.get("weight_compliance") or {}).get("status") == "breached"]
         stages.append({
             "stage": "watchlist",
             "status": boundary_status,
             "detail_status": (
                 "derived_limits_policy_invalid" if derived_block["status"] == "invalid"
+                else "constraint_authority_unresolved" if derived_block.get("constraint_resolution_status") == "unresolved"
                 else "boundaries_evaluated" if not missing_boundaries
                 else "dashboard_catalog_incomplete"),
             "exit_code": 0,
@@ -1091,6 +1208,8 @@ def main(argv: list[str] | None = None) -> int:
                          + ([str(derived_path)] if derived_path else []),
             "errors": boundary_errors,
             "crossed_boundaries": crossed,
+            "weight_cap_breached": weight_breaches,
+            "constraint_resolution_status": derived_block.get("constraint_resolution_status"),
             "dashboard_root": str(dashboard_root),
             "derived_limits": derived_block,
         })
@@ -1206,11 +1325,12 @@ def main(argv: list[str] | None = None) -> int:
     if pack is not None:
         if pack.is_file():
             out_path = task_dir / "out" / "daily_sync_with_thesis.json"
-            out_path.write_text(json.dumps(replay_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            atomic_text(out_path, json.dumps(replay_payload, ensure_ascii=False, indent=2))
             thesis = replay_payload.get("thesis_red_team") or {}
             stages.append({"stage": "daily_sync_with_thesis",
                            "status": status_from_payload(replay_payload, replay_code),
                            "detail_status": thesis.get("fatal_event_status"),
+                           "thesis_red_team": thesis,
                            "exit_code": replay_code, "artifacts": [str(out_path)],
                            "errors": replay_payload.get("errors") or []})
         else:
@@ -1247,8 +1367,7 @@ def main(argv: list[str] | None = None) -> int:
             child.extend(["--holiday-calendar-file", str(holiday_calendar)])
         code, payload = run_module(cn_actionability_gate.main, child)
         gate_path = task_dir / "out" / "actionability_assessment.json"
-        gate_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2),
-                             encoding="utf-8")
+        atomic_text(gate_path, json.dumps(payload, ensure_ascii=False, indent=2))
         native = str(payload.get("status") or "")
         gate_status = {"complete": "complete",
                        "market_closed": "insufficient_evidence",
@@ -1307,8 +1426,7 @@ def main(argv: list[str] | None = None) -> int:
             rollup = {**rollup, "status": pia_readiness.STATUS_FAILED,
                       "detail_status": "decision_scope_conflict"}
         rollup_path = task_dir / "out" / "readiness_rollup.json"
-        rollup_path.write_text(json.dumps(rollup, ensure_ascii=False, indent=2),
-                               encoding="utf-8")
+        atomic_text(rollup_path, json.dumps(rollup, ensure_ascii=False, indent=2))
         summary["readiness"] = rollup
         readiness_status = (
             "complete" if rollup.get("status") in {pia_readiness.STATUS_READY, pia_readiness.STATUS_NOT_READY}
@@ -1354,7 +1472,7 @@ def main(argv: list[str] | None = None) -> int:
                 rollup = {**rollup, "status": pia_readiness.STATUS_FAILED,
                           "detail_status": "decision_scope_conflict"}
             summary["readiness"] = rollup
-            rollup_path.write_text(json.dumps(rollup, ensure_ascii=False, indent=2), encoding="utf-8")
+            atomic_text(rollup_path, json.dumps(rollup, ensure_ascii=False, indent=2))
             if rollup.get("status") not in {pia_readiness.STATUS_READY, pia_readiness.STATUS_NOT_READY}:
                 readiness_stage = next(row for row in stages if row["stage"] == "readiness")
                 readiness_stage.update(status="failed", exit_code=3,

@@ -14,6 +14,7 @@ import tempfile
 import time
 import traceback
 from pathlib import Path
+from process_budget import deadline_after
 
 OPERATION_SECONDS = 30.0
 SUPPLEMENT_SECONDS = 8.0
@@ -230,7 +231,7 @@ def run_provider(function, *args, timeout_seconds=OPERATION_SECONDS, max_attempt
     if not isinstance(max_attempts, int) or not 1 <= max_attempts <= MAX_ATTEMPTS:
         return error_outcome(ValueError('max_attempts must be 1..3'), phase='input')
     start = time.monotonic()
-    deadline = start + timeout_seconds
+    deadline = deadline_after(timeout_seconds, reserve=2.0)
     outcome = {}
     for attempt in range(1, max_attempts + 1):
         if time.monotonic() >= deadline:

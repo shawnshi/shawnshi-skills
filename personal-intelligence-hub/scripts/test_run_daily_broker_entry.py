@@ -92,7 +92,21 @@ def prepare_fixture(
 @pytest.mark.parametrize("count", [0, 3, 4, 5])
 @pytest.mark.parametrize("version", [None, 2, 3])
 def test_prepare_broker_version_real_registered_packets(tmp_path, count, version):
-    result = prepare_fixture(tmp_path, count, version)
+    result = prepare_fixture(
+        tmp_path,
+        count,
+        version,
+        focus_config={
+            "filters": {"max_top10": 10, "min_score_for_top10": 0},
+            "domains": {
+                "technology": {"keywords": [{"keyword": "technology", "weight": 5}]}
+            },
+            # The broker matrix covers four lanes; production optional lanes stay optional.
+            "coverage_policy": {
+                "lanes": {"Sentinel": {"required": True}, "Ranger": {"required": True}}
+            },
+        },
+    )
     version = 3 if version is None else version
     manifest = load_manifest(result.manifest_path)
     assert result.supplement_request_path is not None
@@ -127,7 +141,12 @@ def test_prepare_broker_version_real_registered_packets(tmp_path, count, version
             min(count, 2 if version == 3 else 4) if gap["lane"] == "TechRadar" else 0
         )
         assert len(bound) == expected_bound
-        assert gap["max_urls"] == 4
+        expected_max_urls = (
+            min(8, max(4, count))
+            if version == 3 and gap["lane"] == "TechRadar"
+            else 4
+        )
+        assert gap["max_urls"] == expected_max_urls
         assert gap["max_queries"] == 2
         assert (
             gap["max_duration_seconds"]
@@ -155,6 +174,17 @@ def test_prepare_broker_version_real_registered_packets(tmp_path, count, version
     )
 
 
+@pytest.mark.parametrize("version", [None, 1, 2, 3])
+def test_optional_lanes_are_not_forced_by_broker_version(tmp_path, version):
+    result = prepare_fixture(tmp_path, 0, version)
+    assert result.supplement_request_path is not None
+    request = json.loads(result.supplement_request_path.read_text(encoding="utf-8"))
+    assert {gap["gap_id"] for gap in request["gaps"]} == {
+        "technology-supply", "healthcare-digital-supply"
+    }
+    assert {gap["lane"] for gap in request["gaps"]} == {"TechRadar", "HealthcareRadar"}
+
+
 def test_prepare_production_source_window_budget_propagation(tmp_path):
     root = Path(__file__).resolve().parents[1]
     focus = json.loads(
@@ -164,7 +194,7 @@ def test_prepare_production_source_window_budget_propagation(tmp_path):
     assert result.supplement_request_path is not None
     request = json.loads(result.supplement_request_path.read_text(encoding="utf-8"))
     assert request["article_broker_version"] == 3
-    assert len(request["execution_packets"]) == 4
+    assert len(request["execution_packets"]) in {2, 4}
     for packet in request["execution_packets"]:
         assert packet["execution_budget"] == {
             "max_queries": 2,

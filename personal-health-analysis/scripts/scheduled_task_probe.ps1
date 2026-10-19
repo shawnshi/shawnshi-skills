@@ -5,14 +5,32 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Get-TaskProbeErrorCode {
+    param([System.Management.Automation.ErrorRecord]$Record)
+    $category = [string]$Record.CategoryInfo.Category
+    $fqid = [string]$Record.FullyQualifiedErrorId
+    $hresult = '0x' + [Convert]::ToString([int]$Record.Exception.HResult, 16)
+    # PowerShell's scheduled-task cmdlet uses CimJobException, not only
+    # CimException. Recognize its exact not-found signal, never all errors.
+    if ($category -eq 'ObjectNotFound' -and
+        $fqid -match '^CmdletizationQuery_NotFound(?:_[^,]+)?,Get-ScheduledTask$') {
+        return 'task_missing'
+    }
+    if ($category -eq 'PermissionDenied' -or $fqid -match '0x80041003' -or $hresult -eq '0x80041003') {
+        return 'task_probe_permission_denied'
+    }
+    return 'task_probe_failed'
+}
+
 if ($Mode -eq 'Start') {
-    Start-ScheduledTask -TaskName $TaskName -TaskPath '\'
+    Start-ScheduledTask -TaskName $TaskName -TaskPath '\' -ErrorAction Stop
     [ordered]@{ ok = $true; status = 'start_requested' } | ConvertTo-Json -Compress
     exit 0
 }
 
 try {
-    $task = Get-ScheduledTask -TaskName $TaskName -TaskPath '\'
+    $task = Get-ScheduledTask -TaskName $TaskName -TaskPath '\' -ErrorAction Stop
+    if ($null -eq $task) { throw 'task_probe_empty_result' }
     $action = if ($task.Actions.Count -eq 1) { $task.Actions[0] } else { $null }
     $currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     try {
@@ -51,22 +69,12 @@ try {
         arguments_sha256 = $argumentHash
         working_directory = if ($action) { [string]$action.WorkingDirectory } else { $null }
     } | ConvertTo-Json -Compress
-} catch [Microsoft.Management.Infrastructure.CimException] {
-    $category = [string]$_.CategoryInfo.Category
-    $fqid = [string]$_.FullyQualifiedErrorId
-    $hresult = '0x' + [Convert]::ToString([int]$_.Exception.HResult, 16)
-    if ($category -eq 'ObjectNotFound' -or $fqid -match '0x80070002' -or $hresult -eq '0x80070002') {
+} catch {
+    $errorCode = Get-TaskProbeErrorCode -Record $_
+    if ($errorCode -eq 'task_missing') {
         [ordered]@{ ok = $true; exists = $false; task_name = $TaskName; reason = 'task_missing' } | ConvertTo-Json -Compress
         exit 0
     }
-    $errorCode = if ($category -eq 'PermissionDenied' -or $fqid -match '0x80041003' -or $hresult -eq '0x80041003') {
-        'task_probe_permission_denied'
-    } else {
-        'task_probe_failed'
-    }
     [ordered]@{ ok = $false; exists = $null; task_name = $TaskName; error_code = $errorCode } | ConvertTo-Json -Compress
-    exit 2
-} catch {
-    [ordered]@{ ok = $false; exists = $null; task_name = $TaskName; error_code = 'task_probe_failed' } | ConvertTo-Json -Compress
     exit 2
 }

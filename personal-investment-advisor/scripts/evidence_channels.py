@@ -9,9 +9,16 @@ health verdict and the caller must fail closed on ``broken``.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import datetime
 import hashlib
 import json
+import math
+
+from artifact_io import atomic_text
+from secure_transport import ANONYMOUS_POLICY, anonymous_policy, request as secure_request
+from process_budget import remaining_seconds
 import re
 from pathlib import Path
 from typing import Any, Callable
@@ -26,7 +33,7 @@ HEALTH_BROKEN = "broken"
 CN_TZ = datetime.timezone(datetime.timedelta(hours=8))
 HK_TZ = datetime.timezone(datetime.timedelta(hours=8))
 
-DEFAULT_USER_AGENT = "PIA evidence collector (contact: user@example.invalid)"
+DEFAULT_USER_AGENT = "PIA evidence collector/1.0"
 
 # Channels that were observed answering HTTP 200 without usable data.  They stay
 # listed so a caller never reads "no data" out of a channel that is simply down.
@@ -45,9 +52,9 @@ KNOWN_BROKEN_CHANNELS: dict[str, str] = {
     ),
 }
 
-CNINFO_FULLTEXT_URL = "http://www.cninfo.com.cn/new/fulltextSearch/full"
-CNINFO_STATIC_BASE = "http://static.cninfo.com.cn/"
-SZSE_ANNLIST_URL = "http://www.szse.cn/api/disc/announcement/annList"
+CNINFO_FULLTEXT_URL = "https://www.cninfo.com.cn/new/fulltextSearch/full"
+CNINFO_STATIC_BASE = "https://static.cninfo.com.cn/"
+SZSE_ANNLIST_URL = "https://www.szse.cn/api/disc/announcement/annList"
 HKEX_PREFIX_URL = "https://www1.hkexnews.hk/search/prefix.do"
 HKEX_SEARCH_URL = "https://www1.hkexnews.hk/search/titleSearchServlet.do"
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
@@ -268,6 +275,10 @@ class ChannelFetcher:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.max_cache_age_seconds = float(max_cache_age_seconds)
         self.timeout = float(timeout)
+        if not math.isfinite(self.max_cache_age_seconds) or self.max_cache_age_seconds < 0:
+            raise ValueError('cache TTL must be finite and non-negative')
+        if not math.isfinite(self.timeout) or self.timeout <= 0:
+            raise ValueError('request timeout must be finite and positive')
         self.user_agent = user_agent
         self.bypass_cache = False
         self._clock = clock or (lambda: datetime.datetime.now(datetime.timezone.utc).timestamp())
@@ -277,30 +288,44 @@ class ChannelFetcher:
         return self._clock()
 
     # -- cache ---------------------------------------------------------------
-    def _read_cache(self, key: str) -> dict[str, Any] | None:
-        meta_path = self.cache_dir / f"{key}.meta.json"
-        body_path = self.cache_dir / f"{key}.body"
-        if not meta_path.is_file() or not body_path.is_file():
-            return None
+    def _cache_path(self, key: str) -> Path:
+        return self.cache_dir / (sha256_bytes(key.encode('utf-8')) + '.cache.json')
+
+    def _read_cache(self, key: str, identity: str) -> dict[str, Any] | None:
         try:
-            meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        except ValueError:
+            stored = json.loads(self._cache_path(key).read_text(encoding='utf-8'))
+            if not isinstance(stored, dict) or stored.get('version') != 3:
+                return None
+            meta = stored['meta']
+            if (not isinstance(meta, dict) or meta.get('request_sha256') != identity
+                    or meta.get('anonymous_policy') != ANONYMOUS_POLICY):
+                return None
+            encoded = json.dumps(meta, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()
+            if sha256_bytes(encoded) != stored.get('meta_sha256'):
+                return None
+            fetched = meta.get('fetched_at')
+            now = self._clock()
+            if (type(fetched) not in (int, float) or not math.isfinite(fetched)
+                    or not math.isfinite(now)):
+                return None
+            age = now - fetched
+            if age < 0 or age > self.max_cache_age_seconds:
+                return None
+            body = base64.b64decode(stored['body_base64'], validate=True)
+            if sha256_bytes(body) != meta.get('body_sha256'):
+                return None
+        except (FileNotFoundError, ValueError, TypeError, KeyError, UnicodeError, binascii.Error):
             return None
-        if meta.get("url") is None:
-            return None
-        age = self._clock() - float(meta.get("fetched_at") or 0.0)
-        if age > self.max_cache_age_seconds:
-            return None
-        meta["body"] = body_path.read_bytes()
-        meta["reused"] = True
-        meta["cache_age_seconds"] = round(age, 3)
-        return meta
+        # Permission/storage errors propagate; they are not an empty business result.
+        return {**meta, 'body': body, 'reused': True, 'cache_age_seconds': round(age, 3)}
 
     def _write_cache(self, key: str, meta: dict[str, Any]) -> None:
-        (self.cache_dir / f"{key}.body").write_bytes(meta["body"])
-        stored = {k: v for k, v in meta.items() if k != "body"}
-        (self.cache_dir / f"{key}.meta.json").write_text(
-            json.dumps(stored, ensure_ascii=False, indent=2), encoding="utf-8")
+        stored_meta = {k: v for k, v in meta.items() if k != 'body'}
+        stored_meta['body_sha256'] = sha256_bytes(meta['body'])
+        encoded = json.dumps(stored_meta, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()
+        stored = {'version': 3, 'meta': stored_meta, 'meta_sha256': sha256_bytes(encoded),
+                  'body_base64': base64.b64encode(meta['body']).decode('ascii')}
+        atomic_text(self._cache_path(key), json.dumps(stored, ensure_ascii=False))
 
     # -- transport -----------------------------------------------------------
     def request(
@@ -313,7 +338,14 @@ class ChannelFetcher:
         referer: str | None = None,
         extra_headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        cached = None if self.bypass_cache else self._read_cache(key)
+        method = method.upper()
+        if method not in {'GET', 'POST'}:
+            raise ValueError('only GET and POST are supported')
+        anonymous_policy(self.session, extra_headers)
+        identity = sha256_bytes(json.dumps(
+            [ANONYMOUS_POLICY, method, url, json_body, referer, extra_headers, self.user_agent],
+            sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode())
+        cached = None if self.bypass_cache else self._read_cache(key, identity)
         if cached is not None:
             return cached
         headers = {"User-Agent": self.user_agent}
@@ -321,19 +353,23 @@ class ChannelFetcher:
             headers["Referer"] = referer
         if extra_headers:
             headers.update(extra_headers)
-        meta: dict[str, Any] = {"url": url, "method": method, "fetched_at": self._clock(),
-                                "reused": False, "cache_age_seconds": 0.0}
+        allowance = remaining_seconds(self.timeout)
+        if allowance <= 0:
+            raise TimeoutError('evidence request deadline exhausted')
+        meta: dict[str, Any] = {"url": url, "method": method, "request_sha256": identity,
+                                "fetched_at": self._clock(),
+                                "reused": False, "cache_age_seconds": 0.0,
+                                "anonymous_policy": ANONYMOUS_POLICY}
         try:
             if method == "POST":
                 headers.setdefault("Content-Type", "application/json")
-                response = self.session.post(url, data=json_body, headers=headers,
-                                             timeout=self.timeout)
+                response = secure_request(self.session, 'POST', url, data=json_body, headers=headers,
+                                          timeout=allowance)
             else:
-                response = self.session.get(url, headers=headers, timeout=self.timeout)
+                response = secure_request(self.session, 'GET', url, headers=headers, timeout=allowance)
         except Exception as exc:  # noqa: BLE001 - transport failure is reported, never hidden
             meta.update({"http_status": None, "body": b"", "transport_error":
                          f"{type(exc).__name__}: {exc}", "content_type": None})
-            self._write_cache(key, meta)
             return meta
         body = bytes(response.content or b"")
         meta.update({
@@ -361,7 +397,7 @@ def cninfo_fulltext(fetcher: ChannelFetcher, *, code: str, date_from: str, date_
               "&sortName=nothing&sortType=desc&pageNum=1")
     url = f"{CNINFO_FULLTEXT_URL}?{params}"
     meta = fetcher.request("GET", url, key=f"cninfo_fulltext_{code}_{date_from}_{date_to}",
-                           referer="http://www.cninfo.com.cn/")
+                           referer="https://www.cninfo.com.cn/")
     if meta.get("http_status") != 200:
         return {"channel": "cninfo_fulltext", "health": HEALTH_BROKEN, "records": [],
                 "meta": meta, "error": meta.get("transport_error") or

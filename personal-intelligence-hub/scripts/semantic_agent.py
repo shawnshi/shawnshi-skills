@@ -85,7 +85,7 @@ ACTION_FIELDS = {"domain", "task", "owner_type", "trigger", "indicator"}
 # the major_signal path and with it the independent RedTeam gate. The ledger is now an
 # accepted optional field here and is passed through to the published item.
 OPTIONAL_ITEM_FIELDS = {"claim_grounding"}
-CLAIM_GROUNDING_KINDS = {"number", "policy_status", "causal"}
+CLAIM_GROUNDING_KINDS = {"fact", "number", "policy_status", "causal"}
 CLAIM_GROUNDING_STATUSES = {"grounded", "unverified", "hypothesis"}
 CLAIM_GROUNDING_DIGITS = re.compile(r"[0-9]+(?:[.,][0-9]+)*")
 # F-05: the label used when an item's only event date is the publication date. It is a
@@ -559,12 +559,17 @@ def validate_item_grounding(
     if "source_adoption" in manifest:
         from recovery_lifecycle import validated_source
         policy_manifest = validated_source(manifest)
-    if max(manifest.get("claim_grounding_version", 1), policy_manifest.get("claim_grounding_version", 1)) < 2:
+    policy_version = max(
+        manifest.get("claim_grounding_version", 1),
+        policy_manifest.get("claim_grounding_version", 1),
+    )
+    if policy_version < 2:
         return
     try:
         validate_registered_claims(
             item,
             lambda start, end: _registered_evidence_excerpt(candidate, manifest, start=start, end=end),
+            policy_version=policy_version,
         )
     except ValueError as exc:
         raise RunContractError("registered claim grounding failed: " + str(exc)) from exc
@@ -588,6 +593,10 @@ def read_agent_evidence(
 
 def build_agent_context(request_path: str | Path) -> dict[str, Any]:
     request_file, request, packet, manifest = _load_packet(request_path)
+    policy_version = manifest.get("claim_grounding_version", 1)
+    if "source_adoption" in manifest:
+        from recovery_lifecycle import validated_source
+        policy_version = max(policy_version, validated_source(manifest).get("claim_grounding_version", 1))
     eligible = _eligible_candidates(request, manifest)
     for candidate in eligible:
         candidate["evidence_excerpt"] = _registered_evidence_excerpt(candidate, manifest)
@@ -607,7 +616,7 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
         "requested_ratio": deepcopy(manifest["mix_request"]["requested_ratio"]),
         "max_turns": request["max_turns"],
         "halt_condition": request["halt_condition"],
-        "claim_grounding_version": manifest.get("claim_grounding_version", 1),
+        "claim_grounding_version": policy_version,
         "evidence_read_command": [
             "python", "-X", "utf8", str(Path(__file__).resolve()), "evidence",
             "--request", str(request_file), "--candidate-id", "<eligible candidate_id>",
@@ -631,15 +640,24 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
             "selected_item_required_fields": sorted(ITEM_FIELDS - OPTIONAL_ITEM_FIELDS),
             "selected_item_optional_fields": sorted(OPTIONAL_ITEM_FIELDS),
             "registered_claim_grounding_rule": (
-                "Version 2 is a hard gate for L3/L4, major signals and near-term impact. "
-                "Every published claim is grounded with an exact original-language evidence quote "
+                ("Version 3 requires every formal item to include kind=fact with statement equal to its complete fact and number claims for every asserted number. Unread candidate synopses remain leads: exclude them using existing dispositions. "
+                 if policy_version >= 3 else "Version 2 is a hard gate for L3/L4, major signals and near-term impact. ")
+                + "Every published claim is grounded with an exact original-language evidence quote "
                 "and evidence_ref={readable_text_sha256,start,end}, using unicode offsets. "
-                "Numbers in critical fact must have number claims supported by the quote. "
+                "Numbers in required facts must have number claims supported by the quote. "
                 "Use evidence_read_command to read additional retained spans without network; "
                 "unretained details remain unknown. Hypotheses belong in deduction, not fact. "
                 "Source-byte binding does not replace independent semantic entailment review."
             ),
             "claim_grounding_rule": (
+                "Policy 3 shape: {basis: non-empty string, claims: non-empty list of "
+                "{kind: fact|number|policy_status|causal, statement: non-empty string, "
+                "status: grounded, evidence: exact original-language quote, "
+                "evidence_ref: {readable_text_sha256,start,end}, value: required for number}}. "
+                "At least one fact statement must equal the complete fact. Every asserted "
+                "number needs a number claim. All formal items, including L1/L2, are required. "
+                "Semantic entailment must still be reviewed."
+                if policy_version >= 3 else
                 "Legacy version 1 guidance only; version 2 above takes precedence. "
                 "Required on every item with intelligence_level L3/L4 or "
                 "near_term_decision_impact=true; omit it on L1/L2 items. Shape: "
@@ -668,7 +686,7 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
                 "major_signal_reason": "non-empty string",
                 "near_term_decision_impact": "JSON boolean true/false only; never a string, never null. Put the near-term impact prose in decision_impact_reason instead.",
                 "decision_impact_reason": "non-empty string carrying the near-term impact description",
-                "claim_grounding": "optional object; required when intelligence_level is L3/L4 or near_term_decision_impact is true; see claim_grounding_rule",
+                "claim_grounding": "object required for every formal item under policy 3; under policy 2 required for critical items; registered_claim_grounding_rule takes precedence over legacy guidance",
             },
             "event_identity_exact_fields": sorted(IDENTITY_FIELDS),
             "intelligence_level_allowed": ["L1", "L2", "L3", "L4"],
@@ -688,7 +706,7 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
             "Use one semantic event_identity per selected candidate; event_date and primary_domain must match its registered evidence.",
             "After writing, stop analysis and run finalize_command exactly.",
             "major_signal and near_term_decision_impact must be JSON booleans (true/false); their explanations go in major_signal_reason and decision_impact_reason. A string in either boolean field makes finalize reject the whole draft.",
-            "Every L3/L4 item and every item with near_term_decision_impact=true must also carry claim_grounding as described in dynamic_contract.claim_grounding_rule; omit that key entirely on L1/L2 items.",
+            "Follow dynamic_contract.registered_claim_grounding_rule for the registered policy. Policy 3 requires claim_grounding for L1/L2 too. A candidate synopsis or navigation excerpt does not support an unread factual claim.",
         ],
         "finalize_command": deepcopy(packet["agent_helper"]["finalize_command"]),
         "command_consumption": "argv array; subprocess.run(argv, shell=False); never paste joined shell text",
@@ -910,9 +928,13 @@ def _coverage(manifest: dict[str, Any], supplement: dict[str, Any]) -> dict[str,
     reasons = sorted(str(value) for value in baseline.get("reasons", []) if str(value))
     reasons.extend(f"supplement lane degraded: {lane}" for lane in sorted(failures))
     reasons.extend(registered_coverage_diagnostics(manifest))
+    from collection_quality import quality_policy_enabled
+    confidence = "medium" if run_status == "degraded" else "high"
+    if quality_policy_enabled(manifest) and baseline.get("coverage_confidence") == "low":
+        confidence = "low"
     return {
         "run_status": run_status,
-        "coverage_confidence": "medium" if run_status == "degraded" else "high",
+        "coverage_confidence": confidence,
         "baseline_status": baseline_stage.get("status"),
         "source_attempted": attempted,
         "source_succeeded": succeeded,
@@ -1235,6 +1257,15 @@ def assemble_and_finalize(
         "top_10": final_items,
         "data_gaps": _data_gaps(supplement, mix),
     }
+    if final_items:
+        for index, reason in enumerate(manifest["stages"]["baseline"]["metadata"]["coverage"].get("reasons", [])):
+            core["data_gaps"].append({"gap_id": f"baseline-coverage-{index + 1}", "lane": "baseline", "status": "open",
+                                      "description": str(reason), "impact": "基线覆盖缺口仍未闭合，不能由总来源成功率抵消。"})
+        missing = core["candidate_funnel"].get("quality_gate_reasons", {}).get("missing_verified_access", 0)
+        if missing:
+            core["data_gaps"].append({"gap_id": "verification-incomplete", "lane": "SemanticEvaluator", "status": "open",
+                                      "description": f"{missing} 条候选未取得核验正文，不是语义质量淘汰。",
+                                      "impact": "无法判断未核验候选的内容价值；不以低入选数推断没有资讯。"})
     if not final_items:
         core["data_gaps"] = zero_report_data_gaps(
             supplement, mix, manifest["stages"]["baseline"]["metadata"]["coverage"]
@@ -1283,6 +1314,18 @@ def main() -> int:
             return 0
         _, _, packet, _ = _load_packet(args.request)
         dynamic_path = Path(str(packet["draft_paths"]["dynamic"])).resolve()
+        if not dynamic_path.exists():
+            context = build_agent_context(args.request)
+            if context.get("eligible_candidate_count", 0) == 0:
+                zero_draft = {
+                    "contract_version": DYNAMIC_VERSION,
+                    "status": "passed",
+                    "turns_used": 1,
+                    "halt_condition_met": True,
+                    "selected_items": [],
+                    **zero_report_fields(),
+                }
+                atomic_dump_json(dynamic_path, zero_draft)
         refined, receipt = assemble_and_finalize(args.request, load_json(dynamic_path, {}))
         print(
             json.dumps(

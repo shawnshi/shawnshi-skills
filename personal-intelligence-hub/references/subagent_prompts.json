@@ -24,7 +24,7 @@
     "redirect_rule": "HTTP 3xx 不是正文核验终态。仅沿 HTTP(S) Location 做有界跟随，最多 5 跳并计入同一 URL 访问；保留原地址为 requested_url、最终落点为 final_url。只有最终落点成功取得可识别正文才记 verified；缺失 Location、循环、非 HTTP(S) 跳转或最终失败必须保留为 blocked。",
     "infrastructure_failure_rule": "degraded 或 failed 必须写规范化 failure_kind 与非空 failure_reason；status=degraded 只允许 source_access 或 published_at_conflict，status=failed 只允许 infrastructure。只有代理在执行任何查询或访问前初始化失败时，才可返回 status=failed、failure_kind=infrastructure、非空 failure_reason、turns_used=0、halt_condition_met=false，以及空 executed_queries/access_log/candidates、全零 coverage 和全为 infrastructure_unavailable 的 bound decisions。访问成功但因领域/来源质量排除且无 blocked coverage 时保留 no_increment；日期缺失/冲突/超窗用 degraded/published_at_conflict，访问受阻用 degraded/source_access。访问后无合格候选或预算耗尽不是初始化失败，必须保留实际访问及排除理由，不得改报 infrastructure。completed/no_increment 不得包含 failed coverage。",
     "delivery_rule": "子代理进程退出不等于业务完成。代理只向 packet 登记的 draft 路径写业务 JSON，最终聊天回复或运行时 artifact 不替代草稿。写完返回 draft_ready 与路径；静态运行字段和 candidate 哈希由 helper 派生，不复制 canonical result_envelope 的静态字段到动态草稿。初始化失败且零 query/access/candidate 证据时才报 failed/infrastructure 基础设施失败；已取得证据后因工具预算或超时未交付草稿，只报告真实 blocker 与证据位置，父级按原时钟、grace 与 finalize --parent 收口，不新增检索或虚构时间。",
-    "waiting_rule": "禁止轮询、sleep、重复读取同一路径或反复检查文件来等待父任务。需要父任务动作时只保留一次 contact_supervisor 请求，随后立即结束本轮并返回当前状态、已完成产物路径与阻塞原因；父任务未回复期间不得占用工具预算空转，也不得在本地自造收据或时间戳。"
+    "waiting_rule": "禁止轮询、sleep、重复读取同一路径或反复检查文件来等待父任务。需要父任务动作时同时只保留一个 contact_supervisor 请求；新 native broker 每个 run/gap/request 至多三次交换，仅在父级明确 collecting 回复后发起下一次请求，封存证据到达后立即写 draft 并执行登记的 finalize；未回复或超时则结束本轮并返回阻塞原因，不重新请求；父任务未回复期间不得占用工具预算空转，也不得在本地自造收据或时间戳。"
   },
   "review_common_contract": {
     "handoff_contract_version": "review-handoff/1.0",

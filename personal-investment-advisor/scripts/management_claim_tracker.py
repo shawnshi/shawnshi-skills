@@ -47,6 +47,15 @@ def _atomic_write_text(path: Path, content: str) -> None:
 RESERVED_LOCATORS = ("example.com", "example.test", ".invalid", "localhost")
 
 
+def finite_number(value: Any) -> bool:
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
+
+
 def _non_empty(value: Any) -> bool:
     return value not in (None, "", [])
 
@@ -54,9 +63,9 @@ def _non_empty(value: Any) -> bool:
 def _document_errors(document: dict[str, Any], index: int) -> list[str]:
     errors = []
     for field in ["document_id", "source_tier", "source_locator", "published_at", "retrieved_at", "text"]:
-        if not _non_empty(document.get(field)):
-            errors.append(f"source_documents[{index}].{field} is required")
-    if document.get("source_tier") not in SOURCE_TIERS:
+        if not isinstance(document.get(field), str) or not document[field].strip():
+            errors.append(f'source_documents[{index}].{field} must be a non-empty string')
+    if not isinstance(document.get('source_tier'), str) or document['source_tier'] not in SOURCE_TIERS:
         errors.append(f"source_documents[{index}].source_tier is invalid")
     for field in ["published_at", "retrieved_at"]:
         try:
@@ -66,7 +75,10 @@ def _document_errors(document: dict[str, Any], index: int) -> list[str]:
     return errors
 
 
-def evaluate_claims(payload: dict[str, Any]) -> dict[str, Any]:
+def evaluate_claims(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {'valid': False, 'formal_use_allowed': False,
+                'errors': ['input must be an object']}
     documents = payload.get("source_documents")
     claims = payload.get("claims")
     errors: list[str] = []
@@ -83,6 +95,8 @@ def evaluate_claims(payload: dict[str, Any]) -> dict[str, Any]:
             errors.append(f"source_documents[{index}] must be an object")
             continue
         errors.extend(_document_errors(document, index))
+        if not isinstance(document.get('document_id'), str) or not document['document_id'].strip():
+            errors.append(f'source_documents[{index}].document_id must be a non-empty string')
         locator = str(document.get("source_locator", "")).lower()
         if not test_mode and any(token in locator for token in RESERVED_LOCATORS):
             errors.append(f"source_documents[{index}].source_locator is a reserved test locator")
@@ -90,7 +104,8 @@ def evaluate_claims(payload: dict[str, Any]) -> dict[str, Any]:
     document_ids = {
         document.get("document_id")
         for document in documents
-        if isinstance(document, dict) and _non_empty(document.get("document_id"))
+        if isinstance(document, dict) and isinstance(document.get('document_id'), str)
+        and document['document_id'].strip()
     }
     if len(document_ids) != len(documents):
         errors.append("source document IDs must be present and unique")
@@ -135,38 +150,65 @@ def evaluate_claims(payload: dict[str, Any]) -> dict[str, Any]:
         if missing:
             errors.append(f"claims[{index}] missing fields: {', '.join(missing)}")
             continue
-        if claim["source_document_id"] not in document_ids:
+        string_fields = ('claim_id', 'statement', 'metric', 'source_locator')
+        if any(not isinstance(claim[field], str) or not claim[field].strip() for field in string_fields):
+            errors.append(f'claims[{index}] identity, statement, metric and locator must be non-empty strings')
+            continue
+        if 'actual_period_complete' in claim and type(claim['actual_period_complete']) is not bool:
+            errors.append(f'claims[{index}].actual_period_complete must be boolean')
+            continue
+        if not isinstance(claim['source_document_id'], str) or claim['source_document_id'] not in document_ids:
             errors.append(f"claims[{index}].source_document_id does not match a source document")
             continue
         try:
-            date.fromisoformat(str(claim["deadline"]))
+            deadline = date.fromisoformat(str(claim['deadline']))
         except (TypeError, ValueError):
             errors.append(f"claims[{index}].deadline must be an ISO date")
             continue
         operator = claim.get("operator")
-        if operator not in OPERATORS:
+        if not isinstance(operator, str) or operator not in OPERATORS:
             errors.append(f"claims[{index}].operator must be one of {sorted(OPERATORS)}")
             continue
 
         actual = claim.get("actual")
         actual_source_id = claim.get("actual_source_document_id")
         actual_locator = claim.get("actual_source_locator")
-        status = "insufficient_evidence"
+        target = claim['target']
+        if not finite_number(target):
+            errors.append(f'claims[{index}].target must be a finite non-boolean number')
+            continue
+        if actual is not None and not finite_number(actual):
+            errors.append(f'claims[{index}].actual must be a finite non-boolean number')
+            continue
+        status = 'not_due' if as_of is not None and as_of < deadline else 'insufficient_evidence'
         comparison = None
+        period_verified = False
+        period_reason = 'actual period not established'
         if actual is not None:
-            if actual_source_id not in document_ids or not _non_empty(actual_locator):
+            if (not isinstance(actual_source_id, str) or actual_source_id not in document_ids
+                    or not isinstance(actual_locator, str) or not actual_locator.strip()):
                 errors.append(
                     f"claims[{index}] actual value requires actual_source_document_id and actual_source_locator"
                 )
                 continue
-            try:
-                actual_value = float(actual)
-                target_value = float(claim["target"])
-            except (TypeError, ValueError):
-                errors.append(f"claims[{index}] target and actual must be numeric")
-                continue
-            comparison = OPERATORS[operator](actual_value, target_value)
-            status = "met" if comparison else "missed"
+            period_fields = ('period_start', 'period_end', 'actual_period_start', 'actual_period_end')
+            if all(claim.get(field) is not None for field in period_fields):
+                try:
+                    start, end, actual_start, actual_end = [
+                        date.fromisoformat(str(claim[field])) for field in period_fields]
+                except (TypeError, ValueError):
+                    errors.append(f'claims[{index}] period fields must be ISO dates')
+                    continue
+                if start > end or actual_start > actual_end or end > deadline:
+                    errors.append(f'claims[{index}] inconsistent period boundaries')
+                    continue
+                period_verified = (start == actual_start and end == actual_end
+                                   and claim.get('actual_period_complete') is True
+                                   and as_of is not None and actual_end <= as_of)
+                period_reason = None if period_verified else 'actual period incomplete or mismatched'
+            if period_verified and status != 'not_due':
+                comparison = OPERATORS[operator](actual, target)
+                status = 'met' if comparison else 'missed'
 
         results.append(
             {
@@ -179,6 +221,13 @@ def evaluate_claims(payload: dict[str, Any]) -> dict[str, Any]:
                 "actual": actual,
                 "status": status,
                 "comparison_result": comparison,
+                'period_verified': period_verified,
+                'period_reason': period_reason,
+                'period_start': claim.get('period_start'),
+                'period_end': claim.get('period_end'),
+                'actual_period_start': claim.get('actual_period_start'),
+                'actual_period_end': claim.get('actual_period_end'),
+                'actual_period_complete': claim.get('actual_period_complete'),
                 "claim_source": {
                     "document_id": claim["source_document_id"],
                     "locator": claim["source_locator"],
@@ -191,7 +240,7 @@ def evaluate_claims(payload: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
-    counts = {status: 0 for status in ["met", "missed", "insufficient_evidence"]}
+    counts = {status: 0 for status in ['met', 'missed', 'insufficient_evidence', 'not_due']}
     for result in results:
         counts[result["status"]] += 1
     return {

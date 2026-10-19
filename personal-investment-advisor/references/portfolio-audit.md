@@ -18,6 +18,40 @@
 
 组合根不得内嵌 `rebalance_policy`；分配实验策略必须使用独立、显式版本的 policy 文件。用户提供的 `target_weight` 或 `max_weight` 在计算模块中作为输入约束，计算脚本不得自动重分配或写回。`advisory` 可在独立建议制品中给出价格、数量或目标仓位指令，但不写回实际持仓文件中的数量、成本、现金、成交状态或目标／约束字段。独立风险政策的已授权维护按 [SKILL.md](../SKILL.md#advisory-下的本地修改) 执行；不能借参数输出或维护绕过证据、可行性或 P0 门禁。
 
+## 股票集中度硬上限
+
+用户确认的通用规则：**单只股票权重 ≤ 30%；前三大股票权重之和 ≤ 65%**。这是组合风险约束，不是收益预测、目标仓位或公司 Thesis 致命条件；不依赖独立风险政策文件是否传入。
+
+- **分母**：通过本次行情、身份、覆盖和汇率门的全部活动持仓总市值，含现金、ETF及其他资产，统一换算至基础币种。不得改用股票子集市值或非现金市值重新归一化来核验这两项规则；分配实验的特殊分母不改变此处口径。
+- **分子与排序范围**：只纳入 `quantity > 0` 且显式 `asset_type=stock` 的直接股票持仓，使用当前市值；按权重降序取前三只，并列时按证券代码排序以保证复算一致。ETF、基金、指数、现金及零持股观察标的不参与股票排名，也不自动穿透ETF。
+- **算式**：`w_i = 股票i当前市值 / 全组合当前总市值`；`single_stock_breach = w_i > 0.30`；`top3_stock_breach = sum(前三只股票的w_i) > 0.65`。正好30%或65%不越界。少于三只时对实际持有股票求和，不虚构补足标的；没有实仓股票时标记不适用。
+- **证据门**：只有完整、有效且满足下节时效的全组合权重才能给出通过或越界结论。分母不全、行情/FX失效、身份不明或只有部分持仓时标记未评估并列缺口，不把缺失当零。具名历史快照可作历史复核，但不得称为当前约束判断。
+- **确定性计算与输出**：从本次已绑定市值重算未四舍五入的权重，再排序、求和和比较；不得靠展示百分比判断边界。报告必须列出最大单只股票及权重、前三只股票及各自权重、前三合计、30%/65%上限和两项判断。原生脚本未直接输出前三集中度时，在报告层使用确定性计算补核验，明确这是补充检查，不宣称原生CLI已经执行该门。
+- **其他既有约束**：已授权输入中的更严单标的上限或观察边界仍单列核验；通用30%通过不等于更严上限通过。除非用户另行明确要求替换，不因本次技能规则更新自动撤销、更改这些约束，也不得由分析师临时新增更严上限。
+- **状态与建议**：集中度越界是已评估的风险命中，不自动把流程记为技术失败，也不等于 `fatal_breach`。后续加仓或新建仓参数建议须按交易后同一全组合分母核验两项规则；若现仓已越界，减风险方案应明确其是否消除越界或仍有残余，不能把仍越界的方案标为满足约束。建议不回写真实持仓，不执行订单。
+
+## 个别观察上限的有效性与未决
+
+`position_limits.py` 的现有 `pia_risk_bounds_policy_v1` 全局已确认政策继续沿用其权威边界，不要求用户重复确认；股票另受本技能 30% 硬上限约束。前三股票 65% 仍由原组合审计门核验，本模块的单标的观察结果不能替代该门或 P0 Alpha／统计门。
+
+仅当调用方明确提供获授权的政策文件时，可在其中新增可选 `individual_weight_constraints` 数组，用于明确确认的个别硬上限（不是新持仓格式或自动迁移）：
+
+```json
+{"constraint_id":"synthetic-limit","version":"1","source_locator":"synthetic://user-confirmation/1","symbol":"SYNTH","asset_type":"stock","market":"US","role":"hard_max_weight","denominator":"portfolio_total_market_value_base","value":0.1,"authority_status":"user_confirmed","status":"effective","confirmed_at":"2026-07-01","effective_from":"2026-07-01"}
+```
+
+`version` 是非空确认版本字符串；来源、确认日和生效日必须可回溯，不从数值大小、自然语言或文件存在推断已批准。确认日／生效日／可选 `effective_until` 为 ISO 日期，按输入 `evaluation_epoch` 的 UTC 日期计算，终止日当天仍有效。数值必须为有限 JSON number 且 `0 < value <= 1`，拒绝布尔／字符串；个别项仅接受上述字段及可选 `effective_until`，额外／矛盾的确认标志不静默忽略，归为未决。作用域须精确匹配 symbol（忽略大小写）、asset_type、market；只对同为组合总市值分母、同为 hard_max_weight 的有效规则求交。不同分母不做换算，不同角色（如目标权重）不充当硬上限。未来生效、已过期、`revoked`／`superseded` 不生效；同一 ID 多个有效版本／值或显式 `conflict` 不静默选更小值，不自动挑“最新”。新的版本须由独立授权的维护将旧项明确标为被替代。本技能不修改实际政策。
+
+裸持仓 `max_weight` 继续可读，但在此观察组件中始终列为 `recorded_unconfirmed`，即使数字与确认政策相同也不自动给裸字段授权；`target_weight` 不参与求交。输出每行 `constraint_resolution` 包含 `active_items`、`recorded_unconfirmed`、`conflicts`、`gaps`、`inactive_items`、`excluded_items`、`effective_max_weight` 与 `status=complete|unresolved`，保留来源、版本、作用域及政策字节哈希。来源／版本／时钟缺失、不可比项或显式待确认均不得呈现全部有效。
+
+每行 `weight_compliance` 用未舍入快照 `current_weight > effective_max_weight` 核验已生效上限，等于上限允许；`scope=active_constraints_only` 不代表所有未决条件安全。未决不遮蔽已知超限。观察门保留 `categories.weight_cap_breached` 和快照计算，同时将未决传播为 `constraint_authority_unresolved`／`evaluation_status=insufficient_data`，仍计算其他有证据的价格观察边界。调用方不能用“未评估未确认条件”推出安全结论；无有效运行行情时也保留已算出的快照超限。
+
+### 仓位上限的冻结 NAV 价格映射
+
+保留原公式 `effective_max_weight * portfolio_total_market_value_base / (quantity * fx)`。对应边界增加 `price_mapping.mode=snapshot_frozen_nav`、`denominator`、`frozen_nav`、`base_currency`、`evaluation_epoch` 和 `effective_max_weight`。这是计算时点总资产冻结后的截面映射，不是其他资产价值固定而本标的价格变化时重新计算分母的动态权重触发价。运行价格与该映射相等／交叉仅是价格观察事件，不等于权重违规；实际快照权重违规只看 `weight_compliance` 的严格大于比较。该映射不是买卖指令，不能保证之后的真实动态权重。权重快照来源与新运行行情不是同一时点时必须保留两者时点，不将旧权重冒充实时权重。
+
+本组件不读取 Thesis、不新增或确认用户条件、不改写持仓或政策。政策字节哈希仅绑定所选输入，不独立认证确认来源；调用方仍负责授权文件选择、可信来源和现有组合数据验证。后续原生编排负责跨面状态汇总，不得将 `unresolved` 丢弃或把 `within_limit` 当全部安全。
+
 ## 当前权重与汇率
 
 当前权重只能使用通过严格身份、覆盖和时效检查的 `pia_daily_sync_offline_v3` 报告；报告生成时间距本次计算超过 15 分钟时不再视为当前证据。计算端会重新读取并核对报告所绑定的持仓文件与原始行情包，按消费时点和 `market_state` 重算每条行情的实际年龄，不接受报告自报的空陈旧清单代替计算。持仓数量或身份字段在同一路径发生变化、原始行情包被改写、市场状态缺失或未知时均失败关闭。显式历史重放也执行相同绑定和时效核对，并标记为 `explicit_point_in_time_replay`，不得写成当前权重。

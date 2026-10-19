@@ -344,9 +344,10 @@ def commit_manifest(
                 )
             ):
                 raise RunContractError("article broker reservation is immutable")
-    for gap_id, receipt in previous.get("parent_supplement_finalizations", {}).items():
-        if manifest.get("parent_supplement_finalizations", {}).get(gap_id) != receipt:
-            raise RunContractError("parent finalization receipt is immutable")
+    for key in ("parent_supplement_finalizations", "worker_supplement_finalizations"):
+        for gap_id, receipt in previous.get(key, {}).items():
+            if manifest.get(key, {}).get(gap_id) != receipt:
+                raise RunContractError("finalization receipt is immutable")
     from article_broker import validate_append
 
     validate_append(previous, manifest)
@@ -1012,6 +1013,9 @@ def validate_registered_pipeline_summary(
             "semantic draft coverage.run_status does not match registered stage status"
         )
     expected_confidence = "high" if expected_run_status == "complete" else "medium"
+    from collection_quality import quality_policy_enabled
+    if quality_policy_enabled(manifest) and baseline_coverage.get("coverage_confidence") == "low":
+        expected_confidence = "low"
     if coverage.get("coverage_confidence") != expected_confidence:
         raise RunContractError(
             "semantic draft coverage.coverage_confidence does not match registered stage status"
@@ -1463,7 +1467,7 @@ def create_run(
     linked_from_run_id: str | None = None,
     claim_grounding_version: int = 1,
 ) -> tuple[Path, dict[str, Any]]:
-    if type(claim_grounding_version) is not int or claim_grounding_version not in {1, 2}:
+    if type(claim_grounding_version) is not int or claim_grounding_version not in {1, 2, 3}:
         raise RunContractError("unsupported claim grounding policy")
     from hub_utils import runtime_environment
     current = _aware_now(timezone_name, now)
@@ -2461,6 +2465,7 @@ def build_supplement_request(
     gaps: list[dict[str, Any]],
     *,
     article_broker_version: int = 3,
+    worker_delivery_version: int | None = None,
     now: datetime | None = None,
 ) -> tuple[Path, dict[str, Any]]:
     if type(article_broker_version) is not int or article_broker_version not in {
@@ -2471,6 +2476,12 @@ def build_supplement_request(
         raise RunContractError(
             "article_broker_version must be 1, 2 or 3 for a new request"
         )
+    if worker_delivery_version is not None and (
+        type(worker_delivery_version) is not int
+        or worker_delivery_version != 1
+        or article_broker_version != 3
+    ):
+        raise RunContractError("worker delivery policy requires native broker v3")
     manifest = require_stage(manifest_path, "baseline", {"completed", "degraded"})
     baseline_sha = manifest["stages"]["baseline"].get("artifact_sha256")
     if not baseline_sha:
@@ -2513,13 +2524,13 @@ def build_supplement_request(
         if article_broker_version == 3 and gap.get("article_broker") is True:
             native_limits = {
                 "max_queries": 2,
-                "max_urls": 4,
+                "max_urls": 8 if worker_delivery_version == 1 else 4,
                 "max_duration_seconds": 600,
             }
             budget = _normalized_supplement_budget({**native_limits, **gap})
             if any(budget[key] > limit for key, limit in native_limits.items()):
                 raise RunContractError(
-                    "native v3 budget cannot exceed query2/fetch4/source600"
+                    f"native v3 budget cannot exceed query2/fetch{native_limits['max_urls']}/source600"
                 )
         else:
             budget = _normalized_supplement_budget(gap)
@@ -2543,6 +2554,7 @@ def build_supplement_request(
                 "max_turns": max_turns,
                 "halt_condition": halt_condition,
                 "verify_bound_candidates": verify_bound_candidates,
+                **({"bound_reading_budget": _integer(gap["bound_reading_budget"], "bound reading budget", minimum=1)} if "bound_reading_budget" in gap else {}),
                 **budget,
             }
         )
@@ -2887,6 +2899,14 @@ def build_supplement_request(
                 "run_daily.py finalize-supplement. No post-seal fetch or timestamp repair. Original reservation remains held permanently."
             )
         if gap.get("article_broker") and article_broker_version == 3:
+            if worker_delivery_version == 1:
+                packet["task_message"] = packet["task_message"].replace(
+                    "Worker may write only its dynamic draft.",
+                    "Worker writes only its authorized draft, then must run its bound finalize helper to journal worker delivery before reporting draft_ready. Parent acceptance preserves worker authorship. A hash-valid explicit parent fallback may open independent lanes under collection-quality-v1; only proven shared tool/auth/lifecycle failures stop fanout.",
+                ).replace(
+                    "Finalize uses the same helper; parent must finalize --parent before run_daily.py finalize-supplement.",
+                    "Worker must execute its bound finalize helper before reporting draft_ready. Parent uses finalize --parent only for explicit fallback; normal registration accepts the existing worker journal.",
+                )
             packet["task_message"] = packet["task_message"].replace(
                 "broker-http",
                 "broker-reserve-fetch / native fetch_content(mode=readable) / broker-record-fetch",
@@ -2950,6 +2970,10 @@ def build_supplement_request(
     }
     if any(gap.get("article_broker") for gap in normalized_gaps):
         request["article_broker_version"] = article_broker_version
+        if worker_delivery_version is not None:
+            request["worker_delivery_version"] = worker_delivery_version
+            request["native_capture_version"] = 1
+            request["collection_quality_version"] = 1
     atomic_dump_json(request_path, request)
     request_sha256 = file_sha256(request_path)
     manifest_file = Path(manifest_path)
@@ -4094,6 +4118,13 @@ def register_supplement_results(
     # Even read-only terminal replay must not accept foreign/tampered attestations.
     for gap_id, raw in broker_source_bytes.items():
         receipt = manifest.get("parent_supplement_finalizations", {}).get(gap_id)
+        worker_receipt = manifest.get("worker_supplement_finalizations", {}).get(gap_id)
+        if receipt is not None and worker_receipt is not None:
+            raise RunContractError("supplement finalization author conflict")
+        if receipt is None:
+            receipt = worker_receipt
+        if request.get("worker_delivery_version") == 1 and receipt is None:
+            raise RunContractError("worker delivery requires a finalization journal before registration")
         if receipt is not None:
             from supplement_agent import _validate_parent_receipt
 
@@ -4102,7 +4133,7 @@ def register_supplement_results(
                 for p in request["execution_packets"]
                 if p["assigned_gap_ids"] == [gap_id]
             )
-            _validate_parent_receipt(request_file, request, packet, gap_id, receipt)
+            _validate_parent_receipt(request_file, request, packet, gap_id, receipt, worker=worker_receipt is not None)
             if hashlib.sha256(raw).hexdigest() != receipt["final_draft_sha256"]:
                 raise RunContractError("parent finalization receipt draft mismatch")
     existing_stage = manifest.get("stages", {}).get("supplemental", {})
@@ -4193,7 +4224,12 @@ def register_supplement_results(
         for gap_id in result_source_paths
         if manifest.get("parent_supplement_finalizations", {}).get(gap_id) is not None
     )
-    child_authored = sorted(set(result_source_paths) - set(parent_authored))
+    child_authored = (
+        sorted(gap_id for gap_id in result_source_paths
+               if manifest.get("worker_supplement_finalizations", {}).get(gap_id) is not None)
+        if request.get("worker_delivery_version") == 1
+        else sorted(set(result_source_paths) - set(parent_authored))
+    )
     child_delivery = {
         "gap_count": len(results),
         "child_authored_gaps": child_authored,
@@ -4410,6 +4446,20 @@ def reconcile_supplement_progress(
             for event in canary_events
         )
         canary_broker_terminal = canary_id in broker_terminals
+        if request.get("collection_quality_version") == 1:
+            from collection_quality import shared_infrastructure_failure
+            from supplement_agent import _validate_parent_receipt
+            journal = manifest.get("worker_supplement_finalizations", {}).get(canary_id)
+            worker = journal is not None
+            journal = journal or manifest.get("parent_supplement_finalizations", {}).get(canary_id)
+            canary_packet = next(p for p in request["execution_packets"] if p["assigned_gap_ids"][0] == canary_id)
+            ledger = manifest.get("article_broker_evidence", {}).get(canary_id, {})
+            shared_failure = shared_infrastructure_failure({}, ledger)
+            if journal is not None:
+                raw = _validate_parent_receipt(request_file, request, canary_packet, canary_id, journal, worker=worker)
+                shared_failure = shared_infrastructure_failure(json.loads(raw), ledger)
+            if not shared_failure:
+                raise RunContractError("unstarted gaps require proven shared infrastructure failure; source/content failure is lane-local")
         if not (canary_terminal_failure or canary_sealed or canary_broker_terminal):
             raise RunContractError(
                 "unstarted gaps require a terminal failed or sealed canary state"

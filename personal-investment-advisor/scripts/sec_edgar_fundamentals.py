@@ -312,13 +312,13 @@ def fetch_json(session: requests.Session, url: str, *, user_agent: str, timeout:
     return payload, hashlib.sha256(response.content).hexdigest()
 
 
-def build_report(
+def _build_report(
     symbols: list[str],
     *,
     as_of: date | datetime,
     user_agent: str,
     timeout: float = 30.0,
-    session: requests.Session | None = None,
+    session=None,
     decision_scope: str = "advisory",
 ) -> dict[str, Any]:
     if decision_scope not in ("research_only", "advisory", "actionable"):
@@ -386,12 +386,70 @@ def build_report(
     }
 
 
+def build_report(
+    symbols: list[str], *, as_of: date | datetime, user_agent: str,
+    timeout: float = 30.0, session: requests.Session | None = None,
+    decision_scope: str = "advisory", artifact_dir=None,
+) -> dict[str, Any]:
+    """Optional raw-byte capture; legacy no-directory report contract is unchanged."""
+    from pia_fact_prepare import native_spec, no_links, render, store
+    from source_timing_contract import verify_source_capture
+
+    active = session if session is not None else requests.Session()
+    captures = {}
+    root = no_links(artifact_dir).resolve() if artifact_dir is not None else None
+
+    class CaptureSession:
+        def get(self, url, **kwargs):
+            response = active.get(url, **kwargs)
+            response.raise_for_status()
+            raw = response.content
+            if root is None:
+                raise ValueError('capture directory required')
+            digest = hashlib.sha256(raw).hexdigest()
+            path = store(root / 'raw' / (digest + '.json'), raw)
+            now = datetime.now(timezone.utc).isoformat()
+            receipt = verify_source_capture(path, source_locator=url,
+                                            availability_observed_at=now, retrieved_at=now)
+            receipt['raw_artifact'] = path.relative_to(root).as_posix()
+            receipt['source_provider'] = 'SEC EDGAR'
+            captures[url] = receipt
+            return response
+
+    try:
+        report = _build_report(symbols, as_of=as_of, user_agent=user_agent, timeout=timeout,
+                               session=CaptureSession() if root is not None else active,
+                               decision_scope=decision_scope)
+        if root is not None:
+            specs = []
+            for snapshot in report['results']:
+                if 'evidence' not in snapshot:
+                    continue
+                receipt = captures[snapshot['evidence']['source_locator']]
+                snapshot['evidence']['source_capture_receipt'] = receipt
+                snapshot['evidence']['retrieved_at'] = receipt['retrieved_at']
+                raw = (root / receipt['raw_artifact']).read_bytes()
+                specs.append(native_spec(snapshot, captures[TICKER_MAP_URL], receipt, raw))
+            data = {'projections': specs, 'pdfs': []}
+            raw = render(data)
+            path = store(root / ('fact-input-' + hashlib.sha256(raw).hexdigest() + '.json'), raw)
+            report['retrieved_at'] = max(r['retrieved_at'] for r in captures.values())
+            report['fact_prepare_input'] = str(path)
+            report['evidence_root'] = str(root)
+            report['ticker_map_evidence']['source_capture_receipt'] = captures[TICKER_MAP_URL]
+        return report
+    finally:
+        if session is None:
+            active.close()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("symbols", nargs="+")
     parser.add_argument("--as-of", required=True)
     parser.add_argument("--user-agent", help="Defaults to PIA_SEC_USER_AGENT.")
     parser.add_argument("--timeout", type=float, default=30.0)
+    parser.add_argument("--artifact-dir", help="Explicit directory for immutable original SEC response bytes.")
     parser.add_argument(
         "--decision-scope",
         choices=("research_only", "advisory", "actionable"),
@@ -410,6 +468,7 @@ def main() -> int:
             user_agent=user_agent,
             timeout=args.timeout,
             decision_scope=args.decision_scope,
+            artifact_dir=args.artifact_dir,
         )
     except (OSError, ValueError, requests.RequestException, json.JSONDecodeError) as exc:
         report = {

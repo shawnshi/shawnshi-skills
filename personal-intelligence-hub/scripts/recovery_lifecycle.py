@@ -104,7 +104,24 @@ from run_contract import load_manifest,register_supplement_results,review_input_
 m=load_manifest(root/'run_manifest.json')
 assert m['stages']['supplemental']['status'] in {'completed','degraded'}
 r=json.loads(Path(m['artifacts']['supplement_request']['artifact_path']).read_text(encoding='utf8'))
-p,a=register_supplement_results(root/'run_manifest.json',m['artifacts']['supplement_request']['artifact_path'],[p['output_paths']['result'] for p in r['execution_packets']])
+aggregate=json.loads(Path(m['stages']['supplemental']['artifact_path']).read_text(encoding='utf8'))
+registered={item['gap_id']:item for item in aggregate['results']}
+assert len(registered)==len(aggregate['results']), 'duplicate registered supplement gap'
+paths=[]; failures={}
+for packet in r['execution_packets']:
+    gap_id=packet['assigned_gap_ids'][0]
+    result_path=Path(packet['output_paths']['result']).resolve()
+    recorded=registered[gap_id]
+    if recorded.get('status')=='failed' and recorded.get('failure_kind')=='infrastructure':
+        failure_path=result_path.with_suffix('.failure.json')
+        assert failure_path.parent==root.resolve(), 'foreign reconciliation receipt'
+        failure=json.loads(failure_path.read_text(encoding='utf8'))
+        assert failure==recorded, 'registered reconciliation receipt changed'
+        failures[failure_path]=failure
+        paths.append(failure_path)
+    else:
+        paths.append(result_path)
+p,a=register_supplement_results(root/'run_manifest.json',m['artifacts']['supplement_request']['artifact_path'],paths,_reconciled_failures=failures)
 print(json.dumps({'status':'valid','input_bundle_sha256':review_input_bundle_sha256(m),'lineage_count':len(registered_candidate_lineage(m)),'aggregate_sha256':m['stages']['supplemental']['artifact_sha256']}))
 '''
 

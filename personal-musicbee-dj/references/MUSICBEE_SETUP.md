@@ -22,6 +22,8 @@
 
 专用 `musicbee-tags` 角色由主进程从技能 `templates/` 复制到当次任务 `.pi/agents/`，不修改全局 researcher。角色保留当前研究模型 `antigravity/gemini-3.8-flash`，与默认主模型 GPT-6.1 Sol 分开，不推定两者行为相同。
 
+公开搜索仅允许 `google_search`，走 Antigravity Grounding，固定使用 `gemini-3.8-flash`（底层请求 ID `gemini-3.8-flash-low`），不自动降级到旧模型。全局 `pi-web-access` 的 `webSearch` 工具已停用，其他工具和显式命令保留原配置；本角色不再允许 Gemini API 搜索或 URL 提取。Antigravity 搜索默认值是本地已安装包补丁，包升级可能覆盖，届时须重新核验。
+
 修改技能后 `/reload` 或新会话才能验证自动路由。真正派发前核对任务 cwd 下的原生子代理角色、模型和网络工具注册。静态发现、合成测试和配置检查不能代替真实启动或身份认证验证。
 
 研究模型的任务成功率、版本识别、来源支持和成本尚需按 [评估说明](evaluation.md) 实测；不把本地回归测试称为模型效果评估。

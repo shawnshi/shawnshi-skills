@@ -333,7 +333,7 @@ def render_markdown(data, raw_json):
         for gap in data["data_gaps"]:
             md += f"- {gap}\n"
 
-    md += "\n## 🧠 Mentat 综合分析摘要\n\n"
+    md += "\n## 🧠 Reson 综合分析摘要\n\n"
     md += f"> {data.get('analysis_summary', '')}\n\n"
     md += "\n---\n<details><summary>点击查看原始 JSON 资产</summary>\n\n"
     md += f"```json\n{raw_json}\n```\n</details>\n"

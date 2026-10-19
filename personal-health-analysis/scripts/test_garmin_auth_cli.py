@@ -6,6 +6,7 @@ import os
 import tempfile
 import types
 import unittest
+import unittest.mock
 from pathlib import Path
 from unittest.mock import patch
 
@@ -17,9 +18,20 @@ SCRIPT_PATH = Path(__file__).with_name("garmin_auth.py")
 
 def load_module():
     spec = importlib.util.spec_from_file_location("garmin_auth_cli_under_test", SCRIPT_PATH)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def fake_native_login_client(error=None):
+    return types.SimpleNamespace(
+        configure=unittest.mock.Mock(), skip_strategies=set(),
+        login=unittest.mock.Mock(side_effect=error), dump=unittest.mock.Mock(),
+        _http_post=unittest.mock.Mock(),
+        cs=types.SimpleNamespace(request=unittest.mock.Mock()),
+        _api_session=types.SimpleNamespace(request=unittest.mock.Mock()),
+    )
 
 
 class GarminAuthCliTests(unittest.TestCase):
@@ -64,6 +76,42 @@ class GarminAuthCliTests(unittest.TestCase):
         with patch.object(self.module, "package_version", return_value="0.3.8"):
             with self.assertRaisesRegex(RuntimeError, "garminconnect_version_mismatch"):
                 self.module._load_garmin_api()
+
+    def test_native_client_disables_both_transport_retry_policies(self):
+        from requests import Session
+
+        transports = types.SimpleNamespace(cs=Session(), _api_session=Session())
+        received = {}
+
+        def fake_garmin(**kwargs):
+            received.update(kwargs)
+            return types.SimpleNamespace(client=transports)
+
+        client = self.module._new_live_client(fake_garmin)
+        self.assertIs(client.client, transports)
+        self.assertEqual(received["retry_attempts"], 0)
+        for session in (transports.cs, transports._api_session):
+            for adapter in session.adapters.values():
+                retry = adapter.max_retries
+                self.assertEqual(
+                    (retry.total, retry.connect, retry.read, retry.redirect, retry.status),
+                    (0, 0, 0, 0, 0),
+                )
+
+    def test_legacy_transport_keeps_configure_contract(self):
+        from unittest.mock import Mock
+
+        transport = types.SimpleNamespace(configure=Mock())
+        self.module._new_live_client(
+            lambda **kwargs: types.SimpleNamespace(client=transport)
+        )
+        transport.configure.assert_called_once_with(retries=0)
+
+    def test_unknown_transport_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError, "garmin_transport_contract_mismatch"):
+            self.module._new_live_client(
+                lambda **kwargs: types.SimpleNamespace(client=object())
+            )
 
     def test_login_dry_run_does_not_prompt_import_or_touch_tokens(self):
         stdout = io.StringIO()
@@ -200,10 +248,10 @@ class GarminAuthCliTests(unittest.TestCase):
     def test_auth_failure_output_does_not_echo_identity_or_exception_message(self):
         class FakeGarmin:
             def __init__(self, *_args, **_kwargs):
-                self.client = types.SimpleNamespace(configure=unittest.mock.Mock())
+                self.client = fake_native_login_client(RuntimeError("private@example.com C:/secret/token.json"))
 
             def login(self, **_kwargs):
-                raise RuntimeError("private@example.com C:/secret/token.json")
+                raise AssertionError("cached/password fallback must not run")
 
         stderr = io.StringIO()
         with (
@@ -233,10 +281,10 @@ class GarminAuthCliTests(unittest.TestCase):
     def test_successful_login_does_not_probe_daily_health_summary(self):
         class FakeGarmin:
             def __init__(self, *_args, **_kwargs):
-                self.client = types.SimpleNamespace(configure=unittest.mock.Mock())
+                self.client = fake_native_login_client()
 
             def login(self, **_kwargs):
-                return None
+                raise AssertionError("cached/password fallback must not run")
 
             def get_user_summary(self, *_args, **_kwargs):
                 raise AssertionError("daily health summary must not be read by authentication")
@@ -276,10 +324,10 @@ class GarminAuthCliTests(unittest.TestCase):
     def test_login_routes_garmin_hosts_around_the_configured_proxy(self):
         class FakeGarmin:
             def __init__(self, *_args, **_kwargs):
-                self.client = types.SimpleNamespace(configure=unittest.mock.Mock())
+                self.client = fake_native_login_client()
 
             def login(self, **_kwargs):
-                return None
+                raise AssertionError("cached/password fallback must not run")
 
         with (
             tempfile.TemporaryDirectory() as temp_root,

@@ -199,6 +199,6 @@ def test_registered_two_bound_context_and_frozen_finalization(tmp_path):
             )
     assert context["execution_budget"] == {
         "max_queries": 2,
-        "max_urls": 4,
+        "max_urls": 5,
         "max_duration_seconds": 600,
     }

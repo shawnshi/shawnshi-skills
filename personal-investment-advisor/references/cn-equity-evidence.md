@@ -20,4 +20,6 @@
 
 **实测故障**（回包结构上不可能含数据，一律登记为 `broken`，绝不当成“无公告”）：上交所 `queryCompanyBulletinNew.do` / `commonSoaQuery.do`（total 0 或 `ExceptionInterceptor`）、上交所披露页（JS 壳）、巨潮 `hisAnnouncement/query`（`announcements: null`）、证监会列表页（内容停在 2021 年）、深交所公告 PDF 直链（403 WAF，须回退到检索回包原文）。故障与“窗口内确实没有公告”是两种结论：`broken` 判标的未验证并把整次采集置为 `incomplete`（退出码 1），`empty` 才是忠实的空结果。仅 `broken` 会做有界重试（默认 2 次），`empty` 不重试。
 
-**时间戳纪律**：标的公告时间取通道回包中的真实发布时间；宏观／行业／监管来源没有可靠机器可读发布时间，必须由调用方用 `--scope-source macro=<url>@<published_at>` 显式声明，工具不猜测。缓存回包会带 `reused` 与 `cache_age_seconds` 标签，超过 `--max-cache-age-seconds`（默认 3600）即重新抓取。
+**候选与覆盖边界**：处理返回列表中窗口内的所有候选，按原件 URL（无 URL 时按记录身份）去重；`records` 保留逐条取证，`latest` / `chosen` 及顶层原件字段仍代表最新候选。正文下载失败保留列表原件并标 `body_retrieved=false`、真实错误及 fallback；取得正文也不表示完成正文解析或重大性判断。CNINFO 当前只取第一页，SZSE/HKEX 只取返回列表，SEC 只取 recent，未证明分页或全部重大事件覆盖，`event_coverage_complete=false` 恒如实声明。采集 complete 只代表本次返回候选与声明 scope 的取证闭合，不代表 Thesis 或重大事件覆盖完整。
+
+**时间戳纪律**：标的公告时间取通道回包中的真实发布时间；宏观／行业／监管来源没有可靠机器可读发布时间，必须由调用方用 `--scope-source macro=<url>@<published_at>` 显式声明，工具不猜测。缓存回包带原始 `fetched_at`、`reused` 与 `cache_age_seconds`；负龄、非有限时间、超过 TTL、请求 URL/方法/请求体/头身份不符、元信息或正文摘要不符均重新抓取。v2 单文件缓存绑定元信息与正文并原子替换，旧分步格式不复用；权限与提交错误不得当成无公告。

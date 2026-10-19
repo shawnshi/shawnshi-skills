@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-cognitive-auditor",
-  "generated_at": "2026-10-02T11:52:35+08:00",
+  "generated_at": "2026-10-18T21:02:29+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -65,7 +65,7 @@
     },
     {
       "path": "references/handoff_contract.md",
-      "sha256": "60d98c32f3e75369405ef2deb055ee3f1494e345031972c02e4e40d55c9380b3"
+      "sha256": "080eeed1df848270c49b64fc38fe4c45b87352cf8f1e9fabe7e5b2e415364a88"
     },
     {
       "path": "references/periodic_save.md",
@@ -85,7 +85,7 @@
     },
     {
       "path": "scripts/audit_gate.py",
-      "sha256": "499b8311da19cf5f0d9cd5a4c9b07ed07cd97e85a2ea07bea121ee08d5588722"
+      "sha256": "3b46774d34a7ea83881a706d64f813deeac2832e7508557ce7b50db8e8a5d1c4"
     },
     {
       "path": "scripts/periodic_counterexamples.py",
@@ -97,7 +97,7 @@
     },
     {
       "path": "scripts/test_audit_gate.py",
-      "sha256": "7bbc2cacff01e48ad364b58917f16b7af12d1c80121d58ad17c38680799cb435"
+      "sha256": "47eb3b04716e4120eff5e08bb5f5f099601ae81edd5ff8f5276bd06607a8019b"
     },
     {
       "path": "scripts/test_runtime_stability.py",
@@ -149,7 +149,7 @@
       "path": "references/handoff_contract.md",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/references/handoff_contract.md",
-      "sha256": "60d98c32f3e75369405ef2deb055ee3f1494e345031972c02e4e40d55c9380b3"
+      "sha256": "080eeed1df848270c49b64fc38fe4c45b87352cf8f1e9fabe7e5b2e415364a88"
     },
     {
       "path": "references/periodic_save.md",
@@ -173,7 +173,7 @@
       "path": "scripts/audit_gate.py",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/scripts/audit_gate.py",
-      "sha256": "499b8311da19cf5f0d9cd5a4c9b07ed07cd97e85a2ea07bea121ee08d5588722"
+      "sha256": "3b46774d34a7ea83881a706d64f813deeac2832e7508557ce7b50db8e8a5d1c4"
     }
   ],
   "missing_declared_dependencies": []

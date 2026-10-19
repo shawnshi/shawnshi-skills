@@ -45,7 +45,9 @@ def _number(value: Any, *, positive: bool = False) -> float | None:
 
 def evaluate(positions: dict, quote_payload: Any, *, evaluation_epoch: float,
              dashboard_root: str | Path | None = None, thesis_payload: Any = None,
-             holiday_table: dict | None = None, decision_scope: str = "advisory") -> dict:
+             holiday_table: dict | None = None, decision_scope: str = "advisory",
+             conditions_file: str | Path | None = None,
+             evidence_root: str | Path | None = None) -> dict:
     """Evaluate each zero row, preserving explicit missing/invalid evidence."""
     if _number(evaluation_epoch, positive=True) is None:
         raise ValueError("evaluation_epoch must be positive and finite")
@@ -72,7 +74,8 @@ def evaluate(positions: dict, quote_payload: Any, *, evaluation_epoch: float,
                   if row.get("status") == "valid"}
     thesis = (evaluate_thesis_evidence(
         thesis_payload, expected_symbols=symbols,
-        portfolio_snapshot_binding=binding, evaluation_epoch=evaluation_epoch)
+        portfolio_snapshot_binding=binding, evaluation_epoch=evaluation_epoch,
+        conditions_file=conditions_file, evidence_root=evidence_root)
         if thesis_payload is not None and symbols else
         {"status": "not_assessed", "fatal_event_status": "not_assessed",
          "reason": "primary_source_research_thesis_pack_not_supplied"})
@@ -171,7 +174,9 @@ def evaluate(positions: dict, quote_payload: Any, *, evaluation_epoch: float,
 def run(positions: dict, *, task_dir: Path, cache_dir: Path, evaluation_epoch: float,
         dashboard_root: Path | None = None, quotes_file: Path | None = None,
         thesis_file: Path | None = None, holiday_table: dict | None = None,
-        decision_scope: str = "advisory", reuse: bool = False) -> dict:
+        decision_scope: str = "advisory", reuse: bool = False,
+        conditions_file: str | Path | None = None,
+        evidence_root: str | Path | None = None) -> dict:
     """Collect ordinary quote-only research records, never a fabricated portfolio."""
     symbols = [row["symbol"] for row in unpurchased_positions(positions)]
     output = task_dir / "out" / "unpurchased_quotes.json"
@@ -187,7 +192,8 @@ def run(positions: dict, *, task_dir: Path, cache_dir: Path, evaluation_epoch: f
     elif symbols:
         command = [sys.executable, "-B", str(SCRIPT_DIR / "yf.py"), *symbols,
                    "--json", "--info-only", "--cache-dir", str(cache_dir)]
-        completed = subprocess.run(command, capture_output=True, timeout=900, check=False)
+        from process_budget import run as run_process
+        completed = run_process(command, capture_output=True, timeout=900, check=False)
         try:
             records = json.loads(completed.stdout.decode("utf-8"))
         except (UnicodeError, ValueError) as exc:
@@ -199,14 +205,17 @@ def run(positions: dict, *, task_dir: Path, cache_dir: Path, evaluation_epoch: f
         payload = {"records": [], "research_binding": research_binding(positions)}
     # Never relabel a supplied/replayed packet with a newly minted binding.
     if source != output:
-        output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        from artifact_io import atomic_text
+        atomic_text(output, json.dumps(payload, ensure_ascii=False, indent=2))
     thesis = json.loads(thesis_file.read_text(encoding="utf-8")) if thesis_file else None
     report = evaluate(positions, payload, evaluation_epoch=evaluation_epoch,
                       dashboard_root=dashboard_root, thesis_payload=thesis,
-                      holiday_table=holiday_table, decision_scope=decision_scope)
+                      holiday_table=holiday_table, decision_scope=decision_scope,
+                      conditions_file=conditions_file, evidence_root=evidence_root)
     if capture_errors:
         report["status"] = "insufficient_evidence"
         report["errors"].extend(capture_errors)
-    (task_dir / "out" / "unpurchased_analysis.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    from artifact_io import atomic_text
+    atomic_text(task_dir / 'out' / 'unpurchased_analysis.json',
+                json.dumps(report, ensure_ascii=False, indent=2))
     return report

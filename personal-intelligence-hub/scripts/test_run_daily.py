@@ -477,12 +477,14 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(supplement_request_path.exists())
             request = json.loads(supplement_request_path.read_text(encoding="utf-8"))
             self.assertEqual(request["run_id"], "daily-test")
+            self.assertEqual(request["article_broker_version"], 3)
+            self.assertEqual(request["worker_delivery_version"], 1)
             self.assertEqual(
                 {gap["lane"] for gap in request["gaps"]},
                 {"TechRadar", "HealthcareRadar"},
             )
             manifest = load_manifest(result.manifest_path)
-            self.assertEqual(manifest["claim_grounding_version"], 2)
+            self.assertEqual(manifest["claim_grounding_version"], 3)
             self.assertIn("python", manifest["runtime_environment"])
             self.assertIn("aiohttp", manifest["runtime_environment"]["dependencies"])
             expected_default = {"technology": 0.6, "healthcare_digital": 0.4}

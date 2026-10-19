@@ -168,6 +168,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--kind", choices=("fetch", "query"), required=True)
     parser.add_argument("--header", type=Path, required=True)
     parser.add_argument("--body", type=Path)
+    parser.add_argument("--tool-output", type=Path, help="Exact saved fetch_content return JSON; never reconstructed text")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--query-response", type=Path,
                         help="File containing the exact returned public search text; no paraphrase")
@@ -178,16 +179,30 @@ def main(argv: list[str] | None = None) -> int:
         if args.kind == "fetch":
             if args.query_response is not None:
                 raise AssembleError("fetch assembly must not receive --query-response")
-            if args.body is None:
-                raise AssembleError("fetch assembly requires --body")
-            try:
-                body_text = args.body.read_text(encoding="utf-8", errors="strict")
-            except OSError as exc:
-                raise AssembleError(f"body is unreadable: {exc.strerror or exc}") from exc
-            except UnicodeError as exc:
-                raise AssembleError(f"body is not strict UTF-8: {exc}") from exc
-            receipt = assemble_fetch(header, body_text)
+            if args.tool_output is not None:
+                if args.body is not None:
+                    raise AssembleError("choose --tool-output or legacy --body, not both")
+                from native_capture import capture_fields
+                try:
+                    fields = capture_fields(args.tool_output, header["arguments"]["url"])
+                except (OSError, UnicodeError, ValueError, KeyError) as exc:
+                    raise AssembleError(f"native capture invalid: {exc}") from exc
+                header.update({key: fields[key] for key in ("outcome", "error", "truncated")})
+                receipt = assemble_fetch(header, fields["text"])
+                receipt["native_capture"] = fields["native_capture"]
+            else:
+                if args.body is None:
+                    raise AssembleError("fetch assembly requires --tool-output or legacy --body")
+                try:
+                    body_text = args.body.read_text(encoding="utf-8", errors="strict")
+                except OSError as exc:
+                    raise AssembleError(f"body is unreadable: {exc.strerror or exc}") from exc
+                except UnicodeError as exc:
+                    raise AssembleError(f"body is not strict UTF-8: {exc}") from exc
+                receipt = assemble_fetch(header, body_text)
         else:
+            if args.tool_output is not None:
+                raise AssembleError("--tool-output is only for fetch receipts")
             if args.body is not None:
                 raise AssembleError("query assembly must not receive --body")
             if args.query_response is not None:

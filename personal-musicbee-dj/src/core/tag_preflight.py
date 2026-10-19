@@ -9,6 +9,7 @@ from src.core.tag_inventory import FIELDS, inventory, read_json, scan_paths, val
 ATTRIBUTES = {
     "Tempo": "tempo",
     "mood": "mood",
+    "Genre": "genre",
     "DJ_VOCALS": "dj_vocals",
     "DJ_ENERGY": "dj_energy",
     "DJ_SCENE": "dj_scene",
@@ -119,13 +120,18 @@ def inspect_tracks(tracks, settings, limit=True, required_fields=None):
     by_path = {str(Path(t.local_path).absolute()): t for t in eligible}
     for record in records:
         track = by_path[record["path"]]
-        # Live audio-file tags override stale XML only for the five authorized fields.
+        # Live audio-file tags override stale XML only for the authorized fields.
         for field, attribute in ATTRIBUTES.items():
-            setattr(
-                track,
-                attribute,
-                ";".join(v.strip() for v in values(record["tags"], field)),
-            )
+            vals = values(record["tags"], field)
+            if attribute == "genre":
+                if vals:
+                    setattr(track, attribute, ";".join(v.strip() for v in vals))
+            else:
+                setattr(
+                    track,
+                    attribute,
+                    ";".join(v.strip() for v in vals),
+                )
     for record in records:
         record['requested_fields'] = sorted(requested)
         record['needs'] = [field for field in record['needs'] if field in requested]

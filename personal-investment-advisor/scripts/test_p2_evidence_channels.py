@@ -26,11 +26,20 @@ class FakeResponse:
         self.content = body
         self.headers = {"Content-Type": content_type}
 
+    def close(self):
+        pass
+
 
 class FakeSession:
     def __init__(self, responses: list[FakeResponse] | Exception):
         self.responses = responses if isinstance(responses, list) else [responses]
         self.calls: list[tuple[str, str]] = []
+        self.trust_env = True
+        self.auth = None
+        self.cert = None
+        self.headers = {}
+        self.proxies = {}
+        self.cookies = {}
 
     def _next(self, method: str, url: str):
         self.calls.append((method, url))
@@ -39,10 +48,12 @@ class FakeSession:
             raise item
         return item
 
-    def get(self, url, headers=None, timeout=None):  # noqa: ANN001 - test double
+    def get(self, url, headers=None, timeout=None, *, allow_redirects, verify):
+        assert allow_redirects is False and verify is True
         return self._next("GET", url)
 
-    def post(self, url, data=None, headers=None, timeout=None):  # noqa: ANN001 - test double
+    def post(self, url, data=None, headers=None, timeout=None, *, allow_redirects, verify):
+        assert allow_redirects is False and verify is True
         return self._next("POST", url)
 
 
@@ -75,7 +86,7 @@ class ClassifierTests(unittest.TestCase):
         self.assertEqual(health, ec.HEALTH_OK)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["title"], "大金重工：注销公告")
-        self.assertTrue(records[0]["document_url"].startswith("http://static.cninfo.com.cn/"))
+        self.assertTrue(records[0]["document_url"].startswith("https://static.cninfo.com.cn/"))
         self.assertIn("+08:00", records[0]["published_at"])
 
     def test_szse_requires_count_and_list(self):
@@ -177,12 +188,12 @@ class FetcherTests(unittest.TestCase):
     def test_document_fetch_rejects_waf_pages_and_blocked_statuses(self):
         fetcher = self.fetcher([FakeResponse(403, b"<!DOCTYPE html><html>WAF block</html>",
                                              "text/html")])
-        blocked = ec.fetch_document(fetcher, url="http://example.test/a.pdf", key="blocked")
+        blocked = ec.fetch_document(fetcher, url="https://example.test/a.pdf", key="blocked")
         self.assertEqual(blocked["health"], ec.HEALTH_BROKEN)
 
         good = ec.fetch_document(
             self.fetcher([FakeResponse(200, b"%PDF-1.4 payload", "application/pdf")]),
-            url="http://example.test/b.pdf", key="good")
+            url="https://example.test/b.pdf", key="good")
         self.assertEqual(good["health"], ec.HEALTH_OK)
         self.assertEqual(good["bytes"], 16)
         self.assertEqual(good["content_sha256"],

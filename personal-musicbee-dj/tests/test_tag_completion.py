@@ -115,6 +115,7 @@ def research_rows(records):
                 "file": r["path"],
                 "Tempo": "Moderate",
                 "mood": "Dreamy",
+                "Genre": "Pop",
                 "DJ_VOCALS": "instrumental",
                 "DJ_ENERGY": "low",
                 "DJ_SCENE": "focus;coding",
@@ -123,7 +124,7 @@ def research_rows(records):
                 "evidence": [
                     {
                         "url": "https://example.org/fixture",
-                        "supports": ["mood", "DJ_ENERGY", "DJ_SCENE"],
+                        "supports": ["mood", "DJ_ENERGY", "DJ_SCENE", "Genre"],
                         "note": "Synthetic mechanical test fixture, not a real music claim",
                         "kind": "inference",
                     },
@@ -162,6 +163,7 @@ def test_roundtrip_protects_audio_other_tags_and_exact_restore(
     changes = {
         "Tempo": "Fast",
         "mood": "Upbeat",
+        "Genre": "Rock",
         "DJ_VOCALS": "instrumental",
         "DJ_ENERGY": "medium",
         "DJ_SCENE": "focus;coding",
@@ -310,7 +312,7 @@ def test_import_pinned_apply_verify_and_idempotent_commits(media, tmp_path):
         apply_batch(work, "batch-0001", "wrong")
     record_review(work, "batch-0001", accepted["result_sha256"], records, tmp_path)
     first = apply_batch(work, "batch-0001", accepted["result_sha256"])
-    assert first["applied_files"] == 1 and first["applied_fields"] == 5
+    assert first["applied_files"] == 1 and first["applied_fields"] == 6
     assert (
         apply_batch(work, "batch-0001", accepted["result_sha256"])["applied_files"] == 0
     )
@@ -433,6 +435,7 @@ def test_unresolved_completed_attempt_does_not_loop(media, tmp_path):
         row.update(
             Tempo="",
             mood="",
+            Genre="",
             DJ_VOCALS="unknown",
             DJ_ENERGY="unknown",
             DJ_SCENE="unknown",
@@ -609,3 +612,296 @@ def test_nonpublic_or_authenticated_evidence_not_eligible(url):
     from src.core.tag_writer import public_source_url
 
     assert not public_source_url(url)
+
+
+def test_retry_on_sharing_violation_succeeds_and_fails():
+    from src.core.tag_writer import retry_on_sharing_violation
+
+    calls = {"count": 0}
+
+    def intermittent():
+        calls["count"] += 1
+        if calls["count"] < 2:
+            exc = PermissionError("Locked")
+            exc.winerror = 32
+            raise exc
+        return "success"
+
+    assert retry_on_sharing_violation(intermittent, delay=0.01) == "success"
+    assert calls["count"] == 2
+
+    def persistent():
+        exc = PermissionError("Always locked")
+        exc.winerror = 32
+        raise exc
+
+    with pytest.raises(PermissionError, match="Always locked"):
+        retry_on_sharing_violation(persistent, max_attempts=2, delay=0.01)
+
+
+def test_scan_paths_cache_hit_and_invalidation(media, monkeypatch):
+    from src.core.tag_inventory import scan_paths
+    import src.core.tag_inventory as ti
+
+    root, make = media
+    p1 = make()
+    cache = {}
+
+    # First scan: cache miss, inventory called
+    records1, errors1 = scan_paths([p1], root, cache=cache)
+    assert len(records1) == 1 and not errors1
+    key = str(p1.absolute()).casefold()
+    assert key in cache
+
+    # Spy on inventory to verify cache hit
+    inventory_calls = {"count": 0}
+    orig_inventory = ti.inventory
+
+    def counting_inventory(path, library_root):
+        inventory_calls["count"] += 1
+        return orig_inventory(path, library_root)
+
+    monkeypatch.setattr(ti, "inventory", counting_inventory)
+
+    # Second scan: cache hit, inventory NOT called
+    records2, errors2 = scan_paths([p1], root, cache=cache)
+    assert len(records2) == 1 and not errors2
+    assert inventory_calls["count"] == 0
+
+    # Invalidate cache by modifying file mtime
+    import os
+    st = p1.stat()
+    os.utime(p1, ns=(st.st_atime_ns, st.st_mtime_ns + 10_000_000_000))
+    records3, errors3 = scan_paths([p1], root, cache=cache)
+    assert len(records3) == 1 and not errors3
+    assert inventory_calls["count"] == 1
+
+
+def test_concurrent_jobs_dispatch_and_slot_management(media, tmp_path):
+    root, make = media
+    p1 = make()
+    record = inventory(p1, root)
+    records = []
+    for i in range(35):
+        row = {**record["row"], "文件名": str(root / f"c_{i}.flac")}
+        records.append({**record, "path": row["文件名"], "row": row})
+    output = tmp_path / "work_concurrent"
+    write_inventory(output, root, records, [])
+
+    # Plan with concurrency=3
+    summary = prepare_jobs(output, batch_size=10, max_concurrency=3)
+    assert summary["batches"] == 4 and summary["concurrency"] == 3
+
+    # Exceeding concurrency raises error
+    with pytest.raises(ValueError, match="exceeds plan concurrency"):
+        next_jobs(output, count=4)
+
+    # Dispatch up to 3 batches
+    dispatched = next_jobs(output, count=3)
+    assert len(dispatched) == 3
+    assert [j["key"] for j in dispatched] == ["batch-0001", "batch-0002", "batch-0003"]
+
+    # Mark 2 as running -> only 1 slot left, batch-0003 is still pending
+    mark_job(output, "batch-0001", "running")
+    mark_job(output, "batch-0002", "running")
+
+    # Active research must settle before another wave can be dispatched.
+    assert next_jobs(output, count=2) == []
+
+    # Mark batch-0003 as running -> all 3 slots occupied, returns empty
+    mark_job(output, "batch-0003", "running")
+    assert next_jobs(output, count=1) == []
+
+
+def test_model_prior_evidence_validation_and_review():
+    from src.core.tag_writer import valid_evidence_url, validate_results, validate_review, FIELDS
+
+    assert valid_evidence_url("model://prior")
+    assert valid_evidence_url("model://gemini-3.8-flash")
+    assert valid_evidence_url("urn:model:prior")
+    assert not valid_evidence_url("http://localhost/test")
+
+    file_key = "track.flac"
+    inputs = {file_key: {"tags": {}, "requested_fields": FIELDS}}
+
+    # Result with model://prior for subjective fields
+    result = {
+        "summary": {"input_count": 1, "researched_count": 1, "limitations": []},
+        "rows": [
+            {
+                "file": file_key,
+                "Tempo": "",
+                "mood": "Sad",
+                "Genre": "Pop",
+                "DJ_VOCALS": "vocal",
+                "DJ_ENERGY": "low",
+                "DJ_SCENE": "relax",
+                "confidence": "high",
+                "field_confidence": {f: "high" for f in FIELDS},
+                "unresolved": ["Tempo"],
+                "evidence": [
+                    {
+                        "url": "model://prior",
+                        "supports": ["mood", "DJ_ENERGY", "DJ_SCENE", "Genre"],
+                        "note": "Parametric music knowledge: iconic melancholic ballad with slow arrangement",
+                        "kind": "inference",
+                    },
+                    {
+                        "url": "model://prior",
+                        "supports": ["DJ_VOCALS"],
+                        "note": "Known solo vocal performance",
+                        "kind": "inference",
+                    },
+                ],
+            }
+        ],
+    }
+
+    changes = validate_results(result, inputs)
+    assert changes[file_key]["mood"] == "Sad"
+    assert changes[file_key]["Genre"] == "Pop"
+    assert changes[file_key]["DJ_VOCALS"] == "vocal"
+    assert changes[file_key]["DJ_ENERGY"] == "low"
+    assert changes[file_key]["DJ_SCENE"] == "relax"
+
+    # Review approving model-prior fields
+    review = {
+        "result_sha256": "fake_sha",
+        "run_reference": "run_001",
+        "decisions": [
+            {
+                "file": file_key,
+                "field": "mood",
+                "decision": "approve",
+                "url": "model://prior",
+                "recording_match": True,
+                "note": "Approved model prior reasoning",
+            },
+            {
+                "file": file_key,
+                "field": "Genre",
+                "decision": "approve",
+                "url": "model://prior",
+                "recording_match": True,
+                "note": "Approved genre",
+            },
+            {
+                "file": file_key,
+                "field": "DJ_VOCALS",
+                "decision": "approve",
+                "url": "model://prior",
+                "recording_match": True,
+                "note": "Approved vocal fact",
+            },
+            {
+                "file": file_key,
+                "field": "DJ_ENERGY",
+                "decision": "approve",
+                "url": "model://prior",
+                "recording_match": True,
+                "note": "Approved energy",
+            },
+            {
+                "file": file_key,
+                "field": "DJ_SCENE",
+                "decision": "approve",
+                "url": "model://prior",
+                "recording_match": True,
+                "note": "Approved scene",
+            },
+        ],
+    }
+    approved = validate_review(result, inputs, review, "fake_sha")
+    assert approved[file_key] == changes[file_key]
+
+    # Tempo cannot use model://prior
+    bad_tempo_result = {
+        "summary": {"input_count": 1, "researched_count": 1, "limitations": []},
+        "rows": [
+            {
+                "file": file_key,
+                "Tempo": "Moderate",
+                "mood": "",
+                "Genre": "",
+                "DJ_VOCALS": "unknown",
+                "DJ_ENERGY": "unknown",
+                "DJ_SCENE": "unknown",
+                "confidence": "high",
+                "field_confidence": {f: "high" for f in FIELDS},
+                "unresolved": [],
+                "evidence": [
+                    {
+                        "url": "model://prior",
+                        "supports": ["Tempo"],
+                        "note": "Guessed BPM",
+                        "kind": "source_fact",
+                    }
+                ],
+            }
+        ],
+    }
+    import pytest
+    with pytest.raises(ValueError, match="Tempo requires a public source URL"):
+        validate_results(bad_tempo_result, inputs)
+
+
+def test_auto_commit_batch_end_to_end(media, tmp_path):
+    from src.tag_completion import auto_commit_batch
+    from src.core.tag_inventory import mapped
+
+    root, make = media
+    song = make()
+    work, records = task(tmp_path, root, [song])
+    result = research_rows(records)
+    result_path = tmp_path / "research_result.json"
+    result_path.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+
+    imported = import_result(work, "batch-0001", result_path)
+    record_review(work, "batch-0001", imported["result_sha256"], records, tmp_path)
+    res = auto_commit_batch(work, "batch-0001", result_path,
+                            "synthetic-successful-run", tmp_path / "parent-review.json")
+
+    assert res["status"] == "auto_committed"
+    assert res["applied_files"] == 1
+    assert res["applied_fields"] == 6
+    assert res["all_checked_commits_valid"] is True
+    assert res["verified_commits"] == 1
+
+    # Verify audio tags actually updated on disk
+    updated_tags = mapped(codec().File(song))
+    assert updated_tags.get("mood") == ["Dreamy"]
+    assert updated_tags.get("genre") == ["Pop"]
+    assert updated_tags.get("dj_vocals") == ["instrumental"]
+    assert updated_tags.get("dj_energy") == ["low"]
+    assert updated_tags.get("dj_scene") == ["focus;coding"]
+
+
+def test_genre_completion_flac_and_mp3_roundtrip(media, tmp_path):
+    from src.tag_completion import auto_commit_batch
+    from src.core.tag_inventory import mapped
+
+    root, make = media
+    flac_song = make("flac")
+    mp3_song = make("mp3", version=4)
+
+    work, records = task(tmp_path, root, [flac_song, mp3_song])
+    result = research_rows(records)
+    for row in result["rows"]:
+        row["Genre"] = "Rock; Alternative"
+        for ev in row["evidence"]:
+            if ev["kind"] == "inference" and "Genre" not in ev["supports"]:
+                ev["supports"].append("Genre")
+    result_path = tmp_path / "genre_test_result.json"
+    result_path.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+
+    imported = import_result(work, "batch-0001", result_path)
+    record_review(work, "batch-0001", imported["result_sha256"], records, tmp_path)
+    res = auto_commit_batch(work, "batch-0001", result_path,
+                            "synthetic-successful-run", tmp_path / "parent-review.json")
+    assert res["status"] == "auto_committed"
+    assert res["applied_files"] == 2
+
+    flac_tags = mapped(codec().File(flac_song))
+    mp3_tags = mapped(codec().File(mp3_song))
+    assert flac_tags.get("genre") == ["Rock; Alternative"]
+    assert mp3_tags.get("genre") == ["Rock; Alternative"]

@@ -24,10 +24,34 @@ class AuditGateTests(unittest.TestCase):
             "audit_body_markdown": "证据充分的季度审计正文",
             "next_tactics": ["形成下一季度行动清单"],
             "followup_flags": [],
-            "requires_mentat_diary": False,
+            "requires_reson_diary": False,
         }
 
         self.assertEqual(validate_handoff_payload(payload), [])
+
+    def test_legacy_handoff_requirement_is_read_without_rewriting_payload(self):
+        payload = {
+            "period_type": "quarterly", "audit_title": "Synthetic audit",
+            "audit_body_markdown": "Synthetic body", "next_tactics": ["Synthetic next step"],
+            "followup_flags": [], "requires_mentat_diary": False,
+        }
+        original = dict(payload)
+        self.assertEqual(validate_handoff_payload(payload), [])
+        self.assertEqual(payload, original)
+        self.assertNotIn("requires_reson_diary", payload)
+
+    def test_conflicting_or_malformed_legacy_handoff_requirements_are_rejected(self):
+        base = {
+            "period_type": "quarterly", "audit_title": "Synthetic audit",
+            "audit_body_markdown": "Synthetic body", "next_tactics": ["Synthetic next step"], "followup_flags": [],
+        }
+        accepted = dict(base, requires_reson_diary=False, requires_mentat_diary=False)
+        self.assertEqual(validate_handoff_payload(accepted), [])
+        for canonical, legacy in ((False, True), (True, False), (False, 0), (None, False)):
+            with self.subTest(canonical=canonical, legacy=legacy):
+                payload = dict(base, requires_reson_diary=canonical, requires_mentat_diary=legacy)
+                errors = validate_handoff_payload(payload)
+                self.assertTrue(any("diary requirement" in error or "requires_reson_diary" in error for error in errors))
 
     def test_shared_periodic_topology_cases_through_validate_and_cli(self):
         gate = Path(__file__).with_name("audit_gate.py")

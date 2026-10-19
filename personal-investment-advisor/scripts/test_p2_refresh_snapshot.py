@@ -270,13 +270,13 @@ class FxProbeResilienceTests(unittest.TestCase):
                 return self._completed(2, b"", b"")
             return self._completed(0, fx_capture(), b"")
 
-        with mock.patch.object(pia_refresh.subprocess, "run", side_effect=fake_run):
+        with mock.patch.object(pia_refresh, 'run_process', side_effect=fake_run):
             with self.assertRaisesRegex(RuntimeError, 'FX probe failed'):
                 pia_refresh.fetch_fx_capture("CNY=X", None)
         self.assertEqual(calls["count"], 1)
 
     def test_explicit_outer_retry_is_rejected_before_child_launch(self):
-        with mock.patch.object(pia_refresh.subprocess, 'run') as child:
+        with mock.patch.object(pia_refresh, 'run_process') as child:
             with self.assertRaisesRegex(ValueError, 'outer attempts must be 1'):
                 pia_refresh.fetch_fx_capture('CNY=X', None, attempts=2)
         child.assert_not_called()
@@ -290,7 +290,7 @@ class FxProbeResilienceTests(unittest.TestCase):
                                   "errors": ["unknown symbol"]}).encode("utf-8")
             return self._completed(2, payload, b"")
 
-        with mock.patch.object(pia_refresh.subprocess, "run", side_effect=fake_run):
+        with mock.patch.object(pia_refresh, 'run_process', side_effect=fake_run):
             with self.assertRaises(RuntimeError) as ctx:
                 pia_refresh.fetch_fx_capture("CNY=X", None)
         self.assertEqual(calls["count"], 1)

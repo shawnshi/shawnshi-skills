@@ -1460,7 +1460,7 @@ def generate_chinese_insight(summary_data, historical_context=None):
         output_msg += "防线脆弱。必须把剩余能量让渡给免疫系统，取消一切非必要高强度体能消耗，坚决防御感染。"
     overall_sections.append(output_msg)
 
-    # Section 4: Tactical Directives (Mentat Level) & Device Intervention
+    # Section 4: Tactical Directives (Reson Level) & Device Intervention
     recs = []
 
     # Check for early alarms if sleep debt is high or system is RED

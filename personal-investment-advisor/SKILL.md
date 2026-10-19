@@ -12,9 +12,12 @@ description: 开展证券财报与估值研究、已授权持仓及未购观察�
 - `daily-run --analysis-scope all` 为完整清单默认，独立执行 `unpurchased_analysis`。未购实际数量、市值、投入成本均为零，不进实仓权重分母；参考成本不用于浮盈亏或成本止损，不能假设一股绕过持仓门。
 - 未购轨核验身份、时效、财务估值、Thesis 与已有观察边界；第三方 EPS/PE 仅作筛查。缺证据、范围外与已评估分开报告。实仓报价与权重完成不代表完整清单完成。
 - 持仓授权不扩展到旁边的 Dashboard、Thesis 或政策。Dashboard 根与风险政策须分别显式传入 `--dashboard-root`、`--risk-bounds-policy`；没有前者时报告边界未评估，或按限定任务显式 `--skip-watchlist`。不从父目录或环境变量发现政策。
+- Thesis 声明、已确认条件与数值原件分离：`daily-sync`、`daily-run`、`build thesis-pack` 仅以显式 `--conditions-file` / `--evidence-root` 绑定原件，不从包中推断读取权限。历史声明包不升级为验证；局部 `verified_hits` 在全局不足时仍报警，未决约束及已知 `weight_cap_breached` 不遮蔽。数值验证不证明宏观/板块/监管语义覆盖或全局安全。
 - 新买入情景需另有明确情景授权，不修改真实持仓。双轨流程细节仅在日常核验时读取 [daily-sync.md](references/daily-sync.md)。
 
 ## 不可突破的边界
+
+- **股票集中度硬上限**：单只股票占组合总市值的比例不得高于 **30%**；按该比例排序的前三只股票合计不得大于 **65%**，等于上限允许。组合审计、Daily Sync 及涉及股票仓位的建议必须核验两项，不因未显式提供独立风险政策而省略。计算口径、缺证据处理及既有更严约束见 [portfolio-audit.md](references/portfolio-audit.md#股票集中度硬上限)。本规则不自动改写持仓、Dashboard、Thesis 或政策文件，也不替代基本面致命条件判断。
 
 - 产出按声明的 `decision_scope` 分三级，且标注必须与实际内容一致：`research_only`（仅结论，不含方向、价格或仓位指令）、`advisory`（允许买卖倾向，以及供用户手动执行的具体价格、数量或目标仓位指令；不修改实际持仓、不执行订单；其他本地维护仍须明确授权）、`actionable`（对已满足适用可执行性前置条件的参数方案作行动级标注，仍由用户执行）。高标（把 `research_only` 内容标成 `actionable`）与低标（把 `advisory`/`actionable` 内容标成 `research_only`）同为契约违反。未声明时默认 `advisory`；`research_only` 仅在明确指定时使用。默认范围不豁免证据门，缺少一手事件证据时不得给出有依据的完整方向判断。
 - 主动研究链路仍须先通过 P0 Alpha 推广门禁才可产出候选或目标权重：`candidate_weight`、`allocation_gap` 限用于 `research_only`/`advisory` 产出，`target_weight` 可用于 `advisory` 或 `actionable` 的建议方案，但不是实际持仓字段回写。不因 advisory 获准给参数而绕过 P0，也不得把 `experimental_weight` 直接升级为 `target_weight`。非主动收益的既有约束风控建议按自身证据、计算与交易可行性门执行，不冒充 Alpha 候选。
@@ -32,6 +35,8 @@ description: 开展证券财报与估值研究、已授权持仓及未购观察�
 
 ## 任务路由
 
+- 显式捕获→数值投影→基本面/机会成本诊断与预期反馈：使用 `pia.py fact-prepare`、`fundamental-diagnostic`、`expectation-feedback` 或薄编排 `research-workflow`，只在该任务读取 [p1p2-research-workflow.md](references/p1p2-research-workflow.md)。不隐式抓取/扫描私域，不默认策略参数；研究 complete 不升级 Alpha、正式校准或交易就绪。
+- 显式离线事件→已确认条件关联→补证任务→人工复核记录：使用 `pia.py research-loop`，只在该任务读取 [research-loop.md](references/research-loop.md)。仅 `research_only`，不联网、不扫描私域、不写真实 Thesis、不加入 daily-run；complete 仅指列明事件关联的人工记录闭合，不是投资批准或最新事实外部核验。
 - 单一公司、财报、估值、股票筛选或 Thesis 证伪：读取 [company-research.md](references/company-research.md)；A 股深度研究另读 [cn-equity-research.md](references/cn-equity-research.md)，公告数字或更正链另读 [cn-equity-evidence.md](references/cn-equity-evidence.md)，非金融经营公司采用 DCF 企业价值桥时另读 [cn-equity-valuation.md](references/cn-equity-valuation.md)。
 - 持仓审计、集中度、情景压力测试或分配实验：读取 [portfolio-audit.md](references/portfolio-audit.md)；仅当用户明确提供个人损失、期限与现金预算时另读 [personal-risk-budget.md](references/personal-risk-budget.md)。
 - 日常行情刷新、观察边界或事件红队：读取 [daily-sync.md](references/daily-sync.md)。

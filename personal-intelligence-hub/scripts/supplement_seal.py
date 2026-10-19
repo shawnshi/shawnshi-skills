@@ -1,8 +1,10 @@
 """Parent-side seal helper that cannot lose the supplement finalization clock.
 
 Sealing a gap starts the packet's ``finalization.grace_seconds`` clock. The parent
-must run the guarded ``finalize --parent`` inside that window; interleaving another
-gap's broker work between the two steps is what loses it. This helper performs the
+must hand sealed evidence to the worker for guarded finalization inside that window.
+New worker delivery requests do not auto-finalize as parent; ``--parent-fallback``
+explicitly selects the degraded parent path. Legacy requests still use parent
+finalization; interleaving another gap before finalization loses the original clock. This helper performs the
 seal and, when the worker's dynamic draft is already on disk, the guarded parent
 finalization immediately after it. When no draft exists yet it prints the exact
 deadline instead of leaving the parent to recompute it later.
@@ -63,6 +65,7 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Report the current seal state and remaining grace without mutating the ledger",
     )
+    parser.add_argument("--parent-fallback", action="store_true", help="Explicit parent-authored fallback; never counts as worker canary delivery")
     args = parser.parse_args(argv)
 
     from supplement_agent import _load_bound_packet, finalize_parent_draft
@@ -105,6 +108,17 @@ def main(argv: list[str] | None = None) -> int:
         result["remaining_seconds"] = round(
             (deadline - datetime.now(timezone.utc)).total_seconds(), 3
         )
+
+    if _request.get("worker_delivery_version") == 1 and not args.parent_fallback:
+        result["status"] = "sealed_awaiting_worker"
+        result["next_step"] = (
+            "Hand the sealed evidence to this worker. It must persist its authorized draft "
+            "and run the bound finalize helper before grace_deadline, then return draft_ready. "
+            "Do not start another gap first. Explicit --parent-fallback remains degraded "
+            "and does not pass the canary."
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
 
     if not draft_path.is_file():
         result["status"] = "sealed_awaiting_draft"

@@ -137,7 +137,7 @@ class DefaultReadContractTests(unittest.TestCase):
             "正式个人日记先执行默认读取，再进入保存分支",
             "用户仅提供今日/明日事项不构成免采集指令",
             "只有用户明确要求仅用当次文本或排除相应来源时才跳过对应读取",
-            "Mentat 与周期审计不继承此默认",
+            "历史Reson操作日志读取与周期审计不继承此默认",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, self.entry_text)
@@ -313,10 +313,11 @@ class DefaultReadContractTests(unittest.TestCase):
             with self.subTest(heading=heading):
                 self.assertIn(f"`## {heading}`", self.authority_text)
 
-    def test_canonical_mentat_generation_is_auto_authorized(self):
-        self.assertIn("Canonical Mentat auto-save exception", self.authority_text)
-        self.assertIn("originating request is the approval", self.authority_text)
-        self.assertIn("不再重复询问确认", self.proxy_text)
+    def test_retired_operational_journal_writer_is_not_advertised(self):
+        self.assertIn("已退役的专用操作日志写入", self.authority_text)
+        self.assertNotIn("Canonical Mentat auto-save exception", self.authority_text)
+        self.assertNotIn("mentat-insight-diary", self.authority_text)
+        self.assertIn("无需再次确认", self.entry_text)
 
     def test_canonical_periodic_audits_are_auto_authorized_and_bounded(self):
         self.assertIn(

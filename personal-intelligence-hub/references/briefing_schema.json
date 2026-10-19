@@ -69,14 +69,15 @@
     "required_fields": ["basis", "claims"],
     "basis": "Which registered evidence excerpt(s) the claims were read from.",
     "required_claim_fields": ["kind", "statement"],
-    "kinds": ["number", "policy_status", "causal"],
+    "kinds": ["fact", "number", "policy_status", "causal"],
     "statuses": ["grounded", "unverified", "hypothesis"],
     "number_claim_required_fields": ["value"],
-    "registered_policy_version": 2,
+    "registered_policy_version": 3,
+    "legacy_registered_policy_versions": [1, 2],
     "registered_claim_required_fields": ["evidence", "evidence_ref"],
     "evidence_ref_fields": ["readable_text_sha256", "start", "end"],
-    "registered_policy": "New production runs bind critical claims to exact retained source spans; legacy policy 1 remains warning-only. Source-byte binding does not prove semantic entailment.",
-    "rule": "Only a claim readable from the visible excerpt may be grounded, and a grounded claim must carry the supporting evidence span. A number claim's value must appear in the item's own fact. A cross-item causal sentence or an unconfirmed policy status may only be hypothesis or unverified. For legacy policy 1 only, a missing ledger on an L3/L4 or near-term-impact item remains a warning. Registered policy 2 adds a hard source-span gate outside this schema-only check."
+    "registered_policy": "New production policy 3 binds every formal item, including L1/L2, to exact retained source spans: a kind=fact statement equals the complete fact, and every asserted number has a number claim. Policy 2 retains its critical-item gate; policy 1 retains legacy warning behavior. Source-byte binding does not prove semantic entailment.",
+    "rule": "Only a claim readable from the visible excerpt may be grounded, and a grounded claim must carry the supporting evidence span. A number claim's value must appear in the item's own fact. A cross-item causal sentence or an unconfirmed policy status may only be hypothesis or unverified. For legacy policy 1 only, a missing ledger on an L3/L4 or near-term-impact item remains a warning. Registered policy 2 adds a critical-item hard source-span gate outside this schema-only check. Policy 3 requires complete fact binding on every formal item and all asserted numbers; lowering intelligence_level does not waive it."
   },
   "domain_mix": {
     "domains": ["technology", "healthcare_digital"],

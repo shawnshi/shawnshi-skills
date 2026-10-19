@@ -397,11 +397,17 @@
   },
   {
     "name": "国家卫生健康委 (NHC)",
-    "url": "https://rsshub.app/gov/nhc"
+    "url": "https://www.nhc.gov.cn/wjw/xwdt/list.shtml",
+    "kind": "html",
+    "article_path": "/[a-z]+/[a-z]+/20[0-9]{4}/[a-f0-9]+/files/|/20[0-9]{4}/[a-f0-9]+\\.shtml$",
+    "limit": 20
   },
   {
     "name": "国家医保局 (NHSA)",
-    "url": "https://rsshub.app/gov/nhsa/ybdt"
+    "url": "https://www.nhsa.gov.cn/col/col14/index.html",
+    "kind": "html",
+    "article_path": "^/art/20[0-9]{2}/[0-9]+/[0-9]+/art_[0-9_]+\\.html$",
+    "limit": 20
   },
   {
     "name": "HIStalk",
@@ -437,7 +443,10 @@
   },
   {
     "name": "CHIMA",
-    "url": "https://rsshub.app/chima"
+    "url": "https://www.chima.org.cn/Html/News/Columns/7/Index0.html",
+    "kind": "html",
+    "article_path": "^/Html/News/Articles/[0-9]+\\.html$",
+    "limit": 20
   },
   {
     "name": "John Halamka (Geekdoctor)",

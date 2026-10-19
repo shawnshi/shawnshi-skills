@@ -62,6 +62,7 @@ def _empty_categories() -> dict[str, list[str]]:
         "thresholds_undefined": [],
         "near_rule_undefined": [],
         "insufficient_data": [],
+        "weight_cap_breached": [],
     }
 
 
@@ -280,6 +281,20 @@ def evaluate_watchlist(
         report["detail_status"] = "dashboard_invalid"
         return report
 
+    # Authority gaps do not short-circuit the known snapshot hard-cap check.
+    for row in (derived_limits or {}).get("positions", []):
+        if not isinstance(row, dict) or str(row.get("symbol", "")).upper() != data["stock_code"].upper():
+            continue
+        resolution = row.get("constraint_resolution")
+        report["constraint_resolution"] = resolution
+        report["weight_compliance"] = row.get("weight_compliance")
+        if not isinstance(resolution, dict) or resolution.get("status") != "complete":
+            categories["insufficient_data"].append("constraint_authority_unresolved")
+        compliance = row.get("weight_compliance")
+        if isinstance(compliance, dict) and compliance.get("status") == "breached":
+            categories["weight_cap_breached"].append(row["symbol"])
+        break
+
     contract = data.get("monitoring_boundaries")
     if not isinstance(contract, dict):
         if not _derived_rows_for_symbol(derived_limits, data.get("stock_code")):
@@ -467,6 +482,7 @@ def evaluate_watchlist(
             "authority_status": DERIVED_AUTHORITY,
             "basis": boundary.get("basis"),
             "derivation": boundary["derivation"],
+            "price_mapping": boundary.get("price_mapping"),
         }
         report["evaluations"].append(evaluation)
         report["derived_limits"]["evaluations"].append({
@@ -475,11 +491,14 @@ def evaluate_watchlist(
             "boundary_value": boundary_value,
             "basis": boundary.get("basis"),
             "derivation": boundary["derivation"],
+            "price_mapping": boundary.get("price_mapping"),
         })
 
     if categories["insufficient_data"]:
         report["status"] = "insufficient_data"
-        report["detail_status"] = "monitoring_boundary_insufficient_data"
+        report["detail_status"] = ("constraint_authority_unresolved"
+            if "constraint_authority_unresolved" in categories["insufficient_data"]
+            else "monitoring_boundary_insufficient_data")
         return report
 
     if not contract.get("boundaries"):

@@ -82,6 +82,29 @@ if __name__ == "__main__":
 '''
 
 
+# -I date-adapter fixtures supply only inert interfaces for the child policy.
+# They never import installed GarminDB or make network calls.
+SYNTHETIC_AUTH_MODULES = r'''
+import sys, types
+_package = types.ModuleType("garmindb")
+_package.__path__ = []
+_download = types.ModuleType("garmindb.download")
+_download.Download = type("Download", (), {"login": lambda self: True})
+_auth = types.ModuleType("garmindb.garmin_connect_auth_adapter")
+_auth.GarminConnectAuthAdapter = type("GarminConnectAuthAdapter", (), {"login": lambda self: True})
+_package.download = _download
+_package.garmin_connect_auth_adapter = _auth
+_requests = types.ModuleType("requests")
+_requests.__path__ = []
+_adapters = types.ModuleType("requests.adapters")
+_adapters.HTTPAdapter = type("HTTPAdapter", (), {"__init__": lambda self, **kwargs: None})
+_requests.adapters = _adapters
+sys.modules.update({"garmindb": _package, "garmindb.download": _download,
+    "garmindb.garmin_connect_auth_adapter": _auth,
+    "requests": _requests, "requests.adapters": _adapters})
+'''
+
+
 def synthetic_bindings(seed="a"):
     digest = (seed * 64)[:64]
     alternate = ("b" if seed != "b" else "c") * 64
@@ -128,7 +151,7 @@ def synthetic_bindings(seed="a"):
                     },
                     {
                         "name": "garminconnect",
-                        "version": "0.3.17",
+                        "version": "0.3.11",
                         "metadata_sha256": "4" * 64,
                     },
                 ],
@@ -203,7 +226,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
         cli.write_text(SYNTHETIC_CLI, encoding="utf-8")
         for directory, name, version in (
             ("GarminDB-3.9.0.dist-info", "garmindb", "3.9.0"),
-            ("garminconnect-0.3.17.dist-info", "garminconnect", "0.3.17"),
+            ("garminconnect-0.3.11.dist-info", "garminconnect", "0.3.11"),
         ):
             metadata_dir = site_packages / directory
             metadata_dir.mkdir()
@@ -250,7 +273,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
         cli.write_text(SYNTHETIC_CLI, encoding="utf-8")
         for directory, name, version in (
             ("GarminDB-3.9.0.dist-info", "garmindb", "3.9.0"),
-            ("garminconnect-0.3.17.dist-info", "garminconnect", "0.3.17"),
+            ("garminconnect-0.3.11.dist-info", "garminconnect", "0.3.11"),
         ):
             metadata_dir = site_packages / directory
             metadata_dir.mkdir()
@@ -391,7 +414,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
                 for package in plan["bindings"]["runner"]["environment"]["packages"]
             }
             self.assertEqual(
-                package_versions, {"garmindb": "3.9.0", "garminconnect": "0.3.17"}
+                package_versions, {"garmindb": "3.9.0", "garminconnect": "0.3.11"}
             )
             self.assertEqual(len(plan["payload_sha256"]), 64)
             self.module.load_and_validate_sync_plan(
@@ -790,6 +813,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
         for mutation, expected_error in (
             ("missing", "runner_package_evidence_incomplete"),
             ("wrong_version", "runner_package_version_unsupported"),
+            ("conflicting_garminconnect", "runner_package_version_unsupported"),
         ):
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as root:
                 config_dir, _, interpreter, _ = self.make_bound_environment(root)
@@ -797,6 +821,12 @@ class SyncHealthDataCliTests(unittest.TestCase):
                 metadata = site_packages / "GarminDB-3.9.0.dist-info" / "METADATA"
                 if mutation == "missing":
                     metadata.unlink()
+                elif mutation == "conflicting_garminconnect":
+                    metadata = site_packages / "garminconnect-0.3.11.dist-info" / "METADATA"
+                    metadata.write_text(
+                        "Metadata-Version: 2.1\nName: garminconnect\nVersion: 0.3.17\n\n",
+                        encoding="utf-8",
+                    )
                 else:
                     metadata.write_text(
                         "Metadata-Version: 2.1\nName: garmindb\nVersion: 3.7.0\n\n",
@@ -1368,6 +1398,9 @@ class SyncHealthDataCliTests(unittest.TestCase):
         )
         if mutate_command:
             mutate_command(command, cli, config)
+        if "-c" in command:
+            code_index = command.index("-c") + 1
+            command[code_index] = SYNTHETIC_AUTH_MODULES + command[code_index]
         return subprocess.run(
             command, cwd=root, env=self.module._sanitized_runner_environment(),
             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -1499,6 +1532,9 @@ class SyncHealthDataCliTests(unittest.TestCase):
             self.module.write_sync_plan_atomic(plan_path, self.module.build_sync_plan(start, today, bindings=bindings))
             def run_child(command, **kwargs):
                 temporary_dirs.append(kwargs["cwd"])
+                command = list(command)
+                code_index = command.index("-c") + 1
+                command[code_index] = SYNTHETIC_AUTH_MODULES + command[code_index]
                 completed = real_run(command, **kwargs)
                 self.assertEqual(completed.returncode, 0, completed.stdout)
                 self.assertEqual(

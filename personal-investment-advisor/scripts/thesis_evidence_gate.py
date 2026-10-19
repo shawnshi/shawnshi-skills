@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 from portfolio_loader import normalize_symbol
+from thesis_source_binding import evaluate_bound_conditions
 
 
 SCHEMA_VERSION = "pia_thesis_red_team_v1"
@@ -47,7 +48,10 @@ def _timestamp(value: Any, field: str, errors: List[str]) -> float | None:
 def _valid_public_url(value: Any) -> bool:
     if not isinstance(value, str):
         return False
-    parsed = urlparse(value)
+    try:
+        parsed = urlparse(value)
+    except ValueError:
+        return False
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
@@ -57,6 +61,8 @@ def evaluate_thesis_evidence(
     expected_symbols: List[str],
     portfolio_snapshot_binding: Dict[str, Any],
     evaluation_epoch: float,
+    conditions_file=None,
+    evidence_root=None,
 ) -> Dict[str, Any]:
     errors: List[str] = []
     warnings: List[str] = []
@@ -84,14 +90,16 @@ def evaluate_thesis_evidence(
         "scope_coverage",
         "assessments",
         "evidence_items",
+        "conditions_sha256",
     }
     unexpected_root_keys = sorted(set(payload) - allowed_root_keys)
     if unexpected_root_keys:
         errors.append(
             f"unexpected_root_keys:{','.join(unexpected_root_keys)}"
         )
-    if payload.get("schema_version") != SCHEMA_VERSION:
-        errors.append(f"schema_version_must_equal_{SCHEMA_VERSION}")
+    if (not isinstance(payload.get("schema_version"), str)
+            or payload["schema_version"] not in {SCHEMA_VERSION, "pia_thesis_red_team_v2"}):
+        errors.append("schema_version_must_be_pia_thesis_red_team_v1_or_v2")
     if payload.get("portfolio_snapshot_binding") != portfolio_snapshot_binding:
         errors.append("portfolio_snapshot_binding_mismatch")
 
@@ -116,12 +124,16 @@ def evaluate_thesis_evidence(
         if window_end is not None and generated_at < window_end:
             errors.append("generated_at_must_not_precede_window_end")
 
+    binding_context_valid = not errors
     evidence_items = payload.get("evidence_items")
     if not isinstance(evidence_items, list) or not evidence_items:
         errors.append("evidence_items_must_be_a_non_empty_list")
         evidence_items = []
     evidence_by_id: Dict[str, Dict[str, Any]] = {}
+    valid_evidence: Dict[str, Dict[str, Any]] = {}
+    duplicate_evidence = set()
     for index, item in enumerate(evidence_items):
+        item_error_count = len(errors)
         prefix = f"evidence_items[{index}]"
         if not isinstance(item, dict):
             errors.append(f"{prefix}_must_be_an_object")
@@ -132,9 +144,12 @@ def evaluate_thesis_evidence(
             continue
         if evidence_id in evidence_by_id:
             errors.append(f"duplicate_evidence_id:{evidence_id}")
+            duplicate_evidence.add(evidence_id)
+            valid_evidence.pop(evidence_id, None)
             continue
         evidence_by_id[evidence_id] = item
-        if item.get("source_tier") not in ALLOWED_SOURCE_TIERS:
+        if (not isinstance(item.get("source_tier"), str)
+                or item["source_tier"] not in ALLOWED_SOURCE_TIERS):
             errors.append(f"{prefix}.source_tier_not_primary")
         if not _valid_public_url(item.get("source_locator")):
             errors.append(f"{prefix}.source_locator_must_be_public_http_url")
@@ -150,6 +165,8 @@ def evaluate_thesis_evidence(
             errors.append(f"{prefix}.retrieved_at_is_in_the_future")
         if retrieved_at is not None and window_end is not None and retrieved_at < window_end:
             errors.append(f"{prefix}.retrieved_at_precedes_window_end")
+        if len(errors) == item_error_count and evidence_id not in duplicate_evidence:
+            valid_evidence[evidence_id] = item
     result["evidence_count"] = len(evidence_by_id)
 
     def validate_evidence_ids(value: Any, field: str) -> List[str]:
@@ -204,7 +221,7 @@ def evaluate_thesis_evidence(
             continue
         assessment_by_symbol[symbol] = assessment
         conclusion = assessment.get("conclusion")
-        if conclusion not in ALLOWED_CONCLUSIONS:
+        if not isinstance(conclusion, str) or conclusion not in ALLOWED_CONCLUSIONS:
             errors.append(f"{prefix}.conclusion_invalid")
             assessments_complete = False
         elif conclusion not in COMPLETE_CONCLUSIONS:
@@ -251,41 +268,30 @@ def evaluate_thesis_evidence(
     result["assessment_count"] = len(assessment_by_symbol)
     result["assessments"] = [assessment_by_symbol[symbol] for symbol in normalized_expected if symbol in assessment_by_symbol]
 
-    if errors or not scopes_complete or not assessments_complete:
-        if not errors:
-            warnings.append("coverage_or_assessment_incomplete")
+    # Submitted conclusions remain historical declarations, never verified facts.
+    result["submitted_claims"] = result["assessments"]
+    result["verification_status"] = "declaration_only"
+    result.update(fatal_symbols=[], not_due_symbols=[], earliest_due_date=None,
+                  condition_results=[], verified_hits=[])
+    if not binding_context_valid:
+        warnings.append("invalid_binding_context_prevents_source_verification")
         return result
-
-    fatal_symbols = [
-        symbol
-        for symbol in normalized_expected
-        if assessment_by_symbol[symbol].get("conclusion") == "fatal_breach"
-    ]
-    verified_symbols = [
-        symbol
-        for symbol in normalized_expected
-        if assessment_by_symbol[symbol].get("conclusion") == "no_fatal_breach_verified"
-    ]
-    not_due_symbols = [
-        symbol
-        for symbol in normalized_expected
-        if assessment_by_symbol[symbol].get("conclusion") == NOT_DUE_CONCLUSION
-    ]
-    due_dates = [assessment_by_symbol[symbol].get("due_date") for symbol in not_due_symbols]
-    if fatal_symbols:
-        aggregate = "fatal_breach_detected"
-    elif verified_symbols:
-        aggregate = "no_fatal_breach_verified"
-    else:
-        aggregate = NOT_DUE_STATUS
-    result.update(
-        {
-            "status": "complete",
-            "evidence_status": "ok",
-            "fatal_event_status": aggregate,
-            "fatal_symbols": fatal_symbols,
-            "not_due_symbols": not_due_symbols,
-            "earliest_due_date": min(due_dates) if due_dates else None,
-        }
+    bound = evaluate_bound_conditions(
+        payload, assessment_by_symbol, normalized_expected,
+        conditions_file=conditions_file, evidence_root=evidence_root,
+        evaluation_epoch=evaluation_epoch, valid_evidence=valid_evidence,
     )
+    result.update(bound)
+    if bound["condition_results"]:
+        result["verification_status"] = "source_binding_evaluated"
+    if bound["fatal_symbols"]:
+        result["fatal_event_status"] = "fatal_breach_detected"
+    elif (normalized_expected and len(bound["not_due_symbols"]) == len(set(normalized_expected))
+          and not errors):
+        result["fatal_event_status"] = NOT_DUE_STATUS
+    # This quantitative slice cannot prove semantic macro/sector/regulatory
+    # coverage. Even verified local non-hits must not become a global all-clear.
+    warnings.append("semantic_scope_coverage_not_verified")
+    if not scopes_complete or not assessments_complete:
+        warnings.append("coverage_or_assessment_incomplete")
     return result

@@ -5,14 +5,14 @@
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "e4a2ace52e802b4c31d90a69867cbd1a4766dc71698ac51b877f3aba5599fe9e",
+  "skill_md_sha256": "f8304048aa9a4882ab27e5d999671e908ad377b8e670c24c4f49a83b2dddb578",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "e4a2ace52e802b4c31d90a69867cbd1a4766dc71698ac51b877f3aba5599fe9e"
+      "sha256": "f8304048aa9a4882ab27e5d999671e908ad377b8e670c24c4f49a83b2dddb578"
     }
   ],
   "top_level_directories": [
@@ -59,7 +59,7 @@
     },
     {
       "path": "resources/source_evidence_protocol.md",
-      "sha256": "ba9938ed8f6ea311a6a57fa9400885d37e599fce46e6fc37e875d1584a2e8356"
+      "sha256": "2dfb391f7fb7a18c016049b0ace20efc0ff5d7d7c4e8c6460a3c0e132647a8c5"
     },
     {
       "path": "resources/storytelling_manual.md",
@@ -87,7 +87,7 @@
       "path": "resources/source_evidence_protocol.md",
       "exists": true,
       "resolved_path": "academic-paper-reader/resources/source_evidence_protocol.md",
-      "sha256": "ba9938ed8f6ea311a6a57fa9400885d37e599fce46e6fc37e875d1584a2e8356"
+      "sha256": "2dfb391f7fb7a18c016049b0ace20efc0ff5d7d7c4e8c6460a3c0e132647a8c5"
     },
     {
       "path": "resources/storytelling_manual.md",

@@ -35,7 +35,7 @@
 - 美股点时年度财务：`sec_edgar_fundamentals.py` 或稳定入口 `pia.py edgar-fundamentals`；正式 SEC 请求必须使用真实联系邮箱；
 - 通用行情与当前描述性财务：`yf.py`；请求历史序列时同时传入 `--market` 与 `--asset-type`，或通过已验证组合绑定同等身份；
 - A 股补充：`akshare_fetcher.py`；
-- 管理层承诺：`management_claim_tracker.py`；
+- 管理层承诺：`management_claim_tracker.py`；target/actual 仅接受有限非布尔数字。deadline 未到返回 `not_due`，不提前判 met/missed。履约判断须显式提供 `period_start` / `period_end`、`actual_period_start` / `actual_period_end` 及 `actual_period_complete=true`，两段完全匹配且实际期间已结束才比较；缺少或错配返回 `insufficient_evidence`，不以公告日期猜期间。已有输出键保留，summary 新增 not_due。合成年度例：deadline=2026-12-31、period=2026-01-01..2026-12-31、actual_period=2026-01-01..2026-09-30、actual_period_complete=false、target=100、actual=80，截至 2026-10-10 为 not_due；截至到期后仍无完整年度实际值则证据不足。
 - ETF 历史完整性：先运行 `history_integrity_gate.py`，再通过 `yf.py --history-integrity-file` 绑定同一历史序列。
 
 A 股增强数据超时或连接失败必须结束子进程并返回数据不足，不得改写主进程代理环境或用旧值补齐。历史来源选择为 `akshare` 时失败关闭；只有显式选择 `auto` 才允许回退 Yahoo。

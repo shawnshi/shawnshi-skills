@@ -1,0 +1,84 @@
+{
+  "schema_version": "pia_research_loop_v1",
+  "record_id": "proposal1",
+  "as_of": "2026-10-10T05:00:00Z",
+  "scope": "listed_events_only",
+  "events": [
+    {
+      "event_id": "e1",
+      "symbol": "SYNTH",
+      "published_at": "2026-10-01T00:00:00Z",
+      "retrieved_at": "2026-10-02T00:00:00Z",
+      "source_locator": "https://example.test/event.txt",
+      "artifact": "event.txt",
+      "content_sha256": "e803d1b71653a543be6c3ce58df06b0ca4696fe513d693d08b55d30b06397462",
+      "body_retrieved": true,
+      "health": "ok",
+      "source_error": null,
+      "coverage_complete": true,
+      "coverage_limits": []
+    },
+    {
+      "event_id": "e2",
+      "symbol": "SYNTH",
+      "published_at": "2026-10-01T00:00:00Z",
+      "retrieved_at": "2026-10-02T00:00:00Z",
+      "source_locator": "https://example.test/counter.txt",
+      "artifact": "counter.txt",
+      "content_sha256": "88bc38f75905ee95cf4c78c8ecc265d174901ceb7a3172f7e0dec44665690805",
+      "body_retrieved": true,
+      "health": "ok",
+      "source_error": null,
+      "coverage_complete": true,
+      "coverage_limits": []
+    }
+  ],
+  "conditions": [
+    {
+      "condition_id": "c1",
+      "symbol": "SYNTH",
+      "version": 1,
+      "confirmed_at": "2026-01-01T00:00:00Z",
+      "effective_from": "2026-01-01T00:00:00Z",
+      "metric": "revenue",
+      "operator": "gte",
+      "threshold": 100,
+      "unit": "CNY",
+      "period": {
+        "start": "2026-01-01",
+        "end": "2026-09-30"
+      },
+      "due": "2026-09-30",
+      "channel": "synthetic filing",
+      "source_locator": "https://example.test/condition",
+      "artifact": "condition.txt",
+      "content_sha256": "fe61cefa9422e78e1183f482d071944b5616df2ff8b3271ba29b2689488ab9de"
+    }
+  ],
+  "links": [
+    {
+      "link_id": "l1",
+      "event_ids": [
+        "e1",
+        "e2"
+      ],
+      "condition_id": "c1",
+      "condition_version": 1,
+      "reason": "Human supplied relation",
+      "locator": "page 1 table 1 line 1",
+      "actual": 110,
+      "actual_period": {
+        "start": "2026-01-01",
+        "end": "2026-09-30",
+        "complete": true
+      },
+      "unit": "CNY",
+      "counterevidence": [
+        {
+          "event_id": "e2",
+          "locator": "page 1 line 2"
+        }
+      ]
+    }
+  ]
+}

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
+import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -95,7 +97,7 @@ def table_cells(line: str) -> list[str]:
 def metadata(content: str, label: str) -> str:
     preamble = []
     for line in structural_lines(content):
-        if markdown_heading(line).startswith(("## ", "### ", "#### ", "##### ", "###### ")):
+        if markdown_heading(line).startswith("## "):
             break
         preamble.append(line)
     values = re.findall(rf"^{re.escape(label)}：([^\n]*)$", "\n".join(preamble), re.M)
@@ -154,7 +156,7 @@ def validate_report(file_path: Path, period_start: date, period_end: date,
         return errors + [f"invalid metadata: {exc}"]
     if not allow_custom_filename and file_path.name != f"DHLS-{issue_date:%Y%m%d}.md":
         errors.append("issue filename mismatch")
-    heading = next((s for s in lines if s.startswith("# ")), "")
+    heading = next((s.strip() for s in lines if re.match(r"^ {0,3}#(?:[ \t]|$)", s)), "")
     if heading != f"# 医疗数字化文献侦察报告 - {issue_date}":
         errors.append("title issue date mismatch")
     if "\ufffd" in content or PLACEHOLDER_RE.search(content):
@@ -255,7 +257,24 @@ def validate_report(file_path: Path, period_start: date, period_end: date,
     return errors
 
 
+def describe_contract() -> dict:
+    return {
+        "schema_version": 1, "skill": "hit-lectures-scout", "read_only": True,
+        "required_metadata": ["报告周期", "出刊日期", "生成时点", "报告时区", "命名依据"],
+        "required_sections": ["## 本期研究", "## 来源"],
+        "tables": {"## 本期研究": RESEARCH_HEADER, "## 背景研究": RESEARCH_HEADER, "## 来源": SOURCE_HEADER},
+        "review_statuses": sorted(STATUSES), "window_modes": ["explicit", "generated"],
+        "source_reference_separator": ",", "empty_marker": EMPTY,
+        "title_rule": "literal canonical H1 after whitespace trim; no closing hashes (shared archive identity)",
+        "zero_result_rule": "no research rows; source table may be absent only without source entries or references",
+        "limits": ["structure is not DOI identity, retraction status or clinical evidence", "no archive or network side effects"],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
+    if (sys.argv[1:] if argv is None else argv) == ["--describe-contract"]:
+        print(json.dumps(describe_contract(), ensure_ascii=False, indent=2))
+        return 0
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--file", required=True, type=Path)
     for flag in ("period-start", "period-end", "issue-date"):

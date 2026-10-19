@@ -1,0 +1,243 @@
+{
+  "schema_version": 3,
+  "skill": "reson-collaboration-audit",
+  "generated_at": "2026-10-18T21:02:30+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
+  "skill_md": "SKILL.md",
+  "skill_md_sha256": "9049c3673a045f650a3ec650909e0835115d295241e2346697ddf531138404c0",
+  "top_level_files": [
+    "SKILL.md",
+    "generate_final_report.py"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "9049c3673a045f650a3ec650909e0835115d295241e2346697ddf531138404c0"
+    },
+    {
+      "path": "generate_final_report.py",
+      "sha256": "96dca4c30e33412c3fb2064e597d18c3c6ce5b5317298c6bc80d5807ee39eaf6"
+    }
+  ],
+  "top_level_directories": [
+    "assets",
+    "evals",
+    "references",
+    "resources",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 24
+    },
+    {
+      "name": "references",
+      "file_count": 7
+    },
+    {
+      "name": "resources",
+      "file_count": 1
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    }
+  ],
+  "resource_file_hashes": [
+    {
+      "path": "assets/template.html",
+      "sha256": "a42b574c067057507bc378f2ed299f91c8f6bef038d5a5ff4c0e1932fed347ef"
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "3adfabdb62c1408550e2638fc9269fefd9e215f9f4a89dd323d5c9d69e1c340e"
+    },
+    {
+      "path": "references/ANALYSIS.md",
+      "sha256": "69e6cdbeb218a09b40537e6b107fab6608d32c4cb365d807489ff1001bfd1a6e"
+    },
+    {
+      "path": "references/CODEX-HOOKS.md",
+      "sha256": "8898695aa29633bf591a07eaaccbb3f6ae0e0c86d3aa7d27950b64c8438efa3f"
+    },
+    {
+      "path": "references/IMPROVEMENT.md",
+      "sha256": "6a1b075488b9ef417e73b3e3ef82649b3708e7d9fd12726529106255d023ecc3"
+    },
+    {
+      "path": "references/report-template.md",
+      "sha256": "e0459ffd16a55da6438b07b97643291e6057e8d007105d3be46ab7af5d90216a"
+    },
+    {
+      "path": "references/SCHEMA.md",
+      "sha256": "dd338f5bf11bdf8ec0bcc75f325cc39b5aaea4bdd432a1b5d4d57377f3b8d9e8"
+    },
+    {
+      "path": "references/TOKEN-ANALYSIS.md",
+      "sha256": "72a08099993a40c882c9c47a6545790d260221dc22586e153d0a407897887834"
+    },
+    {
+      "path": "references/WORKFLOW.md",
+      "sha256": "449ca06df82687b6a8434405f1a729ba5a0022d5614598b6f7ef97af84d7ea47"
+    },
+    {
+      "path": "resources/.gitkeep",
+      "sha256": "56f0d6ac8fbc29ea59e8eb8ce626949efcce2b16cd4ac9242e5630a6f35afdc3"
+    },
+    {
+      "path": "scripts/assets/template.html",
+      "sha256": "935549e7a79ffd76d53436ee1092c2ca86cab3e2c2a5c922cec3215f5e43ec43"
+    },
+    {
+      "path": "scripts/context_recovery_receipt.py",
+      "sha256": "9bd9be46565ce66826ab9db5046e530c72c80a78573a9e2b6f2a64ca6abe5404"
+    },
+    {
+      "path": "scripts/core/collaboration_analysis.py",
+      "sha256": "21cdf41fe57662537f7190ebe9ae801242951630123df8e5f70a3c3c429153e9"
+    },
+    {
+      "path": "scripts/core/engine.py",
+      "sha256": "8f27c8b1995e5a2246c7b4a0fb456aa23871dd69fe4c1842d3423fd28de7b301"
+    },
+    {
+      "path": "scripts/core/test_collaboration_analysis.py",
+      "sha256": "34c3b0c608e82eab97b36de72c075e014af7462b81d896610094880facb6c4b5"
+    },
+    {
+      "path": "scripts/core/test_engine.py",
+      "sha256": "73d61b137da9254bea82d45fe891b2feddd66da714eda5574b967611e5f0cc4b"
+    },
+    {
+      "path": "scripts/core/test_phase1_semantics.py",
+      "sha256": "bee15f00385ac8434115ed04752a7429894778756f0f973a60916a1e1a723ed0"
+    },
+    {
+      "path": "scripts/core/test_token_analysis.py",
+      "sha256": "b6f3e25223fd98800451bac909ca25c00a26db421e69d0c23013fe820f517f43"
+    },
+    {
+      "path": "scripts/core/token_analysis.py",
+      "sha256": "388d03a2694e243022cf1e5c6c35ec8adf56ae847ad6d7e5a8d29b5e2cb5f42b"
+    },
+    {
+      "path": "scripts/freeze_jsonl_snapshot.py",
+      "sha256": "9394e1113af02330c00f50214419e2f54584252ef45396c4e8fff2ef8b5f6ce5"
+    },
+    {
+      "path": "scripts/hooks/codex_hook.py",
+      "sha256": "f7e860ce7062f7bcb2cdf3de306697f38f0e2b7fd71678d9f2b87886a384381c"
+    },
+    {
+      "path": "scripts/hooks/test_codex_hook.py",
+      "sha256": "2531ed1fb11644221aba48f60567c8740ec166938809f45d7ce636460a68778a"
+    },
+    {
+      "path": "scripts/report_output.py",
+      "sha256": "c77f659775a38f8f5a42711b5ce86d15c202c00628b544702ff97f9226127b78"
+    },
+    {
+      "path": "scripts/report_pair.py",
+      "sha256": "ddbf4d917f7f860f3efee8b8df984fa0ca8b7e344a0ae9a9c894a7bc10eefb23"
+    },
+    {
+      "path": "scripts/skill_load_receipt.py",
+      "sha256": "e8e2391b2a456097bd6a5502e784fb44c171718132668477e57f43f9c6e9007f"
+    },
+    {
+      "path": "scripts/standardize_codex_rollout.py",
+      "sha256": "9a293391fbd2fc708b1d5b6edf2cd142432d3fe0839b60d03e3e17d1e0edf473"
+    },
+    {
+      "path": "scripts/test_context_recovery_receipt.py",
+      "sha256": "17fd5d5e1e9c7af94e9b306371ce1a2a660e6d7095a0ee6ffbd825db672de197"
+    },
+    {
+      "path": "scripts/test_freeze_jsonl_snapshot.py",
+      "sha256": "c5f0c65b10d77138ffff3ee62b634e60fc728838b487d516304578a1d48b07d3"
+    },
+    {
+      "path": "scripts/test_report_output.py",
+      "sha256": "e09735637f9dd276bbb6b429899f2fcee0e1eff71ff9a7e48b0a0832cac8a5e7"
+    },
+    {
+      "path": "scripts/test_report_pair.py",
+      "sha256": "87a8583f8516e33eda8a6b1b34ab6d54e98d8b0adc9e5b2ceaf4b94c2aee9d11"
+    },
+    {
+      "path": "scripts/test_skill_load_receipt.py",
+      "sha256": "815b8940a2850b06c4b4ca816a6f3ca4e4568ba0d2df65f2c9f761bf78ecc725"
+    },
+    {
+      "path": "scripts/test_standardize_codex_rollout.py",
+      "sha256": "1ae7b6e41998c0ff200ae797f2763e6370c561a8cef3013ee64084d5f6967092"
+    },
+    {
+      "path": "scripts/test_validate_agent_audit.py",
+      "sha256": "254ee8cc4c863dfd0a3c41d36e916844d75a75abff5a43bbc50d1935814e610c"
+    },
+    {
+      "path": "scripts/validate_agent_audit.py",
+      "sha256": "ef53efad83cd88034afad5a82f51973a83e28d5c03fe65ab8c64998daf5a641a"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "assets/template.html",
+      "exists": true,
+      "resolved_path": "reson-collaboration-audit/assets/template.html",
+      "sha256": "a42b574c067057507bc378f2ed299f91c8f6bef038d5a5ff4c0e1932fed347ef"
+    },
+    {
+      "path": "references/ANALYSIS.md",
+      "exists": true,
+      "resolved_path": "reson-collaboration-audit/references/ANALYSIS.md",
+      "sha256": "69e6cdbeb218a09b40537e6b107fab6608d32c4cb365d807489ff1001bfd1a6e"
+    },
+    {
+      "path": "references/CODEX-HOOKS.md",
+      "exists": true,
+      "resolved_path": "reson-collaboration-audit/references/CODEX-HOOKS.md",
+      "sha256": "8898695aa29633bf591a07eaaccbb3f6ae0e0c86d3aa7d27950b64c8438efa3f"
+    },
+    {
+      "path": "references/IMPROVEMENT.md",
+      "exists": true,
+      "resolved_path": "reson-collaboration-audit/references/IMPROVEMENT.md",
+      "sha256": "6a1b075488b9ef417e73b3e3ef82649b3708e7d9fd12726529106255d023ecc3"
+    },
+    {
+      "path": "references/report-template.md",
+      "exists": true,
+      "resolved_path": "reson-collaboration-audit/references/report-template.md",
+      "sha256": "e0459ffd16a55da6438b07b97643291e6057e8d007105d3be46ab7af5d90216a"
+    },
+    {
+      "path": "references/SCHEMA.md",
+      "exists": true,
+      "resolved_path": "reson-collaboration-audit/references/SCHEMA.md",
+      "sha256": "dd338f5bf11bdf8ec0bcc75f325cc39b5aaea4bdd432a1b5d4d57377f3b8d9e8"
+    },
+    {
+      "path": "references/TOKEN-ANALYSIS.md",
+      "exists": true,
+      "resolved_path": "reson-collaboration-audit/references/TOKEN-ANALYSIS.md",
+      "sha256": "72a08099993a40c882c9c47a6545790d260221dc22586e153d0a407897887834"
+    },
+    {
+      "path": "references/WORKFLOW.md",
+      "exists": true,
+      "resolved_path": "reson-collaboration-audit/references/WORKFLOW.md",
+      "sha256": "449ca06df82687b6a8434405f1a729ba5a0022d5614598b6f7ef97af84d7ea47"
+    },
+    {
+      "path": "scripts/validate_agent_audit.py",
+      "exists": true,
+      "resolved_path": "reson-collaboration-audit/scripts/validate_agent_audit.py",
+      "sha256": "ef53efad83cd88034afad5a82f51973a83e28d5c03fe65ab8c64998daf5a641a"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

@@ -56,11 +56,21 @@ Daily Sync 计算命令核验持仓身份、行情覆盖、时效和已确认观
 
 手工档覆盖门：权威 Dashboard JSON 是手工档的唯一来源（见上）。若某个活动非现金标的的 `monitoring_boundaries_defined=false`，调用层必须在报告层列出该标的与 `manual_boundary_coverage_gap`；与上一轮运行目录的 `out/dashboard_catalog.json` 对比发现某标的的手工档从有到无时，同样必须报该缺口。缺口只说明本轮护栏覆盖不完整，不得用归档代补齐、不得自动迁移边界，也不得读作该标的无边界。该审计可直接运行：`python -B scripts/manual_boundary_audit.py --stocks-root <dashboard 根> --run-dir <本次运行目录> [--out <json>]`，输出越界/接近/未越界/未评估与 `manual_boundary_coverage_gap`（只读，不改任何 Dashboard 或运行制品）。
 
+## 股票集中度核验
+
+权重阶段完成后，按 [portfolio-audit.md 的股票集中度硬上限](portfolio-audit.md#股票集中度硬上限)核验：**单只股票 ≤ 30%，前三大股票合计 ≤ 65%**。分母为含现金的完整组合总市值；排名仅含实仓股票，不含ETF或零股观察标的。两项与价格观察边界、独立政策派生限制及其他已确认更严约束并列汇报，不互相替代。
+
+报告必须给出最大单只股票、前三股票及各自权重、合计和两项结果。原生 `weights.json` 没有前三集中度字段时，用本次绑定的全组合市值确定性补算并注明补充检查；上游权重未通过或过期时标记未评估，不以旧权重、缺失值或股票子集归一化代替。集中度越界不等于公司致命事件，也不单独证明流程失败；完整行情不等于集中度符合约束。
+
 ## Thesis 红队
 
 没有 `--thesis-evidence-file` 时，离线 `daily_sync.py` 把 Thesis 阶段标记为 `not_assessed/insufficient_evidence`，因此即使行情批次闭合，顶层仍为 `incomplete`。完成事件判断时，先批量读取发行人、交易所、监管机构和官方产品披露列表，只对窗口内新增且命中证伪条件的材料深读；再按 [thesis_red_team_schema.json](thesis_red_team_schema.json) 形成证据包。A 股发行人/交易所通道的取用要点、零结果对照规则与稳定失败码见 [cn_disclosure_channels.md](cn_disclosure_channels.md)；零结果无对照即为 `coverage_unproven`，不得读作无事件。
 
-证据包必须绑定同一持仓快照，窗口结束时间距评估时点不超过一小时，逐标的覆盖全部活动非现金持仓，并闭合宏观、板块和监管三个范围。每条证据必须是公开一手 URL、带发布时间、获取时间、内容 SHA-256 和可核查主张。门禁只验证包结构、时间、覆盖、引用和绑定，不替代对来源真实性与语义判断的独立复核。存在 `fatal_breach` 不代表流程失败：只要证据覆盖闭合，工作流可为 `complete`，同时由 `fatal_event_status=fatal_breach_detected` 明确报警。
+证据包必须绑定同一快照与评估窗口。v1 历史包仍可读，但 URL、哈希、结论或未来到期声明本身只属于 `declaration_only`，不能成为已验证命中或全局安全。`daily-sync`、`daily-run`、`build thesis-pack` 显式接收 `--conditions-file <获授权原生台账>` 与 `--evidence-root <获授权原件根>`；不得从包内路径自动发现权限。实仓与未购研究共用这两个显式绑定，未购包仍单独传入。
+
+v2 见 [thesis_red_team_v2_schema.json](thesis_red_team_v2_schema.json)：台账原字节 `conditions_sha256`、当前 `condition_version/condition_ids`、原件相对 `local_path` 与 `/facts/N` 指针绑定后，重算数值条件。只支持严格期间/范围/单位一致的 UTF-8 JSON facts；定性条件、旧字符串期间和缺少确认的规则为不足，不推断策略。发布者真实性及宏观/板块/监管语义覆盖未由本数值切片证明，因此顶层仍保守 `incomplete`。即使其他标的或覆盖缺失，`verified_hits/fatal_symbols` 的已验证局部命中仍必须传播到报告；提交的 `fatal_breach` 不等于命中。builder 的 `artifact_build_status=complete` 只表示文件生成，不提升验证状态。
+
+约束表面保留 `constraint_resolution` 的未确认/冲突/排除与 `weight_compliance`；已知 `weight_cap_breached` 不因其他规则未决而消失。权重帽价格仅是冻结 NAV 映射，不是动态权重触发价；`within_limit` 不表示全局安全。
 
 没有新闻不能升级为“未发现致命事件”，股价变化也不能单独证明 Thesis 失效。最终报告必须把行情闭合度与 Thesis 证据状态分开呈现。
 

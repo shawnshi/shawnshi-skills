@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pia_thesis_red_team_v2",
+  "title": "PIA quantitative source-binding package (declarations are not verification)",
+  "description": "Trusted conditions_file and evidence_root are explicit API arguments, never package paths. Hash binding proves bytes/rules only, not publisher authenticity. Semantic scope coverage remains unverified.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "window_start", "window_end", "portfolio_snapshot_binding", "conditions_sha256", "scope_coverage", "assessments", "evidence_items"],
+  "properties": {
+    "schema_version": {"const": "pia_thesis_red_team_v2"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "window_start": {"type": "string", "format": "date-time"},
+    "window_end": {"type": "string", "format": "date-time"},
+    "portfolio_snapshot_binding": {"type": "object"},
+    "conditions_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "scope_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["macro", "sector", "regulatory"],
+      "properties": {
+        "macro": {"$ref": "#/$defs/coverage"},
+        "sector": {"$ref": "#/$defs/coverage"},
+        "regulatory": {"$ref": "#/$defs/coverage"}
+      }
+    },
+    "assessments": {"type": "array", "items": {"$ref": "#/$defs/assessment"}},
+    "evidence_items": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/evidence"}}
+  },
+  "$defs": {
+    "ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence_ids"],
+      "properties": {
+        "status": {"enum": ["complete", "insufficient_evidence"]},
+        "evidence_ids": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol", "conclusion", "rationale", "condition_ids", "condition_version", "evidence_ids"],
+      "properties": {
+        "symbol": {"type": "string", "minLength": 1},
+        "conclusion": {"enum": ["fatal_breach", "no_fatal_breach_verified", "condition_not_due", "insufficient_evidence"]},
+        "rationale": {"type": "string", "minLength": 1},
+        "condition_ids": {"$ref": "#/$defs/ids"},
+        "condition_version": {"type": "integer", "minimum": 1},
+        "due_date": {"type": "string", "format": "date"},
+        "evidence_ids": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "source_tier", "source_locator", "published_at", "retrieved_at", "content_sha256", "claim"],
+      "properties": {
+        "evidence_id": {"type": "string", "minLength": 1},
+        "source_tier": {"enum": ["issuer", "exchange", "regulator", "audited_filing", "official_product_data"]},
+        "source_locator": {"type": "string", "format": "uri", "pattern": "^https?://"},
+        "published_at": {"type": "string", "format": "date-time"},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "content_sha256": {"type": "string", "pattern": "^[0-9A-Fa-f]{64}$"},
+        "claim": {"type": "string", "minLength": 1},
+        "local_path": {"type": "string", "minLength": 1, "description": "Relative POSIX JSON path, confined to caller-selected evidence_root; traversal/links forbidden."},
+        "fact_pointer": {"type": "string", "pattern": "^/facts/(0|[1-9][0-9]*)$"}
+      },
+      "dependentRequired": {"local_path": ["fact_pointer"], "fact_pointer": ["local_path"]}
+    }
+  }
+}

@@ -58,7 +58,7 @@ def bind_registered_proof_paths(snapshot, ledger):
     return bound
 
 
-def compact_packet(snapshot, lane, *, preview_chars=2400):
+def compact_packet(snapshot, lane, *, preview_chars=2400, worker_delivery_version=None):
     if not snapshot.get("completed_at") or snapshot["next_action"]["action"] != "sealed":
         raise rc.RunContractError("sealed broker evidence required; collecting is not completion")
     proofs = []
@@ -81,7 +81,9 @@ def compact_packet(snapshot, lane, *, preview_chars=2400):
         **{key: deepcopy(snapshot[key]) for key in ["request_sha256", "gap_id", "started_at", "completed_at", "broker_evidence_sha256", "executed_queries", "access_log", "required_bound_candidate_ids"]},
         "stop_reason": snapshot["next_action"]["stop_reason"],
         "proofs": proofs,
-        "instruction": "Dates are projected evidence, not model certification. Use only existing validator-admitted bases, never override a body date; window, source quality, event identity and semantic gates still apply. Preview truncation is not native tool truncation. The context already supplies draft_schema: at most one batched read of registered proofs/lane, then persist the registered dynamic draft before optional validation. Parent alone finalizes.",
+        "instruction": "Dates are projected evidence, not model certification. Use only existing validator-admitted bases, never override a body date; window, source quality, event identity and semantic gates still apply. Preview truncation is not native tool truncation. The context already supplies draft_schema: at most one batched read of registered proofs/lane, then persist the registered dynamic draft before optional validation. "
+        + ("Worker runs the bound finalize helper within the original grace and returns draft_ready. Parent fallback is explicit and degraded; independent-lane admission follows the frozen collection-quality policy, never a model claim."
+           if worker_delivery_version == 1 else "Parent alone finalizes."),
     }
 
 
@@ -118,11 +120,11 @@ def main():
     if args.draft_contract:
         print(json.dumps(draft_contract(args.request, args.gap_id), ensure_ascii=False))
         return
-    _, _, packet, _, lane, _ = broker._bound(args.request, args.gap_id)
+    _, request, packet, _, lane, _ = broker._bound(args.request, args.gap_id)
     snapshot = broker.evidence(args.request, args.gap_id)
     ledger = rc.load_manifest(packet["run_manifest_path"])["article_broker_evidence"][args.gap_id]
     snapshot = bind_registered_proof_paths(snapshot, ledger)
-    print(json.dumps(compact_packet(snapshot, lane), ensure_ascii=False))
+    print(json.dumps(compact_packet(snapshot, lane, worker_delivery_version=request.get("worker_delivery_version")), ensure_ascii=False))
 
 
 if __name__ == "__main__":

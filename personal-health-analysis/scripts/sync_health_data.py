@@ -13,10 +13,11 @@ import json
 import os
 import re
 import sqlite3
+import stat
 import subprocess
 import time
 import tempfile
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterator, Sequence
@@ -99,7 +100,7 @@ RUNNER_ENVIRONMENT_FIELDS = frozenset(
 )
 PACKAGE_EVIDENCE_FIELDS = frozenset({"name", "version", "metadata_sha256"})
 PACKAGE_EVIDENCE_NAMES = ("garmindb", "garminconnect")
-SUPPORTED_PACKAGE_VERSIONS = {"garmindb": "3.9.0", "garminconnect": "0.3.17"}
+SUPPORTED_PACKAGE_VERSIONS = {"garmindb": "3.9.0", "garminconnect": "0.3.11"}
 MAX_METADATA_BYTES = 1024 * 1024
 MAX_TOKEN_STORE_BYTES = 1024 * 1024
 TREE_HASH_WORKERS = min(16, max(4, (os.cpu_count() or 1) * 2))
@@ -121,6 +122,69 @@ import sys
 def fail(reason):
     print(json.dumps({"ok": False, "status": "date_adapter_rejected", "error": reason}))
     raise SystemExit(4)
+
+class _SyncAuthBlocked(BaseException):
+    # Stop the pinned SDK's except-Exception refresh/fallback handlers. This
+    # owned signal is caught explicitly at the child boundary below.
+    def __init__(self, rejected_code, actual_code=None):
+        self.category = "rate_limited" if rejected_code == 429 else "provider_blocked"
+        self.http_status = actual_code if isinstance(actual_code, int) else rejected_code
+        super().__init__("bounded_authentication_transport_blocked")
+
+def _guard_sync_auth_requests(native):
+    blocked = None
+    def wrap(request):
+        def guarded(*a, **kw):
+            nonlocal blocked
+            if blocked is not None:
+                raise blocked
+            try:
+                response = request(*a, **kw)
+            except Exception as exc:
+                code = getattr(getattr(exc, "response", None), "status_code", getattr(exc, "status_code", None))
+                if code in (403, 429):
+                    blocked = _SyncAuthBlocked(code)
+                    raise blocked
+                raise
+            code = getattr(response, "status_code", None)
+            if code in (403, 429):
+                blocked = _SyncAuthBlocked(code)
+                raise blocked
+            header = getattr(getattr(response, "headers", None), "get", None)
+            if callable(header) and header("cf-mitigated", "") == "challenge":
+                blocked = _SyncAuthBlocked(403, code)
+                raise blocked
+            decode = getattr(response, "json", None)
+            if callable(decode):
+                try:
+                    body = decode()
+                except ValueError:
+                    body = None
+                if isinstance(body, dict):
+                    error = body.get("error")
+                    embedded = error.get("status-code") if isinstance(error, dict) else None
+                    status = body.get("responseStatus")
+                    if embedded in (403, 429, "403", "429"):
+                        blocked = _SyncAuthBlocked(int(embedded), code)
+                        raise blocked
+                    if isinstance(status, dict) and status.get("type") == "CAPTCHA_REQUIRED":
+                        blocked = _SyncAuthBlocked(403, code)
+                        raise blocked
+            return response
+        return guarded
+    post = getattr(native, "_http_post", None)
+    if not callable(post):
+        raise RuntimeError("guarded_session_exchange_unsupported")
+    native._http_post = wrap(post)
+    seen = set()
+    for name in ("cs", "_api_session"):
+        session = getattr(native, name, None)
+        request = getattr(session, "request", None)
+        if not callable(request):
+            raise RuntimeError("guarded_session_transport_unsupported")
+        if id(session) not in seen:
+            session.request = wrap(request)
+            seen.add(id(session))
 
 try:
     cli, cli_sha, method_sha, start_text, end_text, config_sha, expiry = sys.argv[1:8]
@@ -170,10 +234,64 @@ try:
     method.body.insert(-1, guard)
     ast.fix_missing_locations(tree)
     code = compile(tree, cli, "exec")
-except (OSError, ValueError, SyntaxError, KeyError, TypeError, IndexError):
+    if "--download" in args:
+        # Child-local, version/tree-bound adapter. No password fallback and no
+        # profile/settings files: only the displayName needed by legacy APIs is
+        # retained in memory. Missing/expired sessions propagate as failures.
+        import garmindb.download as bounded_download
+        import garmindb.garmin_connect_auth_adapter as bounded_auth
+        from requests.adapters import HTTPAdapter
+        if not callable(getattr(bounded_download.Download, "login", None)) or not callable(
+            getattr(bounded_auth.GarminConnectAuthAdapter, "login", None)
+        ):
+            fail("runner_auth_interface_unsupported")
+
+        def token_only_login(self):
+            token_file = pathlib.Path(self.gc_config.get_token_store_file())
+            if not token_file.is_file():
+                raise RuntimeError("saved_session_required")
+            client = self.garmin_factory(
+                is_cn=self.gc_config.get_garmin_base_domain() == "garmin.cn",
+                retry_attempts=0,
+            )
+            native = getattr(client, "client", None)
+            if not callable(getattr(native, "load", None)):
+                raise RuntimeError("saved_session_interface_unsupported")
+            for name in ("cs", "_api_session"):
+                session = getattr(native, name, None)
+                if session is not None:
+                    session.trust_env = False
+                    session.mount("https://", HTTPAdapter(max_retries=0))
+                    session.mount("http://", HTTPAdapter(max_retries=0))
+            _guard_sync_auth_requests(native)
+            native.load(str(token_file))
+            profile = client.connectapi("/userprofile-service/socialProfile")
+            display_name = profile.get("displayName") if isinstance(profile, dict) else None
+            if not isinstance(display_name, str) or not display_name:
+                raise RuntimeError("saved_session_identity_unavailable")
+            self.client = client
+            self.profile = {"displayName": display_name}
+            self.display_name = display_name
+            self.full_name = None
+            return True
+
+        def monitoring_login(self):
+            if self.garmin.login() is not True:
+                raise RuntimeError("saved_session_login_incomplete")
+            self.display_name = self.garmin.display_name
+            self.full_name = None
+            return True
+
+        bounded_auth.GarminConnectAuthAdapter.login = token_only_login
+        bounded_download.Download.login = monitoring_login
+except (OSError, ValueError, SyntaxError, KeyError, TypeError, IndexError, ImportError, AttributeError):
     fail("adapter_preflight_invalid")
 sys.argv = [cli, *args]
-exec(code, {"__name__": "__main__", "__file__": cli, "__package__": None})
+try:
+    exec(code, {"__name__": "__main__", "__file__": cli, "__package__": None})
+except _SyncAuthBlocked as blocked:
+    print(json.dumps({"ok": False, "status": blocked.category, "http_status": blocked.http_status}))
+    raise SystemExit(6 if blocked.category == "rate_limited" else 5)
 '''
 
 
@@ -1266,6 +1384,20 @@ def _is_rate_limited(normalized_output: str) -> bool:
 
 
 def classify_process_result(returncode: int, output: str) -> tuple[int, dict]:
+    # The bounded child emits one safe terminal envelope. Inspect bounded tail
+    # lines so preceding SDK diagnostics cannot erase the structured cause.
+    for line in reversed((output or "").splitlines()[-8:]):
+        try:
+            terminal = json.loads(line)
+        except (ValueError, TypeError):
+            continue
+        if isinstance(terminal, dict) and terminal.get("ok") is False and terminal.get("status") in {"rate_limited", "provider_blocked"}:
+            status = terminal["status"]
+            result = {"ok": False, "status": status}
+            code = terminal.get("http_status")
+            if isinstance(code, int) and not isinstance(code, bool) and 100 <= code <= 599:
+                result["http_status"] = code
+            return EXIT_RATE_LIMIT if status == "rate_limited" else EXIT_SYNC_FAILURE, result
     if returncode == EXIT_CONFIGURATION:
         try:
             adapter_error = json.loads(output)
@@ -1279,6 +1411,10 @@ def classify_process_result(returncode: int, output: str) -> tuple[int, dict]:
     normalized = (output or "").casefold()
     if _is_rate_limited(normalized):
         return EXIT_RATE_LIMIT, {"ok": False, "status": "rate_limited"}
+    if "403" in normalized and any(
+        marker in normalized for marker in ("cloudflare", "bot challenge", "cf-mitigated")
+    ):
+        return EXIT_SYNC_FAILURE, {"ok": False, "status": "provider_blocked"}
     if "failed to login" in normalized or "authentication failed" in normalized:
         return EXIT_SYNC_FAILURE, {"ok": False, "status": "authentication_failed"}
     if "failed to parse" in normalized or "exception in" in normalized:
@@ -1290,6 +1426,48 @@ def classify_process_result(returncode: int, output: str) -> tuple[int, dict]:
             "runner_exit_code": returncode,
         }
     return EXIT_OK, {"ok": True, "status": "sync_completed"}
+
+
+@contextmanager
+def _sync_resource_lock(config_dir: Path) -> Iterator[None]:
+    """Serialize every writer by the resolved data resource, not scratch path."""
+    _, config = _read_config_source(config_dir)
+    data_root = _resolve_bound_data_root(config_dir, config)
+    lock_path = data_root / "DBs" / ".garmin-health-sync.lock"
+    if lock_path.is_symlink() or (lock_path.exists() and _is_link_or_reparse(lock_path)):
+        raise SyncConfigurationError("unsafe_sync_lock_path")
+    descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    acquired = False
+    try:
+        evidence = os.fstat(descriptor)
+        if not stat.S_ISREG(evidence.st_mode) or evidence.st_nlink != 1:
+            raise SyncConfigurationError("unsafe_sync_lock_file")
+        if os.name == "nt":
+            import msvcrt
+            if evidence.st_size == 0:
+                os.write(descriptor, b"0")
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            try:
+                msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+            except OSError as exc:
+                if exc.errno in (11, 13, 36):
+                    raise BlockingIOError("sync_already_running") from None
+                raise
+        else:
+            import fcntl
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        acquired = True
+        yield
+    finally:
+        if acquired:
+            if os.name == "nt":
+                import msvcrt
+                os.lseek(descriptor, 0, os.SEEK_SET)
+                msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
 
 
 def execute_sync(
@@ -1423,8 +1601,10 @@ def execute_sync(
     runner = subprocess.run if runner is None else runner
     verifier = _verify_post_sync_state if post_sync_verifier is None else post_sync_verifier
     current_stage = "preflight"
+    resources = ExitStack()
     try:
         remaining_budget()
+        resources.enter_context(_sync_resource_lock(Path(config_dir)))
         before_fingerprint = _sync_database_fingerprint(Path(config_dir))
         remaining_budget()
         with prepare_windowed_config(
@@ -1586,12 +1766,18 @@ def execute_sync(
             "status": "post_sync_verification_failed",
             "error": str(exc),
         }
+    except BlockingIOError:
+        exit_code, payload = EXIT_SYNC_FAILURE, {
+            "ok": False, "status": "sync_already_running", "stage": current_stage,
+        }
     except Exception as exc:
         exit_code, payload = EXIT_SYNC_FAILURE, {
             "ok": False,
             "status": "sync_failed",
             "error_type": type(exc).__name__,
         }
+    finally:
+        resources.close()
     payload["requested_window"] = requested_window
     payload["timeout_budget_seconds"] = budget_seconds
     return exit_code, payload

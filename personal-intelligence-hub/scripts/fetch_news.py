@@ -357,11 +357,18 @@ def build_coverage(source_meta: dict[str, object], funnel: dict) -> dict:
             reasons.append("some candidates lacked a valid publication date")
     else:
         run_status = "complete"
+    from collection_quality import source_diagnostics
+    strategic = source_diagnostics({"metadata": {"sources": source_meta}})["groups"]
+    critical_failure = False
+    for group, details in strategic.items():
+        if details["failed_sources"]:
+            reasons.append(f"strategic coverage {group}: failed " + ", ".join(details["failed_sources"]))
+            critical_failure = critical_failure or group in {"china_policy", "china_health_it"}
     return {
         "run_status": run_status,
         "baseline_status": run_status,
         "coverage_confidence": (
-            "high" if run_status == "complete" else "medium" if run_status == "degraded" else "low"
+            "low" if critical_failure else "high" if run_status == "complete" else "medium" if run_status == "degraded" else "low"
         ),
         "source_attempted": attempted,
         "source_succeeded": source_succeeded,
@@ -383,7 +390,16 @@ def build_coverage(source_meta: dict[str, object], funnel: dict) -> dict:
 def headers() -> dict:
     return {
         "User-Agent": USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Sec-Ch-Ua": '"Not A(Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
     }
 
 
@@ -447,7 +463,10 @@ def _rss_published_at(published: str | None) -> str | None:
     try:
         parsed = parsedate_to_datetime(published) if published else None
     except (TypeError, ValueError, OverflowError):
-        return None
+        try:
+            parsed = datetime.fromisoformat(str(published).replace("Z", "+00:00"))
+        except (TypeError, ValueError, OverflowError):
+            return None
     if parsed is None or parsed.tzinfo is None:
         return None
     return parsed.isoformat()
@@ -533,10 +552,21 @@ async def parse_rss(
             if not link:
                 continue
             desc_raw = entry.get("summary", "") or entry.get("description", "")
-            desc = BeautifulSoup(desc_raw, "html.parser").get_text().strip() if desc_raw else ""
+            if desc_raw:
+                if "<" in desc_raw and ">" in desc_raw:
+                    import warnings
+                    from bs4 import MarkupResemblesLocatorWarning
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
+                        desc = BeautifulSoup(desc_raw, "html.parser").get_text().strip()
+                else:
+                    desc = desc_raw.strip()
+            else:
+                desc = ""
             published = entry.get("published")
             published_source = "rss_published"
             published_at = _rss_published_at(published)
+            updated_at = _rss_published_at(entry.get("updated"))
             retrieved_at = _utc_now().isoformat()
             items.append(
                 {
@@ -545,12 +575,67 @@ async def parse_rss(
                     "source": name,
                     **_publication_fields(published_at, published_source, retrieved_at),
                     "raw_desc": desc,
+                    **({"discovery_updated_at": updated_at, "discovery_date_source": "atom_updated"} if updated_at and not published_at else {}),
                 }
             )
             cache[link] = _utc_now().timestamp()
         return items, "OK"
     except Exception as exc:
         return [], str(exc)
+
+
+def public_list_items(text: str, feed: dict, limit: int = 20) -> list[dict]:
+    from bs4 import BeautifulSoup
+    from urllib.parse import urljoin, urlsplit
+    # NHSA embeds article rows in CDATA, which the HTML parser otherwise ignores.
+    records = re.findall(r"<record[^>]*>\s*<!\[CDATA\[([\s\S]*?)\]\]>", text, re.I)
+    soup = BeautifulSoup("\n".join(records) if records else text, "html.parser")
+    items, seen = [], set()
+    base = feed["url"]
+    pattern = re.compile(feed["article_path"])
+    for anchor in soup.select("a[href]"):
+        url = urljoin(base, anchor["href"])
+        title = anchor.get_text(" ", strip=True)
+        if not title or url in seen or urlsplit(url).hostname != urlsplit(base).hostname or not pattern.search(urlsplit(url).path):
+            continue
+        row = anchor.parent
+        match = None
+        for _ in range(2):
+            if row is None or row.name in {"body", "html", "[document]"}:
+                break
+            article_urls = {urljoin(base, a["href"]) for a in row.select("a[href]") if pattern.search(urlsplit(urljoin(base, a["href"])).path)}
+            if article_urls != {url}:
+                break
+            date_fields = " ".join(node.get_text(" ", strip=True) or str(node.get("datetime") or "") for node in row.select("time, span, .date"))
+            match = re.search(r"(?<!\d)(20\d{2})[-年/.](\d{1,2})[-月/.](\d{1,2})(?:日)?(?!\d)", date_fields)
+            if match or row.name in {"li", "tr"}:
+                break
+            row = row.parent
+        published = None
+        if match:
+            try:
+                published = date(*(int(x) for x in match.groups())).isoformat()
+            except ValueError:
+                published = None
+        seen.add(url)
+        items.append({"title": title, "url": url, "source": feed["name"],
+                      **_publication_fields(published, "official_list_date", _utc_now().isoformat()), "raw_desc": ""})
+        if len(items) >= limit:
+            break
+    if not items:
+        raise ValueError("official list has no recognizable article rows; not a verified no-data result")
+    return items
+
+
+async def parse_public_list(session, feed: dict, cache: dict, limit=20, *, semaphore=None):
+    try:
+        text = await fetch_with_retry(session, feed["url"], semaphore=semaphore)
+        items = public_list_items(text, feed, limit)
+        for item in items:
+            cache[item["url"]] = _utc_now().timestamp()
+        return items, "OK"
+    except (ValueError, OSError) as exc:
+        return [], f"{type(exc).__name__}: {exc}"
 
 
 async def fetch_hackernews(
@@ -757,14 +842,15 @@ async def _scan_all_impl(
             tasks_meta.append(
                 (
                     feed["name"],
-                    parse_rss(
+                    (parse_public_list(session, feed, cache, limit=limit, semaphore=semaphore)
+                     if feed.get("kind") == "html" else parse_rss(
                         session,
                         feed["url"],
                         feed["name"],
                         cache,
                         limit=limit,
                         semaphore=semaphore,
-                    ),
+                    )),
                 )
             )
 
@@ -856,6 +942,8 @@ async def _scan_all_impl(
             "elapsed_seconds": round(loop.time() - started_at, 3),
         },
     }
+    from collection_quality import source_diagnostics
+    payload["metadata"]["strategic_coverage"] = source_diagnostics(payload)
     latest_target = output_path or LATEST_SCAN_PATH
     current_target = current_output_path or CURRENT_SCAN_PATH
 

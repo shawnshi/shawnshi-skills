@@ -462,7 +462,7 @@ _CLAIM_GROUNDING_MONEY = re.compile(
     re.IGNORECASE,
 )
 _CLAIM_GROUNDING_DIGITS = re.compile(r"[0-9]+(?:[.,][0-9]+)*")
-_CLAIM_GROUNDING_KINDS = {"number", "policy_status", "causal"}
+_CLAIM_GROUNDING_KINDS = {"fact", "number", "policy_status", "causal"}
 _CLAIM_GROUNDING_STATUSES = {"grounded", "unverified", "hypothesis"}
 _CLAIM_GROUNDING_BINDING_REQUIRED = {"L3", "L4"}
 
@@ -1590,9 +1590,19 @@ def _validate_coverage(
             if isinstance(run_status, str)
             else None
         )
+        critical_low = (
+            data.get("schema_version") == "1.4"
+            and run_status == "degraded"
+            and coverage.get("coverage_confidence") == "low"
+            and is_contract_integer(coverage.get("source_failed"))
+            and coverage["source_failed"] > 0
+            and any(isinstance(reason, str) and reason.startswith("strategic coverage china_") and ": failed " in reason
+                    for reason in (coverage.get("reasons") if isinstance(coverage.get("reasons"), list) else []))
+        )
         if (
             expected_coverage_confidence is not None
             and coverage.get("coverage_confidence") != expected_coverage_confidence
+            and not critical_low
         ):
             errors.append("coverage.coverage_confidence does not match run_status")
         attempted = coverage.get("source_attempted")

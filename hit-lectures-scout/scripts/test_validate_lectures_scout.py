@@ -101,8 +101,9 @@ class ValidateLecturesScoutTests(unittest.TestCase):
     def test_title_mismatch(self):
         self.rejects(CONTENT.replace("报告 - 2000-01-09", "报告 - 2000-01-10"), "title issue date mismatch")
         title = CONTENT.splitlines()[0]
-        for wrong in (" " + title, title + " ###"):
-            self.rejects(CONTENT.replace(title, wrong), "title issue date mismatch")
+        self.assertEqual([], self.check(CONTENT.replace(title, " " + title)))
+        for invalid in (title + " ###", "    " + title):
+            self.rejects(CONTENT.replace(title, invalid), "title issue date mismatch")
 
     def test_current_outside_window_background_allowed(self):
         old = ROW.replace("R1", "R2").replace("2000-01-05", "1999-12-01")
@@ -296,9 +297,9 @@ class ValidateLecturesScoutTests(unittest.TestCase):
     def test_crlf_metadata_and_aligned_tables(self):
         self.assertEqual("explicit", validator.metadata(CONTENT.replace("\n", "\r\n"), "命名依据"))
         self.assertEqual([], self.check(CONTENT.replace("|---|---|", "|:---|---:|")))
-        # Markdown ATX variants still end the preamble; body metadata cannot rescue it.
+        # Only an H2 ends the metadata header; H3-H6 are allowed before it.
         field = "报告周期：2000-01-03 至 2000-01-09"
-        for heading in ("  ## 说明 ##", "### 说明", "##\t说明"):
+        for heading in ("  ## 说明 ##", "##\t说明"):
             self.rejects(CONTENT.replace(field, "").replace("## 本期研究", heading + "\n" + field + "\n## 本期研究"), "exactly once")
 
     def test_comments_cannot_supply_metadata_or_tables(self):

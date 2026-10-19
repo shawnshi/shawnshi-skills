@@ -1,8 +1,9 @@
-# GarminDB metadata pins a vulnerable garminconnect, so the runner environment
-# installs garmindb with --no-deps and pins garminconnect separately (garmindb
-# 3.9.0 declares garminconnect==0.3.11, the runner runs the newer 0.3.17).
-# Synchronization uses that explicit, separately verified runner environment; garmindb
-# itself stays out of this analysis set.
+# GarminDB metadata pins garminconnect==0.3.11 (also in 4.0.0), so the runner
+# does NOT override that pin: the sync environment is deliberately
+# garmindb==3.9.0 + garminconnect==0.3.11, and sync_health_data.py verifies
+# exactly that pair. The analysis/live-read environment below is separate and
+# stays on garminconnect==0.3.17; the two environments must not be mixed.
+# GarminDb itself stays out of this analysis set.
 garminconnect==0.3.17
 pandas==3.0.6
 fitparse==1.2.0

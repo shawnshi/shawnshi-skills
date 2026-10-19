@@ -225,6 +225,39 @@ class InverseVolBuilderTests(BuildTestCase):
         self.assertEqual(built["bucket_targets"], {"core": 0.8, "satellite": 0.2})
         self.assertEqual(built["bucket_members"], {"core": ["AAA"], "satellite": ["BBB"]})
 
+    def test_missing_fractions_are_not_defaulted(self):
+        payload = policy_payload()
+        del payload["bucket_policy"]["core_fraction"]
+        del payload["bucket_policy"]["satellite_fraction"]
+        policy = self.write("policy.json", payload)
+        positions = self.write("positions.json", positions_payload())
+        observations = self.write("vol.json", self.observations())
+        code, result = self.run_builder([
+            "inverse-vol", "--confirmed-policy", str(policy), "--positions-file", str(positions),
+            "--volatilities-file", str(observations), "--task-dir", str(self.task_dir)])
+        self.assertEqual(code, 2)
+        self.assertEqual(result["detail_status"], "bucket_fractions_missing")
+        self.assertFalse((self.task_dir / "inputs" / "inverse_volatility_policy.json").exists())
+
+    def test_explicit_zero_fraction_is_preserved(self):
+        payload = policy_payload()
+        payload["bucket_policy"].update(core_fraction=0, satellite_fraction=1)
+        policy = self.write("policy.json", payload)
+        positions = self.write("positions.json", positions_payload())
+        observations = self.write("vol.json", self.observations())
+        code, result = self.run_builder([
+            "inverse-vol", "--confirmed-policy", str(policy), "--positions-file", str(positions),
+            "--volatilities-file", str(observations), "--task-dir", str(self.task_dir)])
+        self.assertEqual(code, 0, result)
+        built = json.loads(Path(result["policy_file"]).read_text(encoding="utf-8"))
+        self.assertEqual(built["bucket_targets"], {"core": 0, "satellite": 1})
+        from rebalance_optimizer import run_inverse_volatility_experiment
+        consumer = run_inverse_volatility_experiment(positions_payload()["positions"], built)
+        self.assertEqual(consumer["status"], "complete", consumer)
+        self.assertEqual(consumer["experimental_weights"], [
+            {"symbol": "AAA", "experimental_weight": 0},
+            {"symbol": "BBB", "experimental_weight": 1}])
+
     def test_missing_observation_is_insufficient_data(self):
         policy = self.write("policy.json", policy_payload())
         positions = self.write("positions.json", positions_payload())
@@ -285,7 +318,10 @@ class ThesisPackBuilderTests(BuildTestCase):
             "thesis-pack", "--quotes-file", str(self.quotes), "--evidence-file", str(evidence),
             "--assessments-file", str(assessments), "--scope-coverage-file", str(scopes),
             "--window-start", "2026-09-24T00:00:00+00:00", "--task-dir", str(self.task_dir)])
-        self.assertEqual(code, 0, result)
+        self.assertEqual(code, 2, result)
+        self.assertEqual(result["artifact_build_status"], "complete")
+        self.assertEqual(result["status"], "incomplete")
+        self.assertEqual(result["thesis_red_team"]["verification_status"], "declaration_only")
         pack = json.loads(Path(result["pack_file"]).read_text(encoding="utf-8"))
         expected = hashlib.sha256((self.task_dir / "raw" / "note.txt").read_bytes()).hexdigest()
         self.assertEqual(pack["evidence_items"][0]["content_sha256"], expected)

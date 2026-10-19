@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-writing-assistant",
-  "generated_at": "2026-10-09T11:54:45+08:00",
+  "generated_at": "2026-10-19T09:59:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -38,10 +38,6 @@
     {
       "name": "agents",
       "file_count": 1
-    },
-    {
-      "name": "tests",
-      "file_count": 2
     }
   ],
   "resource_file_hashes": [
@@ -70,12 +66,12 @@
       "sha256": "748598abd6c9f42a6f2e254871ebe1c01b45660e2da89ad4bea6d82bd1e88a7e"
     },
     {
-      "path": "tests/test_text_qa.py",
-      "sha256": "277ff734b80589c446eef1d964fc2f9bfb9fb0f5585605b98ee976318867c98f"
-    },
-    {
       "path": "tests/behavior-cases.md",
       "sha256": "0c668593305be3f3c8c90c74db8a30dd88e9eaf382913acab92dca287fac0215"
+    },
+    {
+      "path": "tests/test_text_qa.py",
+      "sha256": "277ff734b80589c446eef1d964fc2f9bfb9fb0f5585605b98ee976318867c98f"
     }
   ],
   "declared_local_dependencies": [
@@ -102,12 +98,6 @@
       "exists": true,
       "resolved_path": "personal-writing-assistant/scripts/text_qa.py",
       "sha256": "748598abd6c9f42a6f2e254871ebe1c01b45660e2da89ad4bea6d82bd1e88a7e"
-    },
-    {
-      "path": "tests/behavior-cases.md",
-      "exists": true,
-      "resolved_path": "personal-writing-assistant/tests/behavior-cases.md",
-      "sha256": "0c668593305be3f3c8c90c74db8a30dd88e9eaf382913acab92dca287fac0215"
     }
   ],
   "missing_declared_dependencies": []

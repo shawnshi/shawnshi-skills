@@ -49,7 +49,7 @@ fi
 
 if ! command -v pwsh >/dev/null 2>&1; then
     echo "gate: pwsh (PowerShell 7+) is required; Windows PowerShell is not cross-platform." >&2
-    echo "gate: install PowerShell Core, or run the individual commands listed in mentat-skill-creator/SKILL.md." >&2
+    echo "gate: install PowerShell Core, or run the individual commands listed in reson-skill-creator/SKILL.md." >&2
     exit 127
 fi
 

@@ -10,13 +10,6 @@ from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
-MENTAT_INTEGRATION_AVAILABLE = (
-    Path(__file__).resolve().parents[2]
-    / "mentat-insight-diary"
-    / "scripts"
-    / "evidence_gate.py"
-).is_file()
-MENTAT_INTEGRATION_SKIP_REASON = "Optional mentat-insight-diary skill is not installed"
 
 MODULE_PATH = Path(__file__).with_name("diary_ops.py")
 SPEC = importlib.util.spec_from_file_location("diary_ops", MODULE_PATH)
@@ -1418,298 +1411,47 @@ class DiaryOpsTests(unittest.TestCase):
                 )
             self.assertFalse(wrong.parent.exists())
 
-    def _mentat_args(self, target, payload, receipt=None, approval=None):
-        args = self._args(target, payload, receipt, approval, day="2026-09-07")
-        args.kind = "mentat"
-        return args
+    def test_retired_operational_journal_kinds_reject_canonical_targets(self):
+        for kind in ("mentat", "reson"):
+            with self.subTest(kind=kind):
+                with self.assertRaises(diary_ops.DiaryError):
+                    diary_ops.canonical_target(date(2026, 9, 7), kind)
+                with self.assertRaises(diary_ops.DiaryError):
+                    diary_ops._validate_matrix(date(2026, 9, 7), kind, "replace-date", None, None, None)
 
-    def _mentat_evidence(self, status="complete"):
-        event = {
-            "kind": "failure",
-            "summary": "synthetic validation failed and was repaired",
-            "source": "synthetic Pi source",
-            "artifact_or_state": "candidate artifact",
-            "result": "validation passed after repair",
-            "verification": "regression test passed",
-            "decision": "repair the candidate",
-            "rejected_alternative": "weaken the gate",
-            "decision_basis": "preserve the contract",
-            "issue": "schema mismatch",
-            "effect": "save was blocked",
-            "resolution": "evidence corrected",
-            "next_trigger": "review completed",
-            "completion_standard": "gate and writer pass",
-            "source_refs": [
-                {
-                    "source_id": "src-1",
-                    "entry_id": "e1",
-                    "line": 2,
-                    "timestamp": "2026-09-07T10:00:00+08:00",
-                }
-            ],
-        }
-        source_refs = event["source_refs"]
-        return {
-            "collection": {
-                "schema": "mentat-pi-daily-collection-v1",
-                "scope": "pi_daily",
-                "mode": "discovery",
-                "status": status,
-                "date": "2026-09-07",
-                "timezone": "Asia/Shanghai",
-                "window_start": "2026-09-07T00:00:00+08:00",
-                "cutoff": "2026-09-07T12:00:00+08:00",
-                "counts": {"discovered": 1, "checked": 1, "excluded": 0, "error": 0},
-                "sources": [
-                    {"id": "src-1", "kind": "pi_session_jsonl", "status": "checked"}
-                ],
-                "errors": [],
-            },
-            "collected_events": [
-                {
-                    "id": "evt-1",
-                    "timestamp": "2026-09-07T10:00:00+08:00",
-                    "entry_type": "message",
-                    "role": "user",
-                    "tool_name": None,
-                    "outcome": None,
-                    "entry_digest_sha256": "0" * 64,
-                    "source_refs": source_refs,
-                }
-            ],
-            "semantic_review": {
-                "status": "complete",
-                "reviewed_events": [
-                    {
-                        "collected_event_id": "evt-1",
-                        "disposition": "reviewed",
-                        "source_refs": source_refs,
-                    }
-                ],
-            },
-            "events": [event],
-        }
-
-    def _mentat_artifacts(self, root, scope, evidence):
-        receipt = root / "scope.json"
-        receipt.write_text(json.dumps(scope, ensure_ascii=False), encoding="utf-8")
-        gate_input = root / "evidence.json"
-        gate_input.write_text(
-            json.dumps(evidence, ensure_ascii=False), encoding="utf-8"
-        )
-        gate_sha = hashlib.sha256(gate_input.read_bytes()).hexdigest()
-        approval = root / "approval.json"
-        approval.write_text(
-            json.dumps(
-                {
-                    "schema": "diary-write-approval-v1",
-                    "status": "confirmed",
-                    "approval_source": "mentat_evidence_gate",
-                    "approval_evidence_id": gate_sha,
-                    "authorization_id": scope["authorization_id"],
-                    "authorization_scope_sha256": scope["authorization_scope_sha256"],
-                    "gate_input_path": str(gate_input),
-                    "gate_input_sha256": gate_sha,
-                },
-                ensure_ascii=False,
-            ),
-            encoding="utf-8",
-        )
-        return receipt, approval
-
-    def test_missing_mentat_gate_fails_closed_without_writing(self):
+    def test_retired_operational_journal_requests_fail_before_payload_or_gate_io(self):
         with tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
             root = Path(tmp)
-            target = root / "mentat_audit" / "2026-Q3_Audit.md"
-            payload = root / "mentat.md"
-            payload.write_text(
-                "# 2026-09-07 Mentat 内观日志｜合成\n\n正文\n", encoding="utf-8"
-            )
-            scope = diary_ops.build_scope(self._mentat_args(target, payload))
-            receipt, approval = self._mentat_artifacts(
-                root, scope, self._mentat_evidence()
-            )
-            with patch.object(diary_ops, "MENTAT_GATE", root / "absent_gate.py"):
-                with self.assertRaisesRegex(diary_ops.DiaryError, "did not pass"):
-                    diary_ops.replace_operation(
-                        self._mentat_args(target, payload, receipt, approval)
-                    )
-            self.assertFalse(target.exists())
-            self.assertFalse(target.parent.exists())
-
-    @unittest.skipUnless(MENTAT_INTEGRATION_AVAILABLE, MENTAT_INTEGRATION_SKIP_REASON)
-    def test_mentat_gate_rejects_bad_coverage_even_with_full_score(self):
-        skill_gate = (
-            Path(__file__).resolve().parents[2]
-            / "mentat-insight-diary"
-            / "scripts"
-            / "evidence_gate.py"
-        )
-        with (
-            tempfile.TemporaryDirectory() as tmp,
-            self._runtime(tmp),
-            patch.object(diary_ops, "MENTAT_GATE", skill_gate),
-        ):
-            root = Path(tmp)
-            target = root / "mentat_audit" / "2026-Q3_Audit.md"
-            payload = root / "mentat.md"
-            payload.write_text(
-                "# 2026-09-07 Mentat 内观日志｜合成\n\n正文\n", encoding="utf-8"
-            )
-            scope = diary_ops.build_scope(self._mentat_args(target, payload))
-            receipt, approval = self._mentat_artifacts(
-                root, scope, self._mentat_evidence("partial")
-            )
-            with self.assertRaisesRegex(diary_ops.DiaryError, "did not authorize"):
-                diary_ops.replace_operation(
-                    self._mentat_args(target, payload, receipt, approval)
-                )
-
-    @unittest.skipUnless(MENTAT_INTEGRATION_AVAILABLE, MENTAT_INTEGRATION_SKIP_REASON)
-    def test_mentat_gate_rejects_collection_date_mismatch(self):
-        skill_gate = (
-            Path(__file__).resolve().parents[2]
-            / "mentat-insight-diary"
-            / "scripts"
-            / "evidence_gate.py"
-        )
-        with (
-            tempfile.TemporaryDirectory() as tmp,
-            self._runtime(tmp),
-            patch.object(diary_ops, "MENTAT_GATE", skill_gate),
-        ):
-            root = Path(tmp)
-            target = root / "mentat_audit" / "2026-Q3_Audit.md"
-            payload = root / "mentat.md"
-            payload.write_text(
-                "# 2026-09-07 Mentat 内观日志｜合成\n\n正文\n", encoding="utf-8"
-            )
-            scope = diary_ops.build_scope(self._mentat_args(target, payload))
-            evidence = self._mentat_evidence()
-            evidence["collection"].update(
-                {
-                    "date": "2026-09-06",
-                    "window_start": "2026-09-06T00:00:00+08:00",
-                    "cutoff": "2026-09-06T12:00:00+08:00",
-                }
-            )
-            for event in evidence["events"] + evidence["collected_events"]:
-                event["timestamp"] = "2026-09-06T10:00:00+08:00"
-                for ref in event["source_refs"]:
-                    ref["timestamp"] = "2026-09-06T10:00:00+08:00"
-            for item in evidence["semantic_review"]["reviewed_events"]:
-                for ref in item["source_refs"]:
-                    ref["timestamp"] = "2026-09-06T10:00:00+08:00"
-            receipt, approval = self._mentat_artifacts(root, scope, evidence)
-            with self.assertRaisesRegex(diary_ops.DiaryError, "date does not match"):
-                diary_ops.replace_operation(
-                    self._mentat_args(target, payload, receipt, approval)
-                )
-
-    @unittest.skipUnless(MENTAT_INTEGRATION_AVAILABLE, MENTAT_INTEGRATION_SKIP_REASON)
-    def test_mentat_gate_accepts_past_day_full_day_next_midnight_cutoff(self):
-        skill_gate = (
-            Path(__file__).resolve().parents[2]
-            / "mentat-insight-diary"
-            / "scripts"
-            / "evidence_gate.py"
-        )
-        with (
-            tempfile.TemporaryDirectory() as tmp,
-            self._runtime(tmp),
-            patch.object(diary_ops, "MENTAT_GATE", skill_gate),
-        ):
-            root = Path(tmp)
-            target = root / "mentat_audit" / "2026-Q3_Audit.md"
-            payload = root / "mentat.md"
-            payload.write_text(
-                "# 2026-09-07 Mentat 内观日志｜合成\n\n正文\n", encoding="utf-8"
-            )
-            scope = diary_ops.build_scope(self._mentat_args(target, payload))
-            evidence = self._mentat_evidence()
-            evidence["collection"]["cutoff"] = "2026-09-08T00:00:00+08:00"
-            receipt, approval = self._mentat_artifacts(root, scope, evidence)
-            result = diary_ops.replace_operation(
-                self._mentat_args(target, payload, receipt, approval)
-            )
-            self.assertEqual(result["status"], "success")
-            self.assertIn("Mentat 内观日志", target.read_text(encoding="utf-8"))
-
-    def test_mentat_gate_cutoff_check_rejects_wrong_beyond_malformed_and_naive(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            gate_input = Path(tmp) / "evidence.json"
-            gate_input.write_text("{}", encoding="utf-8")
-            gate_sha = hashlib.sha256(gate_input.read_bytes()).hexdigest()
-            approval = {
-                "approval_evidence_id": gate_sha,
-                "gate_input_path": str(gate_input),
-                "gate_input_sha256": gate_sha,
-            }
-            args = argparse.Namespace(date="2026-09-07")
-
-            def gate_output(cutoff):
-                return json.dumps(
-                    {
-                        "save_allowed": True,
-                        "status": "thin",
-                        "collection_date": "2026-09-07",
-                        "collection_window": {
-                            "timezone": "Asia/Shanghai",
-                            "window_start": "2026-09-07T00:00:00+08:00",
-                            "cutoff": cutoff,
-                        },
-                    }
-                )
-
-            with patch.object(
-                diary_ops,
-                "_run_gate",
-                return_value=gate_output("2026-09-08T00:00:00+08:00"),
-            ):
-                diary_ops._verify_mentat_gate(dict(approval), args)
-            for cutoff in (
-                "2026-09-06T23:59:59+08:00",
-                "2026-09-08T00:00:01+08:00",
-                "not-a-time",
-                "2026-09-07T12:00:00",
-            ):
-                with self.subTest(cutoff=cutoff), patch.object(
-                    diary_ops, "_run_gate", return_value=gate_output(cutoff)
+            target = root / "retired-journal" / "never-written.md"
+            args = self._args(target, root / "unread-payload.md", day="2026-09-07")
+            for kind in ("mentat", "reson"):
+                args.kind = kind
+                with (
+                    self.subTest(kind=kind),
+                    patch.object(diary_ops, "_read_payload_source", side_effect=AssertionError("unexpected payload read")),
+                    patch.object(diary_ops, "_run_gate", side_effect=AssertionError("unexpected gate execution")),
                 ):
-                    with self.assertRaisesRegex(
-                        diary_ops.DiaryError, "cutoff does not match"
-                    ):
-                        diary_ops._verify_mentat_gate(dict(approval), args)
+                    for operation in (diary_ops.build_scope, diary_ops.replace_operation):
+                        with self.assertRaises(diary_ops.DiaryError):
+                            operation(args)
+                self.assertFalse(target.exists())
+                self.assertFalse(target.parent.exists())
 
-    @unittest.skipUnless(MENTAT_INTEGRATION_AVAILABLE, MENTAT_INTEGRATION_SKIP_REASON)
-    def test_mentat_gate_accepts_valid_pi_daily_coverage(self):
-        skill_gate = (
-            Path(__file__).resolve().parents[2]
-            / "mentat-insight-diary"
-            / "scripts"
-            / "evidence_gate.py"
-        )
-        with (
-            tempfile.TemporaryDirectory() as tmp,
-            self._runtime(tmp),
-            patch.object(diary_ops, "MENTAT_GATE", skill_gate),
-        ):
-            root = Path(tmp)
-            target = root / "mentat_audit" / "2026-Q3_Audit.md"
-            payload = root / "mentat.md"
-            payload.write_text(
-                "# 2026-09-07 Mentat 内观日志｜合成\n\n正文\n", encoding="utf-8"
-            )
-            scope = diary_ops.build_scope(self._mentat_args(target, payload))
-            receipt, approval = self._mentat_artifacts(
-                root, scope, self._mentat_evidence()
-            )
-            result = diary_ops.replace_operation(
-                self._mentat_args(target, payload, receipt, approval)
-            )
-            self.assertEqual(result["status"], "success")
-            self.assertEqual(result["approval_source"], "mentat_evidence_gate")
-            self.assertIn("Mentat 内观日志", target.read_text(encoding="utf-8"))
+    def test_retired_operational_journal_cli_kinds_are_not_accepted(self):
+        parser = diary_ops._parser()
+        common = ["scope", "--file", "synthetic.md", "--date", "2026-09-07",
+                  "--action", "replace-date", "--content-file", "unread.md",
+                  "--authorization-id", "synthetic-authorization", "--kind"]
+        self.assertEqual(parser.parse_args(common + ["personal"]).kind, "personal")
+        for kind in ("mentat", "reson"):
+            with self.subTest(kind=kind), patch("sys.stderr"):
+                with self.assertRaises(SystemExit) as raised:
+                    parser.parse_args(common + [kind])
+                self.assertEqual(raised.exception.code, 2)
+
+    def test_retired_gate_is_not_an_exposed_writer_capability(self):
+        self.assertFalse(hasattr(diary_ops, "MENTAT_GATE"))
+        self.assertFalse(hasattr(diary_ops, "_verify_mentat_gate"))
 
 
 if __name__ == "__main__":

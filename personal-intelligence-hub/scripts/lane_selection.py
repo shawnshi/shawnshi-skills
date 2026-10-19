@@ -121,9 +121,11 @@ def _lane_candidate_rank(item: dict[str, Any]) -> tuple[Any, ...]:
             "医院",
         )
     )
+    from collection_quality import candidate_reading_priority
     # Stable URL/title ties are independent of input order and untrusted assurance fields.
     return (
         int(opinion),
+        -candidate_reading_priority(item),
         -int(medical),
         -int(concrete),
         normalize_url(str(item.get("url") or "")),
@@ -295,8 +297,12 @@ def select_supplement_bound_candidates(
     if not gap.get("verify_bound_candidates"):
         return candidates, []
     limit = int(gap["max_urls"])
-    if article_broker_version == 3 and gap["lane"] == "TechRadar":
-        limit = min(limit, 2)
+    if article_broker_version == 3 and (
+        gap["lane"] == "TechRadar"
+        or (gap["lane"] == "HealthcareRadar" and "bound_reading_budget" in gap)
+    ):
+        bound_cap = 2 if gap["lane"] == "TechRadar" else max(2, int(gap.get("bound_reading_budget", 2)))
+        limit = min(limit, bound_cap)
         unique = {}
         for candidate in candidates:
             unique.setdefault(candidate["candidate_ref"], candidate)

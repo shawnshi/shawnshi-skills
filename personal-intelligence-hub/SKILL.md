@@ -24,6 +24,8 @@ description: 生成基线优先、跨技术与医疗数字化并带历史去重�
 
 运行脚本前检查 `requirements.txt` 与当前环境。不要自动安装依赖或修改全局配置。
 
+新生产请求执行前同时读取 `references/collection-quality.md` 的对应阶段：原文捕获/车道隔离（P0）、关键覆盖/阅读预算（P1）、扩窗/遥测/结束（P2）。该文明确新 policy 与旧冻结请求的边界；原文由 `scripts/native_capture.py` 校验，诊断与排序由 `scripts/collection_quality.py` 提供。
+
 ## 唯一生产流程
 
 ### 1. 建立运行并先完成基线
@@ -36,15 +38,15 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 
 记录返回的 `execution_cli_path`。下文所有 `python -X utf8 scripts/run_daily.py ...` 在生产 run 中均表示 `python -X utf8 <execution_cli_path> ...`；不得在 prepare 后改回安装目录脚本。
 
-prepare 必须冻结 run/bundle/历史与候选血缘，记录 Python/关键依赖版本并为新生产运行登记 `claim_grounding_version=2`，再完成基线扫描和缺口登记；基线未达 completed/degraded 前不启动补检，启发式候选不得直接成为最终事实或归档内容。完整网络、超时、覆盖与失败保护见执行前必读的 baseline 节。
+prepare 必须冻结 run/bundle/历史与候选血缘，记录 Python/关键依赖版本并为默认 native-v3 新生产运行登记 `claim_grounding_version=3`（显式 legacy v1/v2 准备入口保留原 policy 2），再完成基线扫描和缺口登记；基线未达 completed/degraded 前不启动补检，启发式候选不得直接成为最终事实或归档内容。完整网络、超时、覆盖与失败保护见执行前必读的 baseline 节。
 
 “昨日资讯简报”显式传入昨日日期。不得用运行时滚动窗口或当前日期命名昨日文件。
 
 ### 2. 核验绑定候选，再针对缺口补检
 
-进入本阶段前，父任务读取 `references/workflow_protocols.md` 的 `supplement` 节；有补检请求时，再读 `runtime` 节，完成预算预留后才可启动。代理只接收已登记最小 packet，不得加载本参考文档或主会话历史。seal 会启动 900 秒 finalization grace：父任务必须在 seal 后立即完成该 gap 的 `finalize --parent`，不得先用其他 gap 的 broker 操作；同一命令内完成两步用 `python -X utf8 scripts/supplement_seal.py --request <supplement_request.json> --gap-id <gap_id>`（draft 未就绪时它只报告 grace 截止时间）。reserve-fetch 只接受 required bound URL 或已记录 search receipt 发现的 URL；未尝试但非 required 的 bound 候选不可抓取。600 秒 source 时钟自 `broker-checkpoint` 起算，不得先批量 checkpoint 多条 gap 再逐条收尾，否则未开跑的车道会提前到期。父任务 fallback 的顺序必须是 seal → 写 draft → finalize；先写 draft 会让 seal 被 guard 拒绝（draft/result 已存在）。
+进入本阶段前，父任务读取 `references/workflow_protocols.md` 的 `supplement` 节；有补检请求时，再读 `runtime` 节，完成预算预留后才可启动。代理只接收已登记最小 packet，不得加载本参考文档或主会话历史。seal 会启动 900 秒 finalization grace：新 native 生产请求登记 `worker_delivery_version=1`，父任务立即交回 sealed 证据，由 worker 写授权 draft 并运行绑定的 `finalize`；父任务接收回执后校验登记，不得插入其他 gap 的 broker 操作。只有 worker 无法交付时才在原 grace 内走 `finalize --parent` fallback；显式父级兜底用 `python -X utf8 scripts/supplement_seal.py --request <supplement_request.json> --gap-id <gap_id> --parent-fallback`（draft 已就绪时在原 grace 内收口，未就绪时报告截止时间）。不带该标志的新模式只 seal 并交回 worker，绝不自动登记父级作者。reserve-fetch 只接受 required bound URL 或已记录 search receipt 发现的 URL；未尝试但非 required 的 bound 候选不可抓取。600 秒 source 时钟自 `broker-checkpoint` 起算，不得先批量 checkpoint 多条 gap 再逐条收尾，否则未开跑的车道会提前到期。父任务 fallback 的顺序必须是 seal → 写 draft → finalize；先写 draft 会让 seal 被 guard 拒绝（draft/result 已存在）。
 
-仅在基线 `completed`/`degraded` 后，按已登记 gap/lane 先核验绑定候选，再补缺口；技术与医疗供给车道承担文章核验，不能把基线启发式候选当已认证事实来省略它们。Sentinel/Ranger 只在存在专题线索或本轮 focus 的对应 `required=true` 时额外分派，不再默认固定四路。没有专题线索不等于没有相关事件，未单独检索的专题覆盖须保持未知；根任务不重复已分派检索。canary 基础设施失败即停止后续分派；成功后逐个启动 worker，同一运行最多一个 draft 写者。当前没有 worktree/container 隔离适配，不启动并发写入。保留真实日期、访问日志与失败，禁止弱资讯补数。代理只写授权 draft，父任务确定性校验后原子发布；timeout/失联按持久化逐 gap 状态 reconciler 收口，不得只依赖 stdout。
+仅在基线 `completed`/`degraded` 后，按已登记 gap/lane 先核验绑定候选，再补缺口；技术与医疗供给车道承担文章核验，不能把基线启发式候选当已认证事实来省略它们。Sentinel/Ranger 只在存在专题线索或本轮 focus 的对应 `required=true` 时额外分派，不再默认固定四路。没有专题线索不等于没有相关事件，未单独检索的专题覆盖须保持未知；根任务不重复已分派检索。新 collection-quality-v1 请求的 canary 必须有通过校验、字节仍在场的 worker 或显式 parent finalize 回执；仅有证据的共享工具/认证/生命周期故障停止后续车道，正文/日期/单源失败局限于本车道。旧冻结请求保留原交付门。preflight/context 与 broker 新来源操作共同检查此门；通过后逐个启动 worker，同一运行最多一个 draft 写者。当前没有 worktree/container 隔离适配，不启动并发写入。保留真实日期、访问日志与失败，禁止弱资讯补数。代理只写授权 draft，父任务确定性校验后原子发布；timeout/失联按持久化逐 gap 状态 reconciler 收口，不得只依赖 stdout。
 
 初始 context 的大结果被截断或替换后，不重复 context、不凭记忆拼 Schema；按 `workflow_protocols.md` 的只读 `broker_handoff.py --draft-contract` 回读同一冻结写入合同。此恢复不新增检索、时钟或预算。
 
@@ -54,13 +56,27 @@ prepare 未返回 request 时，脚本已登记结构化 `no_increment`，不要
 
 所有代理异步启动，交互会话禁止阻塞等待或轮询；完成/进度事件后按 `runtime` 节状态机恢复。只凭 running、文件存在或聊天消息不等于进展或完成；正式校验通过后不再等待额外聊天。失败请求封闭，不得复用 request/invocation/输出路径重启；重试创建全新 run。
 
-worker 席位没有原生公网工具，通过 `contact_supervisor` 请求父级 broker；标准读写与帮助脚本仍只能操作登记范围。分派的 packet 已强制「context 之后第一步就是联系父级要 broker 序列」；父任务收到该请求后应立刻代跑整条 broker 链并回传 sealed 证据，不要让 worker 自行探索。worker 因工具预算耗尽而以 BLOCKED 结束、未交付 draft 时，**不算基础设施失败**，也不触发 `stop_fanout_on_canary_infrastructure_failure` 之外的停滞：按 `workflow_protocols.md` 的父级 fallback 顺序（seal → 写 draft → finalize）接管该 gap，并在最终交付中披露 draft 由父级撰写。
+worker 席位没有原生公网工具，通过 `contact_supervisor` 请求父级 broker；标准读写与帮助脚本仍只能操作登记范围。分派的 packet 已强制「context 之后第一步就是联系父级要 broker 序列」；父任务收到该请求后应立刻代跑整条 broker 链并回传 sealed 证据，不要让 worker 自行探索。worker 以 BLOCKED 结束且未交付合格 draft，不代表业务成功。可在原 grace 内按 seal → 写 draft → finalize --parent 接管并披露父级撰写；新 quality-v1 canary 缺少任何可信 finalize 回执时保持阻塞；有显式 parent 回执但只是来源/正文失败时继续独立车道，不得借 sealed/no_increment 取消 fanout。worker 回执只记录帮助脚本的调用角色路径，不是 OS 身份认证或独立审查证明；不得由父级伪装调用 worker finalize 来绕过交付门。
 
 启动前仍执行真实 Token/费用预留与下游 headroom 预留，终态按去缓存预算口径结算；遥测不可用不得估算或释放完整预留。2026-09-16 授权已移除运行级 Token/费用总额上限：预留额度继续登记用于可观测性，触达旧上限不再阻断启动；Token/费用从来不是活动硬停止器，活动中的有界停止依赖 `timeout_ms`、`tool_budget`、查询/URL/轮次限制与收口帮助脚本；详见 `runtime` 节。
 
+### 恢复、交接与成本诊断（新冻结包）
+
+只读入口：`python -B -X utf8 <execution_cli_path> resume --manifest <run_manifest.json>`。宿主收到稳定完成通知后立即读取投影：`prepare_review` 使用返回的原冻结 CLI 命令；`handoff_existing_review` 先核验确切 native run 状态，已有运行只能续接，不能因 pending 标签重启；`host_state_required` 沿用原 request、canary、source/grace 和进度回执完成对账；`forge` 固定已登记的归档目录、跳过共享运行遥测写入，并仍要求原发布授权和既有验证门；目标目录有事务残留/锁或当前目标偏离 prepare 快照时先对账，不自动恢复；`blocked` 不自动重试或覆盖部分提交；`done` 只在已登记归档与正文哈希一致时返回。
+
+入口不启动代理、不登记、不写文件，不重建请求/预算或重置时钟。缺文件、证据改动和非法时间字段必须显式失败，不归一化成无数据。旧冻结包没有该命令时沿用它自己的 `status` 与原 helper，不复制新脚本进去。诊断区分生成→登记延迟、已观测交接与未观测转换；未观测转换不能当作纯空等。成本只汇总已登记调用，父级/编排器及 broker combined usage 未测时保留缺口，`complete_run_cost_usd=null`，缺回执不释放预算。此规则约束当前获授权宿主会话，不安装全局完成回调，不宣称会话外无人值守已验证。
+
+### 研究反馈、运行索引与源码档案复用
+
+- `python -B -X utf8 <execution_cli_path> evaluate --manifest <manifest>`：只读已登记研究漏斗，按 gap 区分未交付、核验缺口、已登记无增量及返回但未入选；新增关键源组/未核验数/遥测缺口，登记子代理用量不代表完整成本。传输/字节绑定与选取数量不等于新颖性、事实正确或语义蕴含；不自动改权重、预算、窗口或开始补查。
+- `python -B -X utf8 scripts/run_daily.py catalog --manifest <manifest> [--manifest <other>]`：仅索引显式文件的记录元数据，不扫描目录、会话或历史正文。保留不同路径的重复 run_id，并显式报告错误。metadata-only 不是完成证明、原生运行状态或启动许可；执行仍用每个原冻结 CLI。
+- 显式源码档案池：`python -B -X utf8 scripts/bundle_pool.py pack --source-root <skill_root> --pool-dir <approved_pool>`；相同内容复用同一个 ZIP。`verify --archive <zip>` 校验路径/数量/解压大小/文件哈希；`restore --archive <zip> --destination <new_directory>` 在新容器下恢复 `personal-intelligence-hub/` 独立副本，拒绝已有目标、链接和路径逃逸。只导出登记源码，不打包运行清单、会话或新闻数据；恢复不授予执行权限，内容哈希也不证明可信作者。
+
+默认 prepare 仍保留原独立冻结副本；本功能不迁移、压缩、删除旧运行目录，不把池内源码 ZIP 的复用量称为默认运行目录的实际节省。池写入和恢复目标必须由当次请求明确给定；不后台建池、不修改原清单路径。评估和 catalog 本身不保存报告或扩大知识库。
+
 ### 3. 事件合并与语义评估
 
-进入本阶段前，父任务读取 `references/workflow_protocols.md` 的 `semantic` 节及 `runtime` 节，再 prepare-review。独立 `SemanticEvaluator` 仅运行已绑定 helper、读取紧凑 eligible candidates、写动态草稿并 finalize，不得扩展候选、重读完整上下文或重新联网访问登记 URL。可用 context 返回的 `evidence_read_command` 按精确唯一原文引句读取同一登记正文，脚本生成哈希与 Unicode 区间；也可用 `evidence --start --end` 补读已保留区间，不增加联网、候选或来源时钟。新生产运行的 L3/L4、重大资讯及近期决策影响条目必须有 `claim_grounding`，各事实主张绑定非空原文 `evidence` 和 `evidence_ref={readable_text_sha256,start,end}`；关键 fact 中的数字必须逐项有来源绑定。缺证据应删除主张、降低等级或拒绝条目，不能只警告；推测放入 deduction。字节绑定不替代独立语义评审。旧 policy 1 的冻结运行和归档仍按旧门回放。
+进入本阶段前，父任务读取 `references/workflow_protocols.md` 的 `semantic` 节及 `runtime` 节，再 prepare-review。独立 `SemanticEvaluator` 仅运行已绑定 helper、读取紧凑 eligible candidates、写动态草稿并 finalize，不得扩展候选、重读完整上下文或重新联网访问登记 URL。可用 context 返回的 `evidence_read_command` 按精确唯一原文引句读取同一登记正文，脚本生成哈希与 Unicode 区间；也可用 `evidence --start --end` 补读已保留区间，不增加联网、候选或来源时钟。新生产默认 native-v3 运行采用 policy 3（显式选择 legacy v1/v2 broker 的准备入口维持原 policy 2；其旧访问回执没有 native 原文 span，不冒充已支持新门）：每个正式条目（含 L1/L2）必须有 `claim_grounding`，至少一条 `kind=fact` 的 statement 精确对应完整 fact，绑定非空原文 `evidence` 与 `evidence_ref={readable_text_sha256,start,end}`；fact 中所有数字逐项有 number 来源绑定。导航摘录和未读研究摘要不能支撑正文事实；缺证据删去主张或拒绝条目，不能通过降低等级绕过。推测放入 deduction，未核验线索按既有未入选处置与 data gap 保留。字节绑定不替代独立语义评审。旧 policy 1/2 和未登记 worker delivery 的冻结请求按原门回放。
 
 按访问/日期/来源门、结构化事件身份、独立佐证、领域内排序和请求配比合并；不足 10 条不补数。`single_secondary_allowed=true` 时单一独立二手来源就是合格候选，不得据此自行加严排除。父任务仅在语义代理失联时按 fallback 补写；一旦改动或追加 `selected_items`，必须同时重写 `punchline`/`insights`/`digest`/`market` 使叙述覆盖最终选定集合，并逐条核对每条的 `title_zh`/`summary_zh`/`fact` 与其 `url` 的已核验正文一致（不得把其他条目的正文归到本条目）。确定性 helper 必须重跑历史去重、验证全部候选对象哈希血缘和访问日志；heuristic 或绑定不一致封闭失败。语义 core/receipt 是可重入阶段提交而非跨文件单一原子事务，中断复用已验证字节与原 invocation 恢复。两份产物登记并确认就绪后才能进入红队，不得并行预启动。
 
@@ -113,6 +129,8 @@ python -X utf8 scripts/run_daily.py forge --manifest <run_manifest.json> --refin
 - `candidate_funnel.observed` 必须等于终态处置之和，retained 必须等于正式条目数。
 - 基线全灭、必要车道失败、日期有效率不足或来源访问失败必须降级并披露，不能写成“未发现”。
 - 来源均返回成功但零候选时仍为 degraded，不得声明 high coverage。
+- `check-expansion` 扩窗门禁：如审核去重后条目不足 10 条，且非用户显式指定，运行 `check-expansion` 诊断；在 `collection_quality_version=1` 下，扩窗需通过覆盖质量检查，若受阻于车道未完成或关键来源覆盖缺口（`expansion_blocked_by_coverage`），不盲目扩窗，而是如实披露缺口并交付当前周期的审计简报。
+
 
 ## 配比与重大资讯
 

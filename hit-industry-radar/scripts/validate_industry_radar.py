@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
+import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -458,7 +460,24 @@ def validate_report(
     return errors
 
 
+def describe_contract() -> dict:
+    return {
+        "schema_version": 1, "skill": "hit-industry-radar", "read_only": True,
+        "required_metadata": ["报告周期", "出刊日期", "生成时点", "报告时区", "窗口模式", "报告范围", "检索状态"],
+        "required_sections": ["## 结论摘要", "## 关键事件", "## 检索覆盖", "## 来源", "## 信息缺口"],
+        "tables": HEADERS, "window_modes": ["rolling7", "natural_week", "explicit"],
+        "research_statuses": ["complete", "partial", "blocked"],
+        "source_reference_separator": ",",
+        "title_rule": "literal canonical H1 after whitespace trim; no closing hashes (shared archive identity)",
+        "empty_markers": {"complete": EMPTY, "partial": PARTIAL_EMPTY, "blocked": BLOCKED_EMPTY},
+        "limits": ["structure is not facts, lineage or source access", "blocked diagnostics are not archive permission", "no archive or network side effects"],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
+    if (sys.argv[1:] if argv is None else argv) == ["--describe-contract"]:
+        print(json.dumps(describe_contract(), ensure_ascii=False, indent=2))
+        return 0
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--file", required=True, type=Path)
     for flag in ("period-start", "period-end", "issue-date"):

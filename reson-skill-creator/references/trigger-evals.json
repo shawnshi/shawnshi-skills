@@ -1,0 +1,556 @@
+{
+  "schema_version": 2,
+  "skill": "reson-skill-creator",
+  "note": "Fixtures define observable routing and write boundaries, not proof of model behavior. Pi uses /skill:name; codex-openai uses $name. Resolve capability_cases against recorded capabilities and required format contracts. Missing optional creators do not block documented native paths; unavailable necessary interfaces or contracts must block without fabricated calls. Mutation cases run only in explicitly authorized isolated targets, never the owner's live installation or publication environment. See references/host-routing-eval.md for evidence layers and version-2 run records.",
+  "cases": [
+    {
+      "id": "explicit_audit_only",
+      "host_surface": "codex-openai",
+      "prompt": "使用 $reson-skill-creator 只读审计当前 skills 库的触发边界，不要修改文件。",
+      "expected_route": "reson-skill-creator",
+      "expected_handoff": null,
+      "expected_mode": "read_only",
+      "mutation_actor": "none",
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [],
+      "external_action": false,
+      "required_stop_before": ["any_file_write", "any_external_action"]
+    },
+    {
+      "id": "plan_is_not_implementation",
+      "host_surface": "codex-openai",
+      "prompt": "使用 $reson-skill-creator 分析资源清单问题并编制修改方案和计划。",
+      "expected_route": "reson-skill-creator",
+      "expected_handoff": null,
+      "expected_mode": "read_only",
+      "mutation_actor": "none",
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [],
+      "external_action": false,
+      "required_stop_before": ["any_file_write", "any_external_action"]
+    },
+    {
+      "id": "explicit_repository_update",
+      "host_surface": "codex-openai",
+      "prompt": "使用 $reson-skill-creator 修复 skills 根 Gate 的局部校验；只修改 scripts/repair_skills.ps1 和 scripts/test_repair_skills.py，不要修改 manifest、README、AGENTS 或 shared 文件，并运行只读验证。",
+      "expected_route": "reson-skill-creator",
+      "expected_handoff": null,
+      "expected_mode": "scoped_edit",
+      "mutation_actor": "reson-skill-creator",
+      "reson_allowed_mutations": [
+        "scripts/repair_skills.ps1",
+        "scripts/test_repair_skills.py"
+      ],
+      "handoff_allowed_mutations": [],
+      "external_action": false,
+      "required_stop_before": ["manifest_refresh", "root_governance_edit", "any_external_action"]
+    },
+    {
+      "id": "generic_new_skill",
+      "host_surface": "codex-openai",
+      "prompt": "创建一个用于 CSV 清洗的新技能。",
+      "expected_route": "skill-creator",
+      "expected_handoff": "skill-creator",
+      "expected_mode": "handoff",
+      "mutation_actor": "handoff",
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [
+        "user_selected_skill_directory"
+      ],
+      "external_action": false,
+      "required_stop_before": [
+        "reson_repository_edit"
+      ],
+      "capability_cases": [
+        {
+          "when": {
+            "handoff_available": true,
+            "required_contracts_available": true
+          },
+          "expected_handoff": "skill-creator",
+          "expected_outcome": "authorized_handoff",
+          "expected_route": "skill-creator",
+          "expected_mode": "handoff",
+          "mutation_actor": "handoff",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": [
+            "user_selected_skill_directory"
+          ]
+        },
+        {
+          "when": {
+            "handoff_available": false,
+            "required_contracts_available": true
+          },
+          "expected_handoff": null,
+          "expected_outcome": "continue_documented_scoped_work",
+          "expected_route": "documented-native-work",
+          "expected_mode": "scoped_build",
+          "mutation_actor": "host-workflow",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": [
+            "user_selected_skill_directory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unrelated_single_skill_copy_edit",
+      "host_surface": "codex-openai",
+      "prompt": "把 personal-health-analysis 的说明文字写得更清楚。",
+      "expected_route": "skill-creator-or-domain-skill",
+      "expected_handoff": "skill-creator-or-domain-skill",
+      "expected_mode": "handoff",
+      "mutation_actor": "handoff",
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [
+        "personal-health-analysis/SKILL.md"
+      ],
+      "external_action": false,
+      "required_stop_before": [
+        "reson_repository_edit"
+      ],
+      "capability_cases": [
+        {
+          "when": {
+            "handoff_available": true,
+            "required_contracts_available": true
+          },
+          "expected_handoff": "skill-creator-or-domain-skill",
+          "expected_outcome": "authorized_handoff",
+          "expected_route": "skill-creator-or-domain-skill",
+          "expected_mode": "handoff",
+          "mutation_actor": "handoff",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": [
+            "personal-health-analysis/SKILL.md"
+          ]
+        },
+        {
+          "when": {
+            "handoff_available": false,
+            "required_contracts_available": true
+          },
+          "expected_handoff": null,
+          "expected_outcome": "continue_documented_scoped_work",
+          "expected_route": "documented-native-work",
+          "expected_mode": "scoped_edit",
+          "mutation_actor": "host-workflow",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": [
+            "personal-health-analysis/SKILL.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "installable_plugin_distribution",
+      "host_surface": "codex-openai",
+      "prompt": "把两个技能打包成其他人可安装的 Codex 插件，本轮只生成本地插件包。",
+      "expected_route": "plugin-creator",
+      "expected_handoff": "plugin-creator",
+      "expected_mode": "handoff",
+      "mutation_actor": "handoff",
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [
+        "user_selected_plugin_directory"
+      ],
+      "external_action": false,
+      "required_stop_before": [
+        "reson_source_edit",
+        "plugin_publication"
+      ],
+      "capability_cases": [
+        {
+          "when": {
+            "handoff_available": true,
+            "required_contracts_available": true
+          },
+          "expected_handoff": "plugin-creator",
+          "expected_outcome": "authorized_handoff",
+          "expected_route": "plugin-creator",
+          "expected_mode": "handoff",
+          "mutation_actor": "handoff",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": [
+            "user_selected_plugin_directory"
+          ]
+        },
+        {
+          "when": {
+            "handoff_available": false,
+            "required_contracts_available": false
+          },
+          "expected_handoff": null,
+          "expected_outcome": "blocked_missing_required_capability_or_contract",
+          "expected_route": "capability-blocked",
+          "expected_mode": "blocked",
+          "mutation_actor": "none",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": []
+        }
+      ]
+    },
+    {
+      "id": "local_skill_installation",
+      "host_surface": "codex-openai",
+      "prompt": "从已指定的仓库安装一个 Codex skill 到本地技能目录。",
+      "expected_route": "skill-installer",
+      "expected_handoff": "skill-installer",
+      "expected_mode": "handoff",
+      "mutation_actor": "handoff",
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [
+        "approved_local_skill_install_target"
+      ],
+      "external_action": true,
+      "required_stop_before": [
+        "reson_repository_edit",
+        "install_without_explicit_request"
+      ],
+      "capability_cases": [
+        {
+          "when": {
+            "handoff_available": true,
+            "required_contracts_available": true
+          },
+          "expected_handoff": "skill-installer",
+          "expected_outcome": "authorized_handoff",
+          "expected_route": "skill-installer",
+          "expected_mode": "handoff",
+          "mutation_actor": "handoff",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": [
+            "approved_local_skill_install_target"
+          ]
+        },
+        {
+          "when": {
+            "handoff_available": false,
+            "required_contracts_available": false
+          },
+          "expected_handoff": null,
+          "expected_outcome": "blocked_missing_required_capability_or_contract",
+          "expected_route": "capability-blocked",
+          "expected_mode": "blocked",
+          "mutation_actor": "none",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": []
+        }
+      ]
+    },
+    {
+      "id": "github_source_publication",
+      "host_surface": "codex-openai",
+      "prompt": "使用 $reson-skill-creator 完成本库发布前验证，然后同步到 GitHub main。",
+      "expected_route": "reson-skill-creator",
+      "expected_handoff": "github:yeet",
+      "expected_mode": "read_only_preflight_then_separate_external_action",
+      "mutation_actor": "handoff",
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [
+        "git_commit",
+        "git_push:explicit-remote/main"
+      ],
+      "external_action": true,
+      "required_preconditions": [
+        "git_worktree",
+        "explicit_remote",
+        "explicit_branch",
+        "scoped_staged_diff",
+        "clean_checkout_validation"
+      ],
+      "required_stop_before": [
+        "local_file_repair",
+        "unscoped_stage",
+        "push_to_unconfirmed_remote_or_branch"
+      ],
+      "capability_cases": [
+        {
+          "when": {
+            "handoff_available": true,
+            "required_contracts_available": true
+          },
+          "expected_handoff": "github:yeet",
+          "expected_outcome": "authorized_handoff",
+          "expected_route": "reson-skill-creator",
+          "expected_mode": "read_only_preflight_then_separate_external_action",
+          "mutation_actor": "handoff",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": [
+            "git_commit",
+            "git_push:explicit-remote/main"
+          ]
+        },
+        {
+          "when": {
+            "handoff_available": false,
+            "required_contracts_available": false
+          },
+          "expected_handoff": null,
+          "expected_outcome": "blocked_missing_required_capability_or_contract",
+          "expected_route": "capability-blocked",
+          "expected_mode": "blocked",
+          "mutation_actor": "none",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": []
+        }
+      ]
+    },
+    {
+      "id": "pi_explicit_audit_only",
+      "host_surface": "pi",
+      "prompt": "/skill:reson-skill-creator 只读审计当前技能库的触发边界，不要修改文件。",
+      "expected_route": "reson-skill-creator",
+      "expected_handoff": null,
+      "expected_mode": "read_only",
+      "mutation_actor": "none",
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [],
+      "external_action": false,
+      "required_stop_before": ["any_file_write", "any_external_action"]
+    },
+    {
+      "id": "pi_plan_is_not_implementation",
+      "host_surface": "pi",
+      "prompt": "/skill:reson-skill-creator 分析资源清单问题并编制修改方案和计划。",
+      "expected_route": "reson-skill-creator",
+      "expected_handoff": null,
+      "expected_mode": "read_only",
+      "mutation_actor": "none",
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [],
+      "external_action": false,
+      "required_stop_before": ["any_file_write", "any_external_action"]
+    },
+    {
+      "id": "pi_repository_update",
+      "host_surface": "pi",
+      "prompt": "/skill:reson-skill-creator 修复技能库根 Gate 的局部校验；只修改 scripts/repair_skills.ps1 和 scripts/test_repair_skills.py，不要修改 manifest、README、AGENTS 或 shared 文件，并运行只读验证。",
+      "expected_route": "reson-skill-creator",
+      "expected_handoff": null,
+      "expected_mode": "scoped_edit",
+      "mutation_actor": "reson-skill-creator",
+      "reson_allowed_mutations": ["scripts/repair_skills.ps1", "scripts/test_repair_skills.py"],
+      "handoff_allowed_mutations": [],
+      "external_action": false,
+      "required_stop_before": ["manifest_refresh", "root_governance_edit", "any_external_action"]
+    },
+    {
+      "id": "pi_unrelated_request_does_not_load_governance_skill",
+      "host_surface": "pi",
+      "prompt": "把 personal-health-analysis 的说明文字写得更清楚。",
+      "expected_route": "personal-health-analysis-or-domain-skill",
+      "expected_handoff": null,
+      "expected_mode": "domain_edit",
+      "mutation_actor": "domain-skill",
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": ["personal-health-analysis/SKILL.md"],
+      "external_action": false,
+      "required_stop_before": ["reson_repository_edit"]
+    },
+    {
+      "host_surface": "pi",
+      "expected_handoff": null,
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [
+        "user_selected_pi_package_directory"
+      ],
+      "id": "pi_package_distribution",
+      "prompt": "把两个已指定技能打包成用户指定隔离目录中的本地 Pi package；不安装、不发布。",
+      "expected_route": "pi-native-package",
+      "expected_mode": "scoped_build",
+      "mutation_actor": "host-workflow",
+      "external_action": false,
+      "required_stop_before": [
+        "reson_repository_edit",
+        "package_installation",
+        "package_publication"
+      ],
+      "required_preconditions": [
+        "explicit_source_skills",
+        "explicit_target_directory",
+        "pi_package_contract"
+      ],
+      "capability_cases": [
+        {
+          "when": {
+            "required_contracts_available": true
+          },
+          "expected_handoff": null,
+          "expected_outcome": "authorized_native_route",
+          "expected_route": "pi-native-package",
+          "expected_mode": "scoped_build",
+          "mutation_actor": "host-workflow",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": [
+            "user_selected_pi_package_directory"
+          ]
+        },
+        {
+          "when": {
+            "required_contracts_available": false
+          },
+          "expected_handoff": null,
+          "expected_outcome": "blocked_missing_required_capability_or_contract",
+          "expected_route": "capability-blocked",
+          "expected_mode": "blocked",
+          "mutation_actor": "none",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": []
+        }
+      ]
+    },
+    {
+      "host_surface": "pi",
+      "expected_handoff": null,
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [
+        "approved_isolated_project_package_settings"
+      ],
+      "id": "pi_local_package_installation",
+      "prompt": "把已指定本地 Pi package 安装到本次测试明确授权的隔离项目；只允许写入该项目的包声明，不安装到个人环境。",
+      "expected_route": "pi-native-package-manager",
+      "expected_mode": "scoped_install",
+      "mutation_actor": "host-workflow",
+      "external_action": true,
+      "required_preconditions": [
+        "explicit_source",
+        "explicit_install_scope",
+        "isolated_test_settings",
+        "resolved_project_trust"
+      ],
+      "required_stop_before": [
+        "personal_settings_write",
+        "install_without_explicit_request",
+        "unscoped_package_installation"
+      ],
+      "capability_cases": [
+        {
+          "when": {
+            "native_interface_available": true,
+            "required_contracts_available": true
+          },
+          "expected_handoff": null,
+          "expected_outcome": "authorized_native_route",
+          "expected_route": "pi-native-package-manager",
+          "expected_mode": "scoped_install",
+          "mutation_actor": "host-workflow",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": [
+            "approved_isolated_project_package_settings"
+          ]
+        },
+        {
+          "when": {
+            "native_interface_available": false,
+            "required_contracts_available": true
+          },
+          "expected_handoff": null,
+          "expected_outcome": "blocked_missing_required_capability_or_contract",
+          "expected_route": "capability-blocked",
+          "expected_mode": "blocked",
+          "mutation_actor": "none",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": []
+        }
+      ]
+    },
+    {
+      "host_surface": "pi",
+      "expected_handoff": null,
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [],
+      "id": "pi_publication_preflight_only",
+      "prompt": "/skill:reson-skill-creator 只读核对 Pi 技能库发布前条件，不修复、不提交、不推送，也不运行会写临时文件的测试。",
+      "expected_route": "reson-skill-creator",
+      "expected_mode": "read_only",
+      "mutation_actor": "none",
+      "external_action": false,
+      "required_stop_before": [
+        "any_file_write",
+        "git_commit",
+        "git_push",
+        "package_publication"
+      ]
+    },
+    {
+      "host_surface": "pi",
+      "expected_handoff": null,
+      "reson_allowed_mutations": [],
+      "handoff_allowed_mutations": [
+        "git_commit",
+        "git_push:explicit-test-remote/main"
+      ],
+      "id": "pi_github_source_publication",
+      "prompt": "/skill:reson-skill-creator 在已指定的隔离仓库核对发布前条件，然后使用已授权的受控发布接口同步至已指定 remote/main；不要修复源文件。",
+      "expected_route": "reson-skill-creator",
+      "expected_mode": "read_only_preflight_then_separate_external_action",
+      "mutation_actor": "host-workflow",
+      "external_action": true,
+      "required_preconditions": [
+        "isolated_repository",
+        "explicit_remote",
+        "explicit_branch",
+        "scoped_staged_diff",
+        "controlled_publish_interface"
+      ],
+      "required_stop_before": [
+        "local_file_repair",
+        "unscoped_stage",
+        "live_remote_publication"
+      ],
+      "capability_cases": [
+        {
+          "when": {
+            "native_interface_available": true,
+            "required_contracts_available": true
+          },
+          "expected_handoff": null,
+          "expected_outcome": "authorized_native_route",
+          "expected_route": "reson-skill-creator",
+          "expected_mode": "read_only_preflight_then_separate_external_action",
+          "mutation_actor": "host-workflow",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": [
+            "git_commit",
+            "git_push:explicit-test-remote/main"
+          ]
+        },
+        {
+          "when": {
+            "native_interface_available": false,
+            "required_contracts_available": true
+          },
+          "expected_handoff": null,
+          "expected_outcome": "blocked_missing_required_capability_or_contract",
+          "expected_route": "capability-blocked",
+          "expected_mode": "blocked",
+          "mutation_actor": "none",
+          "reson_allowed_mutations": [],
+          "handoff_allowed_mutations": []
+        }
+      ]
+    },
+    {
+      "host_surface": "pi",
+      "expected_handoff": null,
+      "reson_allowed_mutations": [
+        "reson-skill-creator/SKILL.md"
+      ],
+      "handoff_allowed_mutations": [],
+      "id": "pi_skill_maintenance_exemption",
+      "prompt": "/skill:reson-skill-creator 只修订本技能说明中的一处措辞，仅允许修改 reson-skill-creator/SKILL.md；不刷新清单、不运行 Gate 或测试。",
+      "expected_route": "reson-skill-creator",
+      "expected_mode": "scoped_edit",
+      "mutation_actor": "reson-skill-creator",
+      "external_action": false,
+      "required_stop_before": [
+        "manifest_refresh",
+        "implicit_gate",
+        "implicit_tests",
+        "any_external_action"
+      ]
+    }
+  ]
+}

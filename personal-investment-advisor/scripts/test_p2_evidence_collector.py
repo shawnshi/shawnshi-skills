@@ -70,6 +70,9 @@ class CollectorTests(unittest.TestCase):
                              "body": b"%PDF-1.4 official", "fetched_at": 1_799_000_050.0,
                              "http_status": 200, "reused": False}}
         with mock.patch.object(pia_evidence.ec, "cninfo_fulltext", return_value=cninfo), \
+             mock.patch.object(pia_evidence.ec, "szse_announcements", return_value=listing(
+                 'szse_announcements', [], url='https://example.test/list', body=b'{}',
+                 fetched_at=1_799_000_000.0, health=ec.HEALTH_EMPTY)), \
              mock.patch.object(pia_evidence.ec, "fetch_document", return_value=document):
             code, payload = self.run_main([
                 "--task-dir", str(self.task), "--symbols", "002487.SZ",

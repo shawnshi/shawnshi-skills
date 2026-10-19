@@ -26,7 +26,7 @@ SCHEMA_VERSION = "pia_run_report_v1"
 SCOPE_UNKNOWN = "unknown"
 KNOWN_SCOPES = ("research_only", "advisory", "actionable")
 # Authoritative order when several artifacts declare the same scope.
-SCOPE_SOURCES = ("daily_run_summary", "weights", "daily_sync")
+SCOPE_SOURCES = ("daily_run_summary", "weights", "daily_sync", "research_workflow")
 SECTIONS = (
     ("阶段状态", "daily_run_summary"),
     ("行情覆盖与时效", "quotes"),
@@ -55,6 +55,7 @@ ARTIFACTS = (
 # invocation, so its absence must not show up as a missing run artifact.  It is read
 # only to raise or keep unverified the actionable prerequisites below.
 READINESS_ARTIFACT = "out/actionability_assessment.json"
+RESEARCH_ARTIFACT = "out/research_workflow.json"
 # Prerequisites that can never be closed from a run's own artifacts: they depend on
 # account rules and a cost model held outside the run.  They are named as human gates
 # instead of being silently counted as unverified evidence.
@@ -89,7 +90,7 @@ def pct(value: Any, digits: int = 2) -> str:
 def declared_scopes(artifacts: dict[str, dict[str, Any] | None]) -> dict[str, str]:
     """Return artifact key -> declared decision scope for artifacts that declare one."""
     declared: dict[str, str] = {}
-    for key, _relative in ARTIFACTS:
+    for key in (*[key for key, _relative in ARTIFACTS], "research_workflow"):
         payload = artifacts.get(key)
         if isinstance(payload, dict):
             value = payload.get("decision_scope")
@@ -188,6 +189,22 @@ def _render_run_inventory(lines: list[str], summary: dict[str, Any] | None) -> N
     lines.append("")
 
 
+def _render_verified_thesis(lines: list[str], thesis: dict[str, Any]) -> None:
+    lines.append(f"- 验证层级：{fmt(thesis.get('verification_status'))}；全局状态：{fmt(thesis.get('status'))}")
+    lines.append(f"- 已验证局部命中：{fmt(thesis.get('fatal_symbols') or [])}；已验证未到期：{fmt(thesis.get('not_due_symbols') or [])}")
+    for item in thesis.get("verified_hits") or []:
+        lines.append("- 已验证命中：{} / {}；重算值 {}".format(
+            fmt(item.get("symbol")), fmt(item.get("condition_id")), fmt(item.get("observed_values"))))
+    for item in thesis.get("condition_results") or []:
+        lines.append("- 条件结果：{} / {}：{}；{}".format(
+            fmt(item.get("symbol")), fmt(item.get("condition_id")),
+            fmt(item.get("status")), fmt(item.get("reason"))))
+    gaps = (thesis.get("binding_errors") or []) + (thesis.get("warnings") or [])
+    for gap in gaps:
+        lines.append(f"- 证据/覆盖缺口：{fmt(gap)}")
+    lines.append("提交声明不是已验证结果；局部非命中/未到期不证明全局安全。")
+
+
 def _render_thesis(lines: list[str], artifacts: dict[str, dict[str, Any] | None],
                    tag: Any = None) -> None:
     """Render the event red-team verdict; an unassessed thesis is a gap, not silence."""
@@ -215,10 +232,11 @@ def _render_thesis(lines: list[str], artifacts: dict[str, dict[str, Any] | None]
     fatal_symbols = thesis.get("fatal_symbols") or []
     lines.append("- 已证伪标的：{symbols}".format(
         symbols=fmt(fatal_symbols) if fatal_symbols else "无（不代表没有未核验风险）"))
+    _render_verified_thesis(lines, thesis)
     assessments = thesis.get("assessments") or []
     if assessments:
         lines.append("")
-        lines.append("| 标的 | 结论 | 到期日 | 证据数 | 条件 |")
+        lines.append("| 标的 | 提交声明（非验证） | 到期日 | 证据数 | 条件 |")
         lines.append("|---|---|---|---|---|")
         for item in assessments:
             lines.append("| {symbol} | {conclusion} | {due} | {count} | {conditions} |".format(
@@ -253,19 +271,29 @@ def _render_position_limits(lines: list[str], limits: dict[str, Any] | None,
     positions = limits.get("positions") or []
     if positions:
         lines.append("")
-        lines.append("| 标的 | 当前权重 | 权重上限 | 下行边界 | 上行边界 |")
-        lines.append("|---|---|---|---|---|")
+        lines.append("| 标的 | 当前权重（总市值） | 当前权重（非现金） | 权重上限 | 下行边界 | 上行边界 |")
+        lines.append("|---|---|---|---|---|---|")
         for item in positions:
             boundaries = item.get("boundaries") or []
             downside = next((b for b in boundaries
                              if b.get("role") == "downside_boundary"), {})
             upside = next((b for b in boundaries
                            if b.get("role") == "upside_boundary"), {})
-            lines.append("| {symbol} | {weight} | {cap} | {down} | {up} |".format(
+            compliance_row = item.get("weight_compliance") or {}
+            lines.append("| {symbol} | {weight} | {policy_weight} | {cap} | {down} | {up} |".format(
                 symbol=fmt(item.get("display_label") or item.get("symbol")),
                 weight=fmt(item.get("current_weight")),
-                cap=fmt(rules.get("max_single_position_weight")),
+                policy_weight=fmt(compliance_row.get("current_weight_policy_denominator")),
+                cap=fmt((item.get("constraint_resolution") or {}).get("effective_max_weight")),
                 down=fmt(downside.get("value")), up=fmt(upside.get("value"))))
+            resolution = item.get("constraint_resolution") or {}
+            compliance = item.get("weight_compliance") or {}
+            lines.append("- {}：约束解析 {}；快照权重判定 {}（仅已生效规则）；未决 {}".format(
+                fmt(item.get("symbol")), fmt(resolution.get("status")), fmt(compliance.get("status")),
+                fmt({key: resolution.get(key) for key in ("recorded_unconfirmed", "conflicts", "gaps", "excluded_items")
+                     if resolution.get(key)})))
+        lines.append("权重上限价格是冻结NAV映射，不是动态权重触发价；within_limit 不代表全局安全。")
+        lines.append("“总市值”分母含现金，“非现金”分母与分桶目标（core/satellite）同口径；两者不可互换。")
     if limits.get("note"):
         lines.append(f"\n- 声明：{fmt(limits.get('note'))}")
     lines.append("")
@@ -619,6 +647,7 @@ def render(run_dir: Path, artifacts: dict[str, dict[str, Any] | None],
                                 else valuation.get("pe_reason")),
                             fmt(valuation.get("price_vs_base_value_pct")),
                             fmt(row.get("thesis_status")), fmt(boundary.get("detail_status") or boundary.get("status"))))
+                    _render_verified_thesis(lines, research.get("thesis_red_team") or {})
                     lines.append("第三方EPS/PE只作筛查；已计算行情或倍数不证明完整Thesis安全，也不产生买入指令。")
 
     lines.append("## 行情覆盖与时效" + tag("quotes"))
@@ -702,6 +731,9 @@ def render(run_dir: Path, artifacts: dict[str, dict[str, Any] | None],
             lines.append(f"| {symbol} | {fmt(entry.get('status'))} | "
                          f"{fmt(entry.get('detail_status'))} | "
                          f"{', '.join(crossed) if crossed else '—'} |")
+            lines.append("- {}：已知快照超限 {}；约束解析 {}；权重判定 {}".format(
+                symbol, fmt(categories.get("weight_cap_breached") or []),
+                fmt(entry.get("constraint_resolution")), fmt(entry.get("weight_compliance"))))
     else:
         lines.append("缺口：缺少 out/watchlist_results.json（观察边界未评估，不等于未越界）")
     lines.append("")
@@ -798,6 +830,13 @@ def render(run_dir: Path, artifacts: dict[str, dict[str, Any] | None],
         lines.append("缺口：本运行未产出 out/risk_diagnostic.json")
     lines.append("")
 
+    research = artifacts.get("research_workflow")
+    if research is not None:
+        lines.extend(["## 研究诊断（非交易就绪）", "",
+                      "基本面 complete 只覆盖结构/数学；量化 Alpha 与正式校准仍走原门。",
+                      "源绑定数值一致不等于发布者认证或语义核验；PDF/候选不升级为事实。", ""])
+        lines.extend(["```json", json.dumps(research_view(research), ensure_ascii=False, indent=2), "```", ""])
+
     _render_coverage_probes(lines, artifacts, tag)
 
     _render_residual_unknowns(lines, artifacts.get("daily_run_summary"), tag)
@@ -825,6 +864,24 @@ def render(run_dir: Path, artifacts: dict[str, dict[str, Any] | None],
     return "\n".join(lines)
 
 
+def research_view(workflow: dict[str, Any]) -> dict[str, Any]:
+    """Keep local conclusions, source/timing limits and branch failures together."""
+    branches = workflow.get("branches") or {}
+    selected = {}
+    for name, branch in branches.items():
+        if name == "fact_prepare":
+            selected[name] = {k: branch[k] for k in ("status", "errors", "facts_automatic", "rules_need_confirmation", "publisher_authenticated", "candidates", "provider_result") if k in branch}
+            selected[name]["projection_provenance"] = [
+                {k: p["document"].get(k) for k in ("projection", "provenance", "limitations")}
+                for p in branch.get("projections", [])]
+        else:
+            selected[name] = branch
+    return {"status": workflow.get("status"), "decision_scope": workflow.get("decision_scope"),
+            "formal_use_allowed": False, "alpha_eligible": False,
+            "branches": selected, "gaps": workflow.get("gaps"),
+            "limitations": workflow.get("limitations"), "completion_scope": workflow.get("completion_scope")}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Render one run directory to Markdown.")
     parser.add_argument("--run-dir", required=True)
@@ -847,6 +904,13 @@ def main(argv: list[str] | None = None) -> int:
         artifacts[key] = load_json(path)
         if path.is_file():
             hashes[key] = hashlib.sha256(path.read_bytes()).hexdigest()
+    research_path = run_dir / RESEARCH_ARTIFACT
+    if research_path.exists():
+        artifacts["research_workflow"] = load_json(research_path)
+        if artifacts["research_workflow"] is None:
+            print(json.dumps({"status": "failed", "errors": ["research_workflow_unreadable"]}))
+            return 3
+        hashes["research_workflow"] = hashlib.sha256(research_path.read_bytes()).hexdigest()
     summary = artifacts.get("daily_run_summary") or {}
     selection = summary.get("analysis_selection")
     if (selection not in (None, "all", "held_only") or

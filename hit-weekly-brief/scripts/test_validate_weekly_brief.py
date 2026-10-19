@@ -73,10 +73,45 @@ COMPLETED_WEEK_CONTENT = """# 数字健康周报｜2026年7月13日—19日
 """
 
 
+FORMAL_SECTIONS = """## 本周结论
+合成结论。
+## 政策和市场影响
+合成影响。
+## 技术落地信号与证据限制
+合成限制。
+## 对医疗信息化业务的传导影响
+合成条件。
+## 建议动作与验证节点
+合成验证。
+## 信息缺口
+合成缺口。
+## 来源清单
+合成来源说明。
+
+"""
+
+
+def complete_fixture(content: str) -> str:
+    if "地区：" not in content:
+        content = content.replace(
+            "报告时区：Asia/Shanghai\n",
+            "报告时区：Asia/Shanghai\n地区：中国为主，补充国际公开研究\n受众：医疗机构管理层\n",
+        )
+    if "## 本周结论" not in content:
+        content = content.replace("## 关键事件与来源", FORMAL_SECTIONS + "## 关键事件与来源")
+    return content
+
+
+VALID_CONTENT = complete_fixture(VALID_CONTENT)
+HISTORICAL_2000_CONTENT = complete_fixture(HISTORICAL_2000_CONTENT)
+COMPLETED_WEEK_CONTENT = complete_fixture(COMPLETED_WEEK_CONTENT)
+
+
 class WeeklyBriefValidationTests(unittest.TestCase):
     def write_report(
         self, directory: str, name: str, content: str = VALID_CONTENT
     ) -> Path:
+        content = complete_fixture(content)
         # Date-focused legacy fixtures use four columns. Expand only their exact
         # synthetic rows to the current source schema; production never migrates
         # reports here. Shape/URL negative cases live in test_audit_regressions.py.

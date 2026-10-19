@@ -227,7 +227,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("SYNC_OPTIONAL_GATES = ()", sync_source)
         self.assertNotIn("build_activities_commands", sync_source)
         self.assertIn('"garmindb": "3.9.0"', sync_source)
-        self.assertIn('"garminconnect": "0.3.17"', sync_source)
+        self.assertIn('"garminconnect": "0.3.11"', sync_source)
         self.assertIn("site_packages_tree_sha256", sync_source)
         self.assertIn("plan_bindings_mismatch", sync_source)
 

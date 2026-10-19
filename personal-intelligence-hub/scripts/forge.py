@@ -307,6 +307,9 @@ def _assert_pipeline_provenance(payload: dict[str, Any], manifest: dict[str, Any
     if coverage.get("run_status") != expected_run_status:
         raise ForgeContractError("coverage.run_status does not match registered stage status")
     expected_confidence = "high" if expected_run_status == "complete" else "medium"
+    from collection_quality import quality_policy_enabled
+    if quality_policy_enabled(manifest) and baseline_coverage.get("coverage_confidence") == "low":
+        expected_confidence = "low"
     if coverage.get("coverage_confidence") != expected_confidence:
         raise ForgeContractError(
             "coverage.coverage_confidence does not match registered stage status"
@@ -579,6 +582,7 @@ def forge_briefing(
         manifest = load_manifest(manifest_file)
     except RunContractError as exc:
         raise ForgeContractError(str(exc)) from exc
+    forge_started_at = (now or datetime.now(ZoneInfo(manifest["timezone"]))).isoformat()
     archive_root, history_file = _bound_archive_paths(manifest, news_dir, history_path)
     run_dir = Path(manifest["run_dir"]).resolve()
     blackboard_path = run_dir / "intelligence_blackboard.json"
@@ -605,6 +609,7 @@ def forge_briefing(
             now=now or datetime.now(ZoneInfo(manifest["timezone"])),
         )
 
+    commit_started_at = (now or datetime.now(ZoneInfo(manifest["timezone"]))).isoformat()
     try:
         result = commit_briefing_pair(
             payload,
@@ -646,6 +651,8 @@ def forge_briefing(
                 "json_sha256": result.json_sha256,
                 "markdown_sha256": result.markdown_sha256,
                 "history_path": str(history_file),
+                "forge_started_at": forge_started_at,
+                "commit_started_at": commit_started_at,
             },
             now=now,
         )

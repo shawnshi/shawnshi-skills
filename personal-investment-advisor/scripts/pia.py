@@ -17,6 +17,8 @@ import time
 from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
+import process_budget
+
 from status_contract import (
     CONTRACT_VERSION,
     STATUS_COMPLETE,
@@ -25,6 +27,7 @@ from status_contract import (
     STATUS_INSUFFICIENT_EVIDENCE,
     exit_code_for,
     make_envelope,
+    normalize_status,
     status_from_payload,
 )
 
@@ -40,8 +43,7 @@ class ChildCapabilityError(RuntimeError):
     pass
 
 
-class ChildOutputLimitError(RuntimeError):
-    pass
+ChildOutputLimitError = process_budget.ChildOutputLimitError
 
 
 def _check_nonblocking_pipes() -> None:
@@ -78,60 +80,18 @@ def _reap_child(process: subprocess.Popen) -> None:
                 raise RuntimeError("child_cleanup_failed: exact child did not exit after kill") from exc
 
 
-def _execute_child(invocation: list[str]) -> subprocess.CompletedProcess:
+def _execute_child(invocation: list[str], *, timeout: float | None = None,
+                   binary: bool = False) -> subprocess.CompletedProcess:
     """Fair, bounded binary pipe reads; own no reader threads or temp transport.
 
-    Only the exact child is owned. After it exits, drain currently available
-    bytes, but never wait for EOF from inherited descendant pipe handles.
+    Descendants belong to an owned Job/session. After the child exits, drain
+    available bytes and close the tree; never wait for inherited pipe EOF.
     """
     _check_nonblocking_pipes()
-    deadline = time.monotonic() + CHILD_TIMEOUT_SECONDS
-    process = subprocess.Popen(
-        invocation, cwd=str(SCRIPT_DIR), stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE, shell=False, bufsize=0,
-    )
-    buffers = {"stdout": bytearray(), "stderr": bytearray()}
-    streams = {name: stream for name, stream in
-               (("stdout", process.stdout), ("stderr", process.stderr)) if stream is not None}
-    try:
-        for stream in streams.values():
-            os.set_blocking(stream.fileno(), False)
-        open_streams = dict(streams)
-        while True:
-            if time.monotonic() >= deadline:
-                raise subprocess.TimeoutExpired(invocation, CHILD_TIMEOUT_SECONDS)
-            exited = process.poll() is not None
-            received = False
-            for name, stream in list(open_streams.items()):
-                remaining = MAX_CHILD_STREAM_BYTES - len(buffers[name])
-                try:
-                    data = os.read(stream.fileno(), min(CHILD_READ_BYTES, remaining + 1))
-                except BlockingIOError:
-                    continue
-                except BrokenPipeError:
-                    data = b""
-                if not data:
-                    del open_streams[name]
-                    continue
-                received = True
-                if len(data) > remaining:
-                    raise ChildOutputLimitError(
-                        f"{name} exceeded {MAX_CHILD_STREAM_BYTES} bytes; partial output discarded"
-                    )
-                buffers[name].extend(data)
-            if exited and not received:
-                break
-            if not received:
-                time.sleep(min(0.005, max(0.0, deadline - time.monotonic())))
-        return subprocess.CompletedProcess(
-            invocation, process.returncode,
-            buffers["stdout"].decode("utf-8", errors="replace"),
-            buffers["stderr"].decode("utf-8", errors="replace"),
-        )
-    finally:
-        for stream in streams.values():
-            stream.close()
-        _reap_child(process)
+    return process_budget.bounded_capture(
+        invocation, timeout=CHILD_TIMEOUT_SECONDS if timeout is None else timeout,
+        cwd=SCRIPT_DIR, limit=MAX_CHILD_STREAM_BYTES, read_bytes=CHILD_READ_BYTES,
+        binary=binary)
 
 
 class JsonArgumentParser(argparse.ArgumentParser):
@@ -439,6 +399,24 @@ def _run_child(
         else:
             status = STATUS_FAILED
             detail = "portfolio_context_contract_unknown"
+    elif public_command == "build":
+        # A builder writes a real artifact and *then* reports whether the evidence
+        # gate resolved.  ``pia_build.py`` exits 2 for a built-but-unresolved pack,
+        # which the generic rule would read as invalid input and report as a hard
+        # failure.  Nothing was invalid here, so keep the honest verdict
+        # (insufficient evidence) and let ``artifact_build_status`` carry the
+        # build result.  Crash-style exits still outrank any payload claim.
+        native = payload.get("status") if isinstance(payload, dict) else None
+        native_detail = payload.get("detail_status") if isinstance(payload, dict) else None
+        built = (isinstance(payload, dict)
+                 and payload.get("artifact_build_status") == "complete")
+        if completed.returncode < 0 or completed.returncode >= exit_code_for(STATUS_FAILED):
+            status = STATUS_FAILED
+        elif built and normalize_status(native) == STATUS_INCOMPLETE:
+            status = STATUS_INSUFFICIENT_EVIDENCE
+        else:
+            status = status_from_payload(payload, completed.returncode)
+        detail = str(native_detail or "child_status_normalized")
     elif public_command == "actionability-gate":
         # The gate has three legitimate verdicts plus an invalid-input failure.  An
         # unknown native status still fails closed, and a closed market is reported as
@@ -522,6 +500,53 @@ def _build_parser() -> JsonArgumentParser:
     )
     research.add_argument("brief_json", type=_path_argument)
 
+    loop = subparsers.add_parser('research-loop', help='Offline explicit event/condition human review; research_only only.')
+    loop.add_argument('--input-file', required=True, type=_path_argument)
+    loop.add_argument('--evidence-root', required=True, type=_path_argument)
+    loop.add_argument('--task-dir', required=True, type=_path_argument)
+    loop.add_argument('--decisions-file', type=_path_argument)
+    loop.add_argument('--require-authenticated-review', action='store_true')
+
+    isolated = subparsers.add_parser('isolated-research-loop', help='Fixed WSL IP network namespace; no host fallback.')
+    for name in ('input-file', 'evidence-root', 'task-dir'):
+        isolated.add_argument('--'+name, required=True, type=_path_argument)
+    isolated.add_argument('--decisions-file', type=_path_argument)
+    isolated.add_argument('--require-authenticated-review', action='store_true')
+    prepare = subparsers.add_parser('research-prepare', help='Explicit collector candidates; no confirmed relations or downloads.')
+    for name in ('channel-report', 'template-file', 'evidence-root', 'task-dir'):
+        prepare.add_argument('--'+name, required=True, type=_path_argument)
+    for command, help_text in (
+        ('fact-prepare', 'Explicit native raw captures to source-bound numeric facts; no fetch.'),
+        ('fundamental-diagnostic', 'Research-only math/scenario diagnostics; not Alpha or trading readiness.'),
+        ('expectation-feedback', 'Descriptive hash-bound prior/actual comparison; not formal calibration.'),
+        ('research-workflow', 'Offline explicit F/M/J and risk composition; no scans, fetch or journal append.'),
+    ):
+        component = subparsers.add_parser(command, help=help_text)
+        component.add_argument('--input-file', required=True, type=_path_argument)
+        component.add_argument('--evidence-root', required=True, type=_path_argument)
+        if command in ('fact-prepare', 'research-workflow'):
+            component.add_argument('--task-dir', required=True, type=_path_argument)
+    intake = subparsers.add_parser(
+        'evidence-intake',
+        help='Bind operator-supplied Thesis documents when disclosure channels are unavailable.')
+    intake.add_argument('--manifest', required=True, type=_path_argument)
+    intake.add_argument('--evidence-root', required=True, type=_path_argument)
+    intake.add_argument('--out', required=True, type=_path_argument)
+    intake.add_argument('--retrieved-at', required=True)
+    derive = subparsers.add_parser(
+        'derive-policy',
+        help='Derive research policies and stress scenarios from confirmed goals plus the portfolio.')
+    derive.add_argument('--positions-file', required=True, type=_path_argument)
+    derive.add_argument('--risk-policy', required=True, type=_path_argument)
+    derive.add_argument('--weights-file', required=True, type=_path_argument)
+    derive.add_argument('--series-file', required=True, type=_path_argument)
+    derive.add_argument('--goals-file', type=_path_argument)
+    derive.add_argument('--calibration-file', type=_path_argument)
+    derive.add_argument('--out', required=True, type=_path_argument)
+    check = subparsers.add_parser('evidence-check', help='Artifact claim consistency, not business truth authentication.')
+    for name in ('input-file', 'evidence-root', 'output'):
+        check.add_argument('--'+name, required=True, type=_path_argument)
+
     screen = subparsers.add_parser(
         "screen", help="Run the profile-driven financial quality pre-screen."
     )
@@ -541,6 +566,8 @@ def _build_parser() -> JsonArgumentParser:
     edgar.add_argument("--as-of", required=True)
     edgar.add_argument("--user-agent")
     edgar.add_argument("--timeout", type=float)
+    edgar.add_argument("--artifact-dir", type=_path_argument,
+                       help="Explicit task-owned raw-byte capture directory; no headers persisted.")
     edgar.add_argument(
         "--decision-scope",
         choices=("research_only", "advisory", "actionable"),
@@ -562,6 +589,8 @@ def _build_parser() -> JsonArgumentParser:
     daily.add_argument("--quotes-file", required=True, type=_path_argument)
     daily.add_argument("--holiday-calendar-file", type=_path_argument)
     daily.add_argument("--thesis-evidence-file", type=_path_argument)
+    daily.add_argument("--conditions-file", type=_path_argument)
+    daily.add_argument("--evidence-root", type=_path_argument)
     daily.add_argument("--now-epoch", type=float)
     daily.add_argument("--max-quote-age-seconds", type=int)
     daily.add_argument(
@@ -671,6 +700,8 @@ def _build_parser() -> JsonArgumentParser:
     daily_run.add_argument("--task-dir", required=True, type=_path_argument)
     daily_run.add_argument("--cache-dir", type=_path_argument)
     daily_run.add_argument("--thesis-evidence-file", type=_path_argument)
+    daily_run.add_argument("--conditions-file", type=_path_argument)
+    daily_run.add_argument("--evidence-root", type=_path_argument)
     daily_run.add_argument("--unpurchased-quotes-file", type=_path_argument)
     daily_run.add_argument("--unpurchased-thesis-evidence-file", type=_path_argument)
     daily_run.add_argument("--scenario-assumptions", type=_path_argument)
@@ -732,10 +763,13 @@ def _build_parser() -> JsonArgumentParser:
     build.add_argument("--research-universe", action="store_true",
                        help="thesis-pack only: bind the separate zero-quantity research universe.")
     build.add_argument("--evidence-file", type=_path_argument)
+    build.add_argument("--conditions-file", type=_path_argument)
+    build.add_argument("--evidence-root", type=_path_argument)
     build.add_argument("--assessments-file", type=_path_argument)
     build.add_argument("--scope-coverage-file", type=_path_argument)
     build.add_argument("--window-start")
     build.add_argument("--window-end")
+    build.add_argument("--now-epoch", type=float)
     build.add_argument(
         "--artifact", action="append", default=[],
         help="relative-path=local-file, repeatable (dataset-manifest only)",
@@ -946,6 +980,60 @@ def _run_active_stage(
 
 
 def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
+    if args.command in ('fact-prepare', 'fundamental-diagnostic', 'expectation-feedback', 'research-workflow'):
+        child = ['--input-file', str(args.input_file), '--evidence-root', str(args.evidence_root)]
+        if args.command in ('fact-prepare', 'research-workflow'):
+            child.extend(['--task-dir', str(args.task_dir)])
+        return _run_child(public_command=args.command,
+                          script_name='pia_' + args.command.replace('-', '_') + '.py',
+                          child_arguments=child, completion_scope='research_only_component_diagnostics',
+                          limitations=['complete means listed diagnostics only; not source semantics, Alpha, calibration or trading readiness',
+                                       'no implicit private input scan, fetch, actual journal append or orders'])
+    if args.command == 'evidence-intake':
+        return _run_child(public_command=args.command, script_name='pia_evidence_intake.py',
+                          child_arguments=['--manifest', str(args.manifest),
+                                           '--evidence-root', str(args.evidence_root),
+                                           '--out', str(args.out),
+                                           '--retrieved-at', args.retrieved_at],
+                          completion_scope='operator_supplied_evidence',
+                          limitations=['hash binding proves byte identity only, not publisher authenticity',
+                                       'operator-supplied evidence must still pass the Thesis gate',
+                                       'no channel outage may be read as an absence of announcements'])
+    if args.command == 'derive-policy':
+        child = ['--positions-file', str(args.positions_file),
+                 '--risk-policy', str(args.risk_policy),
+                 '--weights-file', str(args.weights_file),
+                 '--series-file', str(args.series_file),
+                 '--out', str(args.out)]
+        for flag, value in (('--goals-file', args.goals_file),
+                            ('--calibration-file', args.calibration_file)):
+            if value is not None:
+                child.extend([flag, str(value)])
+        return _run_child(public_command=args.command, script_name='pia_goal_policy.py',
+                          child_arguments=child, completion_scope='derived_research_policy',
+                          limitations=['derived values encode stated goals and the current portfolio; they are not validated alpha',
+                                       'scenario losses are mechanical sigma stress with no probability',
+                                       'derived policies gate research and never size or place an order'])
+    if args.command == 'research-prepare':
+        child = ['--channel-report',str(args.channel_report),'--template-file',str(args.template_file),
+                 '--evidence-root',str(args.evidence_root),'--task-dir',str(args.task_dir)]
+        return _run_child(public_command=args.command, script_name='pia_research_prepare.py',
+                          child_arguments=child, completion_scope='explicit_unconfirmed_research_candidates')
+    if args.command == 'evidence-check':
+        child = ['--input-file',str(args.input_file),'--evidence-root',str(args.evidence_root),'--output',str(args.output)]
+        return _run_child(public_command=args.command, script_name='pia_evidence_check.py',
+                          child_arguments=child, completion_scope='artifact_claim_consistency_only')
+    if args.command in ('research-loop', 'isolated-research-loop'):
+        child = ['--input-file', str(args.input_file), '--evidence-root', str(args.evidence_root),
+                 '--task-dir', str(args.task_dir)]
+        _append_option(child, '--decisions-file', args.decisions_file)
+        if args.require_authenticated_review:
+            child.append('--require-authenticated-review')
+        return _run_child(public_command=args.command, script_name=('pia_isolated_loop.py' if args.command == 'isolated-research-loop' else 'pia_research_loop.py'),
+                          child_arguments=child, completion_scope='offline_listed_event_human_review',
+                          limitations=['research_only; no investment authorization or orders',
+                                       'input human identity is not externally authenticated',
+                                       'file hashes do not authenticate business facts or complete event coverage'])
     if args.command == "actionability-gate":
         child = [str(args.assessment)]
         _append_option(child, "--holiday-calendar-file", args.holiday_calendar_file)
@@ -992,6 +1080,8 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         for flag, value in (
             ("--cache-dir", args.cache_dir),
             ("--thesis-evidence-file", args.thesis_evidence_file),
+            ("--conditions-file", args.conditions_file),
+            ("--evidence-root", args.evidence_root),
             ("--unpurchased-quotes-file", args.unpurchased_quotes_file),
             ("--unpurchased-thesis-evidence-file", args.unpurchased_thesis_evidence_file),
             ("--scenario-assumptions", args.scenario_assumptions),
@@ -1264,10 +1354,13 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
             ("--volatilities-file", args.volatilities_file),
             ("--quotes-file", args.quotes_file),
             ("--evidence-file", args.evidence_file),
+            ("--conditions-file", args.conditions_file),
+            ("--evidence-root", args.evidence_root),
             ("--assessments-file", args.assessments_file),
             ("--scope-coverage-file", args.scope_coverage_file),
             ("--window-start", args.window_start),
             ("--window-end", args.window_end),
+            ("--now-epoch", args.now_epoch),
         ):
             _append_option(child, flag, value)
         for artifact in args.artifact:
@@ -1349,6 +1442,7 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         child = [*args.symbols, "--as-of", args.as_of]
         _append_option(child, "--user-agent", args.user_agent)
         _append_option(child, "--timeout", args.timeout)
+        _append_option(child, "--artifact-dir", args.artifact_dir)
         _append_option(child, "--decision-scope", args.decision_scope)
         return _run_child(
             public_command=args.command,
@@ -1384,6 +1478,8 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         _append_option(child, "--now-epoch", args.now_epoch)
         _append_option(child, "--max-quote-age-seconds", args.max_quote_age_seconds)
         _append_option(child, "--thesis-evidence-file", args.thesis_evidence_file)
+        _append_option(child, "--conditions-file", args.conditions_file)
+        _append_option(child, "--evidence-root", args.evidence_root)
         _append_option(child, "--holiday-calendar-file", args.holiday_calendar_file)
         _append_option(child, "--decision-scope", args.decision_scope)
         return _run_child(

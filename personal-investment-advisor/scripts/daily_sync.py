@@ -369,6 +369,8 @@ def evaluate_daily_sync(
     positions_file: str,
     quotes_file: str,
     thesis_evidence_file: Optional[str] = None,
+    conditions_file: Optional[str] = None,
+    evidence_root: Optional[str] = None,
     holiday_calendar_file: Optional[str] = None,
     now_epoch: Optional[float] = None,
     max_quote_age_seconds: int = MAX_QUOTE_AGE_SECONDS,
@@ -480,6 +482,8 @@ def evaluate_daily_sync(
                 expected_symbols=expected_symbols,
                 portfolio_snapshot_binding=portfolio_binding,
                 evaluation_epoch=evaluation_epoch,
+                conditions_file=conditions_file,
+                evidence_root=evidence_root,
             )
             thesis_stage["status"] = report["thesis_red_team"]["status"]
             thesis_stage["errors"] = list(
@@ -747,6 +751,8 @@ def main() -> None:
             "and regulatory coverage."
         ),
     )
+    parser.add_argument("--conditions-file", help="Explicitly authorized native Thesis condition ledger.")
+    parser.add_argument("--evidence-root", help="Explicitly authorized local source root; never inferred from the pack.")
     parser.add_argument("--now-epoch", type=float)
     parser.add_argument("--holiday-calendar-file", help="Reverify the same exchange holiday source used for quote acquisition")
     parser.add_argument(
@@ -768,6 +774,8 @@ def main() -> None:
         positions_file=args.positions_file,
         quotes_file=args.quotes_file,
         thesis_evidence_file=args.thesis_evidence_file,
+        conditions_file=args.conditions_file,
+        evidence_root=args.evidence_root,
         holiday_calendar_file=args.holiday_calendar_file,
         now_epoch=args.now_epoch,
         max_quote_age_seconds=args.max_quote_age_seconds,

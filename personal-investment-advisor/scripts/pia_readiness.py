@@ -49,6 +49,9 @@ def load_run_artifacts(
     """
     artifacts = {key: pia_report.load_json(run_dir / relative)
                  for key, relative in pia_report.ARTIFACTS}
+    research_path = run_dir / pia_report.RESEARCH_ARTIFACT
+    if research_path.exists():
+        artifacts["research_workflow"] = pia_report.load_json(research_path)
     assessment = pia_report.load_json(run_dir / pia_report.READINESS_ARTIFACT)
     return artifacts, assessment
 
@@ -70,6 +73,11 @@ def build_rollup(run_dir: Path, artifacts: dict[str, dict[str, Any] | None],
                    if row["prerequisite"] in pia_report.HUMAN_GATE_PREREQUISITES]
 
     blockers: list[str] = []
+    research = artifacts.get("research_workflow")
+    if "research_workflow" in artifacts:
+        blockers.append("research diagnostics cannot establish trading readiness or formal calibration")
+        if research is None:
+            blockers.append("research_workflow_unreadable")
     if scope == pia_report.SCOPE_UNKNOWN:
         blockers.append("run artifacts declare no decision scope")
     blockers.extend(conflicts)
@@ -99,6 +107,7 @@ def build_rollup(run_dir: Path, artifacts: dict[str, dict[str, Any] | None],
         "run_detail_status": summary.get("detail_status"),
         "status_consistency": consistency,
         "run_inventory": summary.get("run_inventory"),
+        "research_diagnostics": pia_report.research_view(research) if research is not None else None,
         "residual_unknowns": residual if residual_declared else None,
         "residual_unknowns_declared": residual_declared,
         "machine_prerequisites": machine_rows,
@@ -143,7 +152,7 @@ def main(argv: list[str] | None = None) -> int:
         return 3
 
     summary_path = run_dir / "out" / "daily_run_summary.json"
-    if not summary_path.is_file():
+    if not summary_path.is_file() and not (run_dir / pia_report.RESEARCH_ARTIFACT).is_file():
         payload = invalid(run_dir, "run_summary_missing",
                           f"no run summary at {summary_path}")
         print(json.dumps(payload, ensure_ascii=False, indent=2))

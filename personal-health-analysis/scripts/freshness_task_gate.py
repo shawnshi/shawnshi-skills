@@ -112,11 +112,15 @@ def validate_terminal_state(
         return "terminal_window_mismatch"
     if expected_start is not None and (state.get("requested_window") or {}).get("start") != expected_start:
         return "terminal_window_mismatch"
-    if state.get("database_fingerprint_changed") is not True:
-        return "terminal_database_unchanged"
+    # Idempotent re-imports need not change database bytes. Require a real
+    # fingerprint result, then independently enforce every component's date.
+    if not isinstance(state.get("database_fingerprint_changed"), bool):
+        return "terminal_database_change_invalid"
     dates = state.get("component_latest_observation_dates") or {}
     for component in COMPONENTS:
         observation = dates.get(component)
+        if not isinstance(observation, str):
+            return "terminal_date_invalid"
         try:
             parsed = date.fromisoformat(observation)
         except (TypeError, ValueError):

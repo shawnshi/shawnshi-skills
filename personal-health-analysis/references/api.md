@@ -37,7 +37,7 @@
 <SKILL_PYTHON> scripts/garmin_auth.py status --allow-network
 ```
 
-上游登录流程会使用移动 SSO，并可能读取账户 Profile/Settings。技能不再通过 `get_user_summary()` 读取当日健康数据来探测会话。状态检查从持久令牌的临时副本恢复，使令牌刷新不能改写原目录；这不替代 Windows ACL、磁盘加密或凭据管理器。
+显式口令登录直接进入已固定SDK的既定 `mobile+cffi` 策略，只使用该SDK的第一个既有传输配置，不轮换指纹、不先重试旧会话，也不在429/明确的Cloudflare 403后切换策略。保留一次必要的身份接口验证，并对异常失败关闭，不沿用上游对429/5xx等“不确定即接受”的默认语义；只有身份验证成功后，才经现有 `--allow-token-write` 能力调用SDK原子保存令牌。MFA完成前保留其原有会话；SSO、MFA、DI/IT交换及身份验证的实例级请求闸门，在首个HTTP 429/403、已知JSON限流或验证码挑战后中止整个流程，不允许SDK吞异常后换端点、客户端ID或JWT路径，也不关闭验证以制造登录成功。必要的身份核验仍可能读取账户Profile，但不通过 `get_user_summary()` 读取当日健康数据来探测会话。状态检查从持久令牌的临时副本恢复，使令牌刷新不能改写原目录；这不替代 Windows ACL、磁盘加密或凭据管理器。
 
 禁止在文档或分析代码中直接实例化 `Garmin(...)`、直接调用 `client.login()` 或绕过 CLI 签发能力。密码只允许交互输入或进程环境变量，不得出现在命令行、报告、日志和错误消息中。
 
@@ -66,7 +66,7 @@
 
 - 首次出现 HTTP 429 或 `Too Many Requests` 即停止；摘要组件按顺序读取，避免已有组件触发 429 后再启动后续组件；不得自动退避重试、并发扩散或切换备用接口。子进程输出里的 429 判定必须是 HTTP 上下文（`Too Many Requests`、`http … 429`、`status[_code] … 429`、`Client Error … 429`、`rate limit`）；不得用裸子串 `429` 判定，因为导入阶段 tqdm 进度条会出现 `429/800` 这类计数，曾被误判为限流。
 - Garmin 主机默认绕过本机 HTTP 代理：`garmin_auth.py` 在发起网络动作前把 `garmin.com` 与 `.garmin.com` 幂等写入 `NO_PROXY`/`no_proxy`（保留已有条目），因为部分代理出口会被 Garmin 边缘直接重置 TLS 或全程返回 429，登录五条策略链会同时失败。需要保留代理时设 `GARMIN_EGRESS_ALLOW_PROXY=1`。两阶段同步的子进程环境使用白名单（仅 SYSTEMROOT/WINDIR/COMSPEC/TEMP/TMP/LANG/LC_ALL），本来就传递不了代理变量，因此不需要重复注入。
-- 认证、连接和 API 异常只输出稳定状态和异常类型，不回显邮箱、令牌路径、服务响应正文或原始异常消息。`garmin_auth.py` 把上游异常归类为下列稳定状态之一：`rate_limited`、`tls_error`、`connection_error`、`mfa_required`、`token_store_error`、`dependency_error`、`authentication_failed`、`auth_unclassified`；同时用 `base_status` 保留旧标签（`authentication_failed` 或 `saved_session_invalid`），并用 `error_type` 给出异常类型名。`login` 与 `status` 的失败回执与 stderr 记录使用同一套分类，限流、TLS、依赖与凭据失败因此可直接区分。
+- 认证、连接和 API 异常只输出稳定状态和异常类型，不回显邮箱、令牌路径、服务响应正文或原始异常消息。`garmin_auth.py` 把上游异常归类为下列稳定状态之一：`rate_limited`、`provider_blocked`（认证链路HTTP 403或明确服务挑战，不等同于密码错误）、`tls_error`、`connection_error`、`mfa_required`、`token_store_error`、`dependency_error`、`authentication_failed`、`auth_unclassified`；同时用 `base_status` 保留旧标签（`authentication_failed` 或 `saved_session_invalid`），并用 `error_type` 给出异常类型名。`login` 与 `status` 的失败回执与 stderr 记录使用同一套分类，限流、TLS、依赖与凭据失败因此可直接区分。
 - 缺数据应返回 `no_data`、`partial` 或 `no_observation`，不得补零或拿远处样本替代。
 - 用户需要判断数据准确性时，应把同一日期的结果与 Garmin Connect 官方界面或合法导出文件核对，并把差异记为未解释。
 
@@ -84,7 +84,9 @@
 <SKILL_PYTHON> scripts/sync_health_data.py sync --start 2026-08-01 --end 2026-08-07 --allow-network --allow-sync --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-file <SESSION_SCRATCH>/sync-plan.json
 ```
 
-GarminDB runner 可使用显式指定的全局 Python 或虚拟环境，不要求独立虚拟目录。计划绑定窗口、配置、同目录令牌、解析后的绝对数据根、`DBs` 目录身份、解释器、相邻 CLI、可选 `pyvenv.cfg`、site-packages 文件树和固定包元数据。执行时配置与令牌只复制到自动删除的临时目录，并把临时配置改写为已绑定的绝对数据根，避免依赖继承的主目录变量。GarminDB 配置的结束日为开区间，临时配置把用户结束日加一天；3.9.0 CLI 的 `min((today-start).days, days)` 又排除了当天，故仅加一天配置不足以修复。技能内置 `python -I -B -c` 有界适配，在内存中将已匹配固定 AST 摘要的非 latest 分支上限改为 `(today-start).days + 1`，并要求返回起日与天数精确匹配请求。未来或越界日期、未知方法形状、CLI/配置漂移、过期计划在失败关闭路径终止；不伪造日期、不修改上游安装、不增加备用 API。v3 计划还绑定 `sync_health_data.py` 文件身份与 SHA-256（包含被执行的适配代码）；旧版计划须重新生成。两个子进程启动前均重新检查计划、runner 文件和临时副本；上游代码执行前，子进程再次检查 CLI 字节、方法形状、配置摘要与窗口、计划到期时间。执行拆为精确窗口下载和 `--latest` 导入分析两个阶段；`--latest` 只用于离线导入本次新增文件，不用于下载。启动前会重新验证计划有效期、配置、令牌、数据根、临时副本和 runner，并用 `python -I -B`、移除 Python/pip/TLS 信任覆盖后的环境、关闭 stdin 的子进程运行。不得从 `PATH` 自动发现 CLI，不得使用备用 API；私有 CA 需要另建显式绑定路径、摘要与用途的受控流程。进程返回成功后还要核对目标数据库指纹和请求窗口覆盖。**注意：覆盖门只逐组件比对“窗口末日的最近观测”，不检测窗口内部空洞**；对历史空洞跑同步会在窗口末日有数据时返回 `sync_completed` 而空洞依旧，回填结果必须用独立逐日审计核对，不能以该返回值作为回填成功的证据。
+GarminDB runner 可使用显式指定的全局 Python 或虚拟环境，不要求独立虚拟目录。计划绑定窗口、配置、同目录令牌、解析后的绝对数据根、`DBs` 目录身份、解释器、相邻 CLI、可选 `pyvenv.cfg`、site-packages 文件树和固定包元数据。执行时配置与令牌只复制到自动删除的临时目录，并把临时配置改写为已绑定的绝对数据根，避免依赖继承的主目录变量。GarminDB 配置的结束日为开区间，临时配置把用户结束日加一天；3.9.0 CLI 的 `min((today-start).days, days)` 又排除了当天，故仅加一天配置不足以修复。技能内置 `python -I -B -c` 有界适配，在内存中将已匹配固定 AST 摘要的非 latest 分支上限改为 `(today-start).days + 1`，并要求返回起日与天数精确匹配请求。未来或越界日期、未知方法形状、CLI/配置漂移、过期计划在失败关闭路径终止；不伪造日期、不修改上游安装、不增加备用 API。v4 计划还绑定 `sync_health_data.py` 文件身份与 SHA-256（包含被执行的适配代码）；旧版计划须重新生成。两个子进程启动前均重新检查计划、runner 文件和临时副本；上游代码执行前，子进程再次检查 CLI 字节、方法形状、配置摘要与窗口、计划到期时间。执行拆为精确窗口下载和 `--latest` 导入分析两个阶段；`--latest` 只用于离线导入本次新增文件，不用于下载。启动前会重新验证计划有效期、配置、令牌、数据根、临时副本和 runner，并用 `python -I -B`、移除 Python/pip/TLS 信任覆盖后的环境、关闭 stdin 的子进程运行。不得从 `PATH` 自动发现 CLI，不得使用备用 API；私有 CA 需要另建显式绑定路径、摘要与用途的受控流程。进程返回成功后还要核对目标数据库指纹和请求窗口覆盖。**注意：覆盖门只逐组件比对“窗口末日的最近观测”，不检测窗口内部空洞**；对历史空洞跑同步会在窗口末日有数据时返回 `sync_completed` 而空洞依旧，回填结果必须用独立逐日审计核对，不能以该返回值作为回填成功的证据。
+
+2026-10-18 A方案维护：下载子进程只恢复已有临时令牌，不读取配置口令、不回退口令登录；仅为旧版指标路由保留必要的displayName于内存，跳过额外的社交资料文件、user-settings和personal-information下载/保存，不清理存量文件。直接与自动同步入口共享数据根写锁；非零子进程回执的脱敏错误分类会传入自动作业终态。幂等导入可无数据库变化，但必须维持末端覆盖门；详见 [同步合同](sync_contract.md)。本轮未升级实际 `0.3.11` 同步环境，未注册任务或发起真实认证/同步，不将离线回归称为恢复。
 
 日期适配来源证据：`GarminDbMain.__get_date_and_days` 的无位置 AST SHA-256 为 `0969e144a693559faae318a15a6d0b05493d9031e6a7c6b85a89fe5d35bf71ae`，是本适配的支持门；该值在 `garmindb` 3.8.0、3.9.0、4.0.0 三个原件上实测一致，方法体逐字未变。`garmindb_cli.py` 的原始 SHA-256 因 pip 安装时改写首行 shebang 而随解释器不同：全局 Python 实例为 `3354724f449e0dd609c20961325193e52b40c8db725c5dc51af1210d97bd756e`（2026-05-16），技能 venv 实例为 `49cd1aa64f3ae127ea8222f64c3190f1b7bc4edc870e77715b8839dde22e7392`（3.8.0）、同步 runner 实例为 `b93e0b6b93fdec93313b76e98eae9e035aabf32cd51be3c327cec1b836e55701`（3.9.0），除 shebang 外字节相同；运行时仍绑定所选 CLI 的完整原始字节和包文件树，不把包版本字符串当作内容校验，也不把任一枚举值当作跨环境常量。未知方法变更须重新审查，不能放宽摘要检查后继续。
 

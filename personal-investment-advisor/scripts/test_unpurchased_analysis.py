@@ -242,7 +242,14 @@ class UnpurchasedTests(unittest.TestCase):
                                    '--evidence-file', str(evidence), '--assessments-file', str(assessments),
                                    '--scope-coverage-file', str(scopes), '--window-start', '2026-09-01T00:00:00Z',
                                    '--task-dir', str(task)])
-        self.assertEqual(code, 0)  # build success is not semantic evidence-gate success
+        envelope = json.loads(output.getvalue())
+        # The artifact is built, but the evidence gate stays unresolved: that is
+        # insufficient evidence (exit 2), not a build failure (exit 3) and not success.
+        self.assertEqual(code, 2)
+        self.assertEqual(envelope['status'], 'insufficient_evidence')
+        self.assertEqual(envelope['detail_status'], 'thesis_evidence_pack_built')
+        self.assertEqual(envelope['result']['artifact_build_status'], 'complete')
+        self.assertNotEqual(envelope['result']['status'], 'complete')
         self.assertEqual(actual.read_text(), '{"sentinel":"actual holdings"}')
         self.assertTrue((task / 'inputs/unpurchased_thesis_evidence_pack.json').exists())
         self.assertFalse((task / 'inputs/thesis_evidence_pack.json').exists())

@@ -22,6 +22,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pia_report
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 LANES_PATH = SKILL_DIR / "references" / "review_lanes.json"
@@ -100,6 +102,13 @@ def render_brief(lane_name: str, lane: dict[str, Any], run_dir: Path,
         for relative in missing:
             lines.append(f"- 缺口：缺少 {relative}（本泳道不应在缺此项的情况下得出结论）")
     lines.append("")
+    research_path = run_dir / pia_report.RESEARCH_ARTIFACT
+    if research_path.exists():
+        research = pia_report.load_json(research_path)
+        lines.extend(["## 研究组件状态与局部结论（不代表交易就绪）", "", "```json",
+                      json.dumps(pia_report.research_view(research) if research is not None else
+                                 {"status": "failed", "errors": ["research_workflow_unreadable"]},
+                                 ensure_ascii=False, indent=2), "```", ""])
     lines.append("## 禁止事项")
     lines.append("")
     for item in lane["forbidden"]:
@@ -141,6 +150,15 @@ def main(argv: list[str] | None = None) -> int:
         if not run_dir.is_dir():
             raise LaneError(f"run directory not found: {run_dir}")
         present, missing = scan_inputs(run_dir, lane["required_inputs"])
+        research_path = run_dir / pia_report.RESEARCH_ARTIFACT
+        research = None
+        if research_path.exists():
+            research = pia_report.load_json(research_path)
+            if research is None:
+                raise LaneError("research_workflow_unreadable")
+            if pia_report.RESEARCH_ARTIFACT not in lane["required_inputs"]:
+                extra, _ = scan_inputs(run_dir, [pia_report.RESEARCH_ARTIFACT])
+                present.extend(extra)
         brief = render_brief(args.lane, lane, run_dir, present, missing)
         report = {
             "schema_version": SCHEMA_VERSION,
@@ -153,6 +171,7 @@ def main(argv: list[str] | None = None) -> int:
             "present_inputs": present,
             "missing_inputs": missing,
             "question_count": len(lane["questions"]),
+            "research_diagnostics": pia_report.research_view(research) if research is not None else None,
             "brief_sha256": hashlib.sha256(brief.encode("utf-8")).hexdigest(),
             "note": ("the brief is a task request, not a permission; the lane must still "
                      "declare anything it cannot verify"),

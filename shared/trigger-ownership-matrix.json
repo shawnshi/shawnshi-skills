@@ -204,7 +204,7 @@
                 },
                 {
                     "id": "interaction_meta_analysis",
-                    "primary_skill": "mentat-collaboration-audit",
+                    "primary_skill": "reson-collaboration-audit",
                     "secondary_skills": [
                         "personal-cognitive-auditor"
                     ],
@@ -272,7 +272,7 @@
             "classes": [
                 {
                     "id": "local_skills_library_maintenance",
-                    "primary_skill": "mentat-skill-creator",
+                    "primary_skill": "reson-skill-creator",
                     "secondary_skills": [],
                     "request_signals": [
                         "audit local codex skills library",

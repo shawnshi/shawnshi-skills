@@ -161,6 +161,14 @@ def reserve(request, gap="tech", url=URL, **changes):
         "parent_attestation": "actual_public_tool_receipt",
         **changes,
     }
+    if rc.load_json(Path(request), {}).get("native_capture_version") == 1:
+        from native_capture import capture_fields
+        captured = Path(request).parent / f"native_{gap}_{reserved['id']}.fixture.capture.json"
+        atomic_dump_json(captured, {"responseId": f"fixture:{gap}:{reserved['id']}", "urls": [{
+            "url": receipt["arguments"]["url"], "content": receipt["text"], "status": 200,
+            "error": receipt["error"], "truncated": receipt["truncated"] if isinstance(receipt["truncated"], bool) else False,
+        }]})
+        receipt.update(capture_fields(captured, receipt["arguments"]["url"]))
     return data, receipt
 
 
@@ -971,7 +979,22 @@ def test_native_out_of_window_error_search_and_expired_clock(new_run, monkeypatc
 
 
 @pytest.mark.parametrize("arxiv", [False, True, "mixed"])
-def test_native_mocked_end_to_end_temporary_forge(tmp_path, monkeypatch, arxiv):
+def test_native_mocked_end_to_end_temporary_forge(tmp_path, monkeypatch, arxiv, *, low_coverage=False):
+    if low_coverage:
+        import json
+        import test_run_daily_broker_entry as entry
+        original_scan = entry.scan_fixture
+        def low_scan(count):
+            async def scan(**kwargs):
+                payload = await original_scan(count)(**kwargs)
+                payload["coverage"].update(run_status="degraded", baseline_status="degraded", coverage_confidence="low",
+                                           source_attempted=2, source_succeeded=1, source_failed=1, source_success_rate=0.5,
+                                           reasons=["strategic coverage china_policy: failed NHC"])
+                for name in ("output_path", "current_output_path"):
+                    kwargs[name].write_text(json.dumps(payload), encoding="utf-8")
+                return payload
+            return scan
+        monkeypatch.setattr(entry, "scan_fixture", low_scan)
     mixed = arxiv == "mixed"
     if mixed:
         import json
@@ -1013,6 +1036,16 @@ def test_native_mocked_end_to_end_temporary_forge(tmp_path, monkeypatch, arxiv):
     monkeypatch.setattr(broker, "_transport", forbid)
     monkeypatch.setattr("supplement_agent._fetch_url", forbid)
     drafts = []
+
+    def finish_worker(packet, draft):
+        finalized = subprocess.run(
+            [sys.executable, "-B", "-X", "utf8", packet["agent_helper"]["path"],
+             "finalize", "--request", str(request), "--gap-id", packet["assigned_gap_ids"][0]],
+            capture_output=True, text=True, encoding="utf8", timeout=30,
+        )
+        assert finalized.returncode == 0, finalized.stderr
+        drafts.append(str(draft))
+
     for packet in packets:
         gap = packet["assigned_gap_ids"][0]
         selected = (
@@ -1043,7 +1076,7 @@ def test_native_mocked_end_to_end_temporary_forge(tmp_path, monkeypatch, arxiv):
                 broker.validate_result(request, gap, {**value, "confidence": "high"})
             draft = Path(packet["output_paths"]["draft"])
             atomic_dump_json(draft, value)
-            drafts.append(str(draft))
+            finish_worker(packet, draft)
             continue
         search(request, gap, matched=selected, url=url)
         if selected:
@@ -1063,7 +1096,7 @@ def test_native_mocked_end_to_end_temporary_forge(tmp_path, monkeypatch, arxiv):
                 url=url, source="arXiv", title=data["proofs"][0]["metadata"]["title"]
             )
         atomic_dump_json(draft, value)
-        drafts.append(str(draft))
+        finish_worker(packet, draft)
     snapshot = Path(rc.load_manifest(prepared.manifest_path)["skill_path"]).parent
     # Execute the frozen helpers, not patched validators; all files/archives remain under tmp_path.
     code = r"""
@@ -1081,6 +1114,9 @@ for packet in rc.load_json(request,{})['execution_packets']:
 _,aggregate=rc.register_supplement_results(manifest,request,[Path(p) for p in sys.argv[5:]],publish_drafts=True)
 candidate=next(c for result in aggregate['results'] for c in result['candidates'])
 m=rc.load_manifest(manifest)
+assert not m.get('parent_supplement_finalizations')
+assert len(m['worker_supplement_finalizations'])==len(rc.load_json(request,{})['gaps'])
+assert m['claim_grounding_version']==3
 pool=rc.load_json(Path(m['artifacts']['candidate_pool']['artifact_path']),{})
 assert rc.candidate_date_owned(candidate,rc.candidate_date_ownership(m,pool,aggregate))
 assert rc.registered_candidate_lineage(m)[candidate['candidate_id']]['eligible_hashes']
@@ -1111,6 +1147,12 @@ if expected==2:
     second=next(c for c in candidate_list if c['candidate_id']!=item['candidate_id'])
     extra=dict(dynamic['selected_items'][0],candidate_id=second['candidate_id'],event_identity=second['event_identity'])
     dynamic['selected_items'].append(extra)
+for row in dynamic['selected_items']:
+    evidence=next(c for c in context['eligible_candidates'] if c['candidate_id']==row['candidate_id'])['evidence_excerpt']
+    assert evidence['status']=='available'
+    row['claim_grounding']={'basis':'registered source span','claims':[{
+        'kind':'fact','statement':row['fact'],'status':'grounded','evidence':evidence['text'],
+        'evidence_ref':{k:evidence[k] for k in ('readable_text_sha256','start','end')}}]}
 core,semantic=assemble_and_finalize(review,dynamic)
 _,red=rc.build_review_request(manifest,core,'red_team',semantic_receipt_path=semantic)
 assert red.get('deterministic_fast_path')
@@ -1145,10 +1187,13 @@ print('NATIVE_E2E_RECEIPT_SEAL_DATE_SEMANTIC_GATE_FORGE_PASS')
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "NATIVE_E2E_RECEIPT_SEAL_DATE_SEMANTIC_GATE_FORGE_PASS" in result.stdout
+    if low_coverage:
+        day = rc.load_manifest(prepared.manifest_path)["report_date"].replace("-", "")
+        payload = rc.load_json(tmp_path / "news" / f"intelligence_{day}_briefing.json", {})
+        assert payload["coverage"]["coverage_confidence"] == "low"
 
 
-@pytest.fixture
-def timely_lanes(new_run, monkeypatch):
+def timely_scenario(new_run, monkeypatch, *, worker_delivery_version=None):
     from datetime import timedelta
 
     import supplement_agent as sa
@@ -1180,6 +1225,7 @@ def timely_lanes(new_run, monkeypatch):
             for gap, lane in [("tech", "TechRadar"), ("risk", "Sentinel")]
         ],
         article_broker_version=3,
+        worker_delivery_version=worker_delivery_version,
         now=created,
     )
     packets = value["execution_packets"]
@@ -1194,6 +1240,11 @@ def timely_lanes(new_run, monkeypatch):
         return draft
 
     return path, request, packets, Clock, seal
+
+
+@pytest.fixture
+def timely_lanes(new_run, monkeypatch):
+    return timely_scenario(new_run, monkeypatch)
 
 
 def test_timely_two_lane_staggered_registration_and_replay(timely_lanes):

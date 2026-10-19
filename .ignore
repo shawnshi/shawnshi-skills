@@ -1,0 +1,4 @@
+# Retired source-directory names may still hold private archives or caches.
+# Keep discovery out of those trees without relocating or reading their contents.
+/mentat-collaboration-audit/
+/mentat-skill-creator/
