@@ -1091,7 +1091,7 @@ def _fillable_parent_derived(path: str) -> bool:
 
 
 def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_path: Path) -> None:
-    from article_broker import evidence
+    from article_broker import evidence, _url_path_declared_day
     data = evidence(request_path, gap_id)
     if data.get("completed_at") is None and data.get("next_action", {}).get("stop_eligible"):
         from article_broker import operate
@@ -1100,6 +1100,12 @@ def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_pat
         raise RunContractError(f"cannot auto-generate parent draft for unsealed broker gap {gap_id}")
 
     _, request, packet, gap, lane_slice, _ = _load_bound_packet(request_path, gap_id)
+    window = lane_slice.get("window", {})
+    w_start = str(window.get("start", ""))
+    w_end = str(window.get("end", ""))
+    lane = str(gap.get("lane") or "")
+    default_domain = "healthcare_digital" if lane in {"HealthcareRadar"} else "technology"
+
     access_log = data.get("access_log", [])
     access_by_url = {
         normalize_url(str(a.get("requested_url") or "")): a.get("status")
@@ -1107,11 +1113,82 @@ def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_pat
         if isinstance(a, dict)
     }
 
+    candidates = []
+    for p in data.get("proofs", []):
+        url = p.get("access", {}).get("requested_url", "")
+        meta = p.get("metadata", {})
+        if p.get("access", {}).get("status") != "verified" or not meta.get("recognizable_body"):
+            continue
+        pub_day = None
+        date_obj = None
+        if meta.get("dates"):
+            for d in meta["dates"]:
+                day = str(d.get("published_at") or "")
+                if w_start <= day <= w_end:
+                    pub_day = day
+                    date_obj = deepcopy(d)
+                    break
+        elif meta.get("article_core"):
+            url_day = _url_path_declared_day(url)
+            if url_day and w_start <= url_day <= w_end:
+                pub_day = url_day
+                date_obj = {
+                    "field": "url_path",
+                    "raw": url_day,
+                    "published_at": url_day,
+                    "published_at_source": "url_path",
+                    "parser_rule": "url-path/1",
+                    "text_sha256": p.get("readable_text_sha256", ""),
+                }
+        if pub_day and date_obj:
+            cid = candidate_ref(url)
+            cand_title = str(meta.get("title") or "Accessed publication").strip()
+            source_name = urlsplit(url).netloc
+            for c in lane_slice.get("candidates", []):
+                if c.get("candidate_ref") == cid:
+                    cand_title = str(c.get("title") or cand_title).strip()
+                    source_name = str(c.get("source") or source_name).strip()
+                    break
+            cand_obj = {
+                "candidate_id": cid,
+                "title": cand_title,
+                "url": url,
+                "source": source_name,
+                "published_at": pub_day,
+                "published_at_source": date_obj.get("published_at_source", "url_path"),
+                "published_at_proof": date_obj,
+                "broker_body_proof_sha256": p.get("proof_sha256"),
+                "retrieved_at": p.get("access", {}).get("checked_at"),
+                "primary_domain": default_domain,
+                "secondary_domains": [],
+                "source_type": "primary",
+                "identity_quality": "semantic",
+                "event_identity": {
+                    "key_version": "1",
+                    "primary_domain": default_domain,
+                    "actor": source_name[:50] if source_name else "Source",
+                    "action": "released",
+                    "object": cand_title[:90],
+                    "event_date": pub_day,
+                },
+                "access_check": deepcopy(p["access"]),
+                "summary": f"{source_name} reported on {cand_title[:90]}.",
+            }
+            candidates.append(cand_obj)
+
+    registered_cids = {c["candidate_id"] for c in candidates}
     required_ids = set(lane_slice.get("required_bound_candidate_ids", []))
     bound_candidate_decisions = []
     for c in lane_slice.get("candidates", []):
         cid = c.get("candidate_ref")
         if cid not in required_ids:
+            continue
+        if cid in registered_cids:
+            bound_candidate_decisions.append({
+                "candidate_id": cid,
+                "decision": "registered",
+                "reason": "Verified primary article within the window",
+            })
             continue
         curl = normalize_url(str(c.get("url") or ""))
         st = access_by_url.get(curl)
@@ -1129,10 +1206,16 @@ def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_pat
             })
 
     failed = sum(1 for a in access_log if isinstance(a, dict) and a.get("status") == "blocked")
-    status = "degraded" if failed > 0 else "no_increment"
-    failure_kind = "source_access" if failed > 0 else None
-    failure_reason = "One or more candidate URLs were blocked or lacked recognizable document content" if failed > 0 else None
-    confidence = "low"
+    if candidates:
+        status = "degraded" if failed > 0 else "completed"
+        failure_kind = "source_access" if failed > 0 else None
+        failure_reason = "One or more attempted URLs were blocked" if failed > 0 else None
+        confidence = "medium"
+    else:
+        status = "degraded" if failed > 0 else "no_increment"
+        failure_kind = "source_access" if failed > 0 else None
+        failure_reason = "One or more candidate URLs were blocked or lacked recognizable document content" if failed > 0 else None
+        confidence = "low"
 
     dynamic = {
         "status": status,
@@ -1145,7 +1228,7 @@ def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_pat
         "access_log": deepcopy(access_log),
         "broker_evidence_sha256": data["broker_evidence_sha256"],
         "bound_candidate_decisions": bound_candidate_decisions,
-        "candidates": [],
+        "candidates": candidates,
     }
     if failure_kind:
         dynamic["failure_kind"] = failure_kind

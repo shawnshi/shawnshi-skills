@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-10-19T07:37:08+08:00",
+  "generated_at": "2026-10-19T10:05:33+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -114,7 +114,7 @@
     },
     {
       "path": "scripts/article_broker.py",
-      "sha256": "6fd5be7afb6cfe9d1ead90f098e1108ba726bfe218a3ca3ef82603d6a95449bd"
+      "sha256": "5c032acef1e80c9046f15fcb88faf6028f49a31c2ed8b108b0961b5cbca9249a"
     },
     {
       "path": "scripts/await_artifacts.py",
@@ -250,7 +250,7 @@
     },
     {
       "path": "scripts/supplement_agent.py",
-      "sha256": "51d49bc7b1bf4f8041232e9603af9b4ea0ea7fd779fc5bfa1c5edbae9390cfc9"
+      "sha256": "f1ff660375a30d26797d7493be3e6c5d878430b40a58c7bd7957d4fce7668d5f"
     },
     {
       "path": "scripts/supplement_seal.py",

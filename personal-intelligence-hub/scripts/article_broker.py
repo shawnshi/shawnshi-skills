@@ -2165,6 +2165,11 @@ def _usable_article(proof, window, declared_day=None):
         for d in meta["dates"]
     ):
         return True
+    # Date basis D (owner-authorized 2026-09-25): URL path declared date
+    if not meta["dates"] and meta.get("article_core"):
+        url_day = _url_path_declared_day(proof.get("access", {}).get("requested_url", ""))
+        if url_day and window["start"] <= url_day <= window["end"]:
+            return True
     # Date basis C: an undated body is usable only through the bound lane's own
     # registered feed declaration; a body that does carry dates never falls back.
     if meta["dates"] or not declared_day:
