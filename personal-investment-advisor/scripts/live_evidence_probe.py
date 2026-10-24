@@ -199,12 +199,29 @@ def _has_depositary_marker(value: Any) -> bool:
     )
 
 
-def _recent_filings(submissions: dict[str, Any], limit: int = 5) -> list[dict[str, Any]]:
+FOREIGN_ISSUER_TIER_BY_FORM = {
+    "20-F": "annual_audited_filing",
+    "20-F/A": "annual_audited_filing",
+    "40-F": "annual_audited_filing",
+    "40-F/A": "annual_audited_filing",
+    "6-K": "current_report",
+    "6-K/A": "current_report",
+}
+
+
+def _recent_filings(
+    submissions: dict[str, Any], limit: int = 5, *, allow_foreign_issuer: bool = False
+) -> list[dict[str, Any]]:
     recent = submissions.get("filings", {}).get("recent", {})
     forms = recent.get("form", [])
+    tier_map = (
+        {**DISCLOSURE_TIER_BY_FORM, **FOREIGN_ISSUER_TIER_BY_FORM}
+        if allow_foreign_issuer
+        else DISCLOSURE_TIER_BY_FORM
+    )
     output: list[dict[str, Any]] = []
     for index, form in enumerate(forms):
-        if form not in ACCEPTED_DISCLOSURE_FORMS:
+        if form not in tier_map:
             continue
         try:
             accession = recent["accessionNumber"][index]
@@ -217,7 +234,7 @@ def _recent_filings(submissions: dict[str, Any], limit: int = 5) -> list[dict[st
         output.append(
             {
                 "form": form,
-                "source_tier": DISCLOSURE_TIER_BY_FORM[form],
+                "source_tier": tier_map[form],
                 "filing_date": filing_date,
                 "accession_number": accession,
                 "primary_document": primary_document,
@@ -239,6 +256,8 @@ def probe_us_stock(
     fetch_json: Callable[[str, dict[str, str], int], tuple[dict[str, Any], int, str]] | None = None,
     now: datetime | None = None,
     cik: str | int | None = None,
+    *,
+    allow_foreign_issuer: bool = False,
 ) -> dict[str, Any]:
     fetch = fetch_json or _default_fetch_json
     retrieved_at = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
@@ -349,7 +368,7 @@ def probe_us_stock(
         identity_errors.append(
             f"unsupported Nasdaq instrument type: {nasdaq_asset_class}; use a market-specific evidence path"
         )
-    if _has_depositary_marker(nasdaq_data.get("companyName")):
+    if not allow_foreign_issuer and _has_depositary_marker(nasdaq_data.get("companyName")):
         identity_errors.append(
             "Nasdaq company identity indicates an ADR or depositary security edge case"
         )
@@ -409,12 +428,12 @@ def probe_us_stock(
                 and submission_index < len(submission_exchanges)
                 else None
             )
-        filings = _recent_filings(submissions_payload)
+        filings = _recent_filings(submissions_payload, allow_foreign_issuer=allow_foreign_issuer)
         recent_forms = set(
             submissions_payload.get("filings", {}).get("recent", {}).get("form", [])
         )
         foreign_forms = sorted(recent_forms.intersection(FOREIGN_ISSUER_FORMS))
-        if foreign_forms:
+        if foreign_forms and not allow_foreign_issuer:
             identity_errors.append(
                 "foreign issuer disclosure forms detected: " + ", ".join(foreign_forms)
             )
@@ -422,8 +441,9 @@ def probe_us_stock(
             evidence_errors.append(
                 "SEC submissions response has no accepted domestic company disclosure forms"
             )
-        if _has_depositary_marker(sec_name) or _has_depositary_marker(
-            submissions_payload.get("name")
+        if not allow_foreign_issuer and (
+            _has_depositary_marker(sec_name)
+            or _has_depositary_marker(submissions_payload.get("name"))
         ):
             identity_errors.append(
                 "SEC company identity indicates an ADR or depositary security edge case"
@@ -546,6 +566,7 @@ def main() -> int:
     parser.add_argument("--asset-type", default="stock", choices=["stock"])
     parser.add_argument("--sec-user-agent", default=os.environ.get("PIA_SEC_USER_AGENT"))
     parser.add_argument("--cik", help="Optional explicit SEC CIK with 1 to 10 digits.")
+    parser.add_argument("--allow-foreign-issuer", action="store_true", help="Accept 20-F/40-F/6-K foreign private issuer disclosures.")
     parser.add_argument("--timeout", type=int, default=20)
     args = parser.parse_args()
     if not args.sec_user_agent:
@@ -558,11 +579,13 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 2
     try:
+        extra_kwargs = {"allow_foreign_issuer": True} if args.allow_foreign_issuer else {}
         result = probe_us_stock(
             args.symbol,
             args.sec_user_agent,
             timeout=args.timeout,
             cik=args.cik,
+            **extra_kwargs,
         )
     except (LiveProbeError, requests.RequestException) as exc:
         result = _empty_probe_result(

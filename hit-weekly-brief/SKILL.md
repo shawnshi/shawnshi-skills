@@ -3,26 +3,80 @@ name: hit-weekly-brief
 description: 汇总指定周期内数字健康、医疗政策、医疗AI与信息化动态，默认面向中国医疗机构管理层及医疗IT经营决策者，生成带来源周报或速览。适用于周度综合研判，不以纯论文扫描或单条新闻解读触发正式周报；当前信息须联网核验，区分事实、来源主张、分析和不确定性；正式周报验证后默认自动归档，速览及预览不保存。
 ---
 
-# 数字健康周报
+# 数字健康与医疗信息化周报（HIT Weekly Brief）
 
-## 执行流程
+## 1. 职责边界与模式路由
 
-1. 先定交付模式：**速览**是简短综合答复，不保存；**正式周报**须完整模板及全部门禁，验证后默认自动归档，无需再次确认；用户要求**预览/草稿/不保存**时仅在会话答复中交付、保持严格只读，绝不落盘报告或写入归档目录。简短措辞不免除正式门禁；“生成本周周报”等未标预览的出刊请求默认正式周报；“简要看看/速览”默认速览。其余模式确有歧义才澄清，不把速览自动升级为归档。
-2. 检索前只读检查来源检索/原文访问能力；正式任务另查 Python、时区数据、自有校验器、头部提取器 `scripts/inspect_report_headers.py`、共享脚本、Windows 及已有 pywin32、唯一目标路径。不得以试写/commit 探测能力。能力不足立即告知；仍可交付注明缺口的预览，正式归档 **BLOCKED**。检查通过也不替代最终共享 validate → commit；不安装、不提权、不回退复制。
-3. 职责分工与受众：周报面向中国医疗机构管理层与医疗 IT 经营决策者进行周度综合研判，以自然周（周一至周日出刊）或明确历史闭区间为界；与行业雷达（按滚动/截止时点跟踪厂商/政策/采购阶段事件）和情报 Hub（基线优先每日资讯与历史去重）明确区分。用户指定地区/受众优先；未指定时，`地区` 字段须与最近三期不冲突的稳定惯例对齐（当前惯例为中国为主、补充美国、欧盟及国际公开研究），不得默认收窄为仅中国；全球信息仅作可迁移参考，并逐条说明中国监管、采购、工作流及数据条件下的可迁移性与失效条件。按合规期限、采购/运营/架构影响排序，不虚构量化收益。默认当前自然周（周一至周日），出刊日取周日；自定义周期须用户明确指定，出刊日等于结束日。历史补刊/上一完整周按用户口径。延续归档时用 `scripts/inspect_report_headers.py --directory <已解析既有归档目录> --before <周期开始日>`，只取该周期之前最近三份规范 `DHWB-YYYYMMDD.md` 的文件名、标题和地区/时区头字段；不输出正文、不创建目录。字面 conflict 须做语义解释，括注覆盖差异不自动变成地区冲突或新增确认；insufficient/no_history 说明惯例缺口并沿用当前合同已明确口径，不把它写成无历史或无事件。读取 error 不归一化为空结果；自定义文件名不在该提取器覆盖内，必要时只对获准精确路径做窄读，不扩大扫描。
-4. 研究时按需读 [研究工作流](references/research-workflow.md)：全任务默认首轮 2–4 个互补查询，补检最多一轮 2 个查询，去重后原文访问最多 8 次（含重试），并发最多 3。8 次访问上限内应优先预留高影响结论（合规、预算、不可逆架构）的原始依据与独立复核额度，先减少低价值候选，不为凑满候选耗尽预算；达到预算或停止条件即收束，披露覆盖缺口，不循环追搜。assets 仅按选中的检索面读取，不强制并行或子代理。
-5. 记录发布日期、事件日期和生效日期；发布、实施、实质版本更新可分别成事件，旧闻转载不能充当新事件。事件窗口上界为 `min(周期结束日当日结束, cutoff)`；同日截止须核对时刻。高影响的效果、因果和外推结论须核验原始依据与独立证据，不满足时降为待核主张/假设；法规原文可直接证明明确条款与期限，适用性争议另行核实。事实、来源主张、分析、假设分层，证据强弱与冲突按研究工作流处理。
-6. 检索失败/访问受限不等于空结果。仅在有效完成所选检索面且无合格事件时用空结果标记；未完成时交付预览并列出失败及恢复条件，正式交付 BLOCKED。未完结周期在标题下写截止时点及“本周尚未结束”（结束日全天仍未完结，次日零点才完结）；已完结历史周期不标未结束。
-7. 面级收窄必须显式归因：若本期未覆盖最近三期惯例所含的检索面（含国际面），或未使用其 `地区` 口径，必须在 `信息缺口` 中以独立条目写明收窄范围、原因与恢复条件；不得用模板默认值代替地区声明，也不得只写“未检索英文源”这类无归因说明。
+1. **核心定位**：面向中国医疗机构管理层与医疗 IT 经营决策者，按自然周（周一至周日，或显式授权的自定义周期）汇总研判**医疗政策与医保支付、医院数字化转型、临床 AI 落地与国内外厂商战略动态**。
+   - 项目级招投标与竞对事件扫描交 `hit-industry-radar`；学术论文与预印本侦察交 `hit-lectures-scout`；每日跨技术与医疗简报交 `personal-intelligence-hub`。
+2. **输出模式**：
+   - `formal_weekly`（默认）：生成完整 8 章节管理层周报，通过 `validate_weekly_brief.py` 校验后自动调用 `shared/scripts/report_archive.py` 归档至 `C:\Users\shich\MEMORY\raw\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`。
+   - `quick_digest`（用户明确要求速览/预览/不保存）：输出核心判断、关键事件简表与来源，不写盘。
+   - `single_event_readout`（单条政策/事件解读）：直接交付事实、传导机制与建议动作，不写盘。
+   - 正式周报默认自动归档。若用户明确要求预览或不保存，则只在答复交付，不落盘报告。
 
-## 正式周报分支
+---
 
-编制正式正文前先运行自有校验器 `--describe-contract` 获取只读机器合同，再完整读取 [正式周报编制与归档](references/formal-report.md)、[模板](references/template.md)及[填充说明](references/research-workflow.md#正式模板填充)；正式归档前另须完整读取 [共享契约](../shared/references/report_archive.md)。正式周报验证后自动归档，不新增二次确认；权限、身份、日期、结构、事务与写后回读门全部保留。路径歧义或门禁失败即 BLOCKED，保留证据，不自行复制或扩权。
+## 2. Pi `codemode` 四面并发取证与历史去重
 
-## 输出要求
+详见 `references/research-workflow.md`。在 `formal_weekly` 模式下：
 
-正式周报及完整模板预览在编制前读 [正式分支合同](references/formal-report.md)、[模板](references/template.md) 及 [填充说明](references/research-workflow.md#正式模板填充)，替换全部占位符，不复制教学说明或合成内容；完整模板预览仍只在会话交付，不执行保存命令。速览不加载完整模板/归档文法，可仅给结论、事件与直接来源、影响/条件、行动验证节点及信息缺口，仍遵守时间与证据边界。
+1. **前置历史去重检查（只读）**：
+   ```powershell
+   python -X utf8 C:\Users\shich\.pi\agent\skills\hit-weekly-brief\scripts\inspect_report_headers.py C:\Users\shich\MEMORY\raw\DigitalHealthWeeklyBrief --limit 4
+   ```
+   核对近期已出刊周期，避免重复收录往期已报道的旧事件。
+2. **四大维度并发检索（`codemode` + `Promise.allSettled`）**：
+   - **政策与支付面（`assets/Task_policy.md`）**：国家卫健委、国家医保局（DRG/DIP、医疗服务价格立项指南、医保基金监管）、国家数据局及省级医改政策；
+   - **行业与厂商战略面（`assets/Task_strategy.md`）**：公立医院高质量发展、三甲评审（互联互通五乙、电子病历六级）、国内外头部 HIT 与医疗 AI 企业重大合作与财报信号（可结合 `mcp__Reson_KnowWeave_mcp__search_timeline` 核对基线）；
+   - **技术架构与临床 AI 面（`assets/Task_tech.md`）**：院内多智能体（Agentic Workflow）、核心系统信创替代与微服务解耦、临床决策支持（CDSS）真实世界落地验证；
+   - **跨界机制参考面（`assets/Task_serendipity.md`）**：金融风控、工业高可靠系统、基础大模型工程演进对医疗 IT 的可迁移启示。
+   - **工具组合**：在 `codemode` 中并发调用 `google_search`、`web_search(queries=[...])` 与 `fetch_content(urls=[...])` 获取一手原始页面与准确发布/事件日期。
 
-## 完成检查
+---
 
-日期/命名一致；`地区` 字段与最近三期惯例一致，或其收窄已在 `信息缺口` 显式归因；来源可访问且已核验；事实/主张/分析/假设分层；高影响结论达到证据门；建议动作有依据、条件和验证/停止节点；错误与信息缺口显式披露；交付模式、归档状态与回执一致。
+## 3. 正式周报结构契约（内联速查，详见 `references/formal-report.md` 与 `references/template.md`）
+
+### 3.1 标题与头部元数据（H1 与第一个 `##` 之间，精确单次出现）
+- **标题格式（`canonical_title`）**：
+  - 同年同月：`# 数字健康周报｜YYYY年M月D日—D日`
+  - 同年跨月：`# 数字健康周报｜YYYY年M月D日—M月D日`
+  - 跨年：`# 数字健康周报｜YYYY年M月D日—YYYY年M月D日`
+- **头部元数据字段**：
+  ```markdown
+  报告周期：YYYY-MM-DD 至 YYYY-MM-DD（默认周一至周日，7 个日历日）
+  出刊日期：YYYY-MM-DD（必须等于 period_end）
+  生成时点：YYYY-MM-DDTHH:MM:SS+08:00
+  报告时区：Asia/Shanghai
+  地区：中国（兼顾全球对标）
+  受众：医疗机构管理层与医疗信息化决策者
+  ```
+
+### 3.2 八大必选二级章节与固定表头
+1. `## 本周结论`：分三条明确列出 `- **已核实事实**：...`、`- **来源主张**：...`、`- **分析判断**：...`。
+2. `## 关键事件与来源`（无事件时写独行 `本周期未发现符合纳入标准的事件`；有事件时使用固定 6 列表头）：
+   `| 事件日期 | 主体与已核实动作 | 事实或来源主张 | 分析判断 | 证据强度 | 直接来源 |`
+   - `事件日期`：必须在 `[period_start, period_end]` 窗口内，支持 `YYYY-MM-DD` 或 `M月D日`；
+   - `证据强度`：`高 / 中 / 低`；
+   - `直接来源`：**必须包含完整 HTTP(S) 原始链接或 Markdown 链接 `[S1](https://...)`**（不能只写纯文本 `S1`）。
+3. `## 政策和市场影响`：阐明政策/采购变化的传导机制、适用地区与生效节点。
+4. `## 技术落地信号与证据限制`：区分真实临床生产落地与实验室/厂商基准宣传。
+5. `## 对医疗信息化业务的传导影响`：针对 HIS/EMR 解耦、集成平台、数据治理与 AI 智能体产品线给出具体传导推演。
+6. `## 建议动作与验证节点`：按责任角色、触发条件与可核验指标给出行动建议。
+7. `## 信息缺口`：如实披露检索边界、受阻渠道与待核事项。
+8. `## 来源清单`（固定 7 列表头）：
+   `| 编号 | 标题 | 发布机构 | 发布日期 | 事件日期 | 访问日期 | URL |`
+
+---
+
+## 4. 一键校验与事务归档流程
+
+1. **执行结构与日期门禁校验**：
+   ```powershell
+   python -X utf8 C:\Users\shich\.pi\agent\skills\hit-weekly-brief\scripts\validate_weekly_brief.py --file <draft.md> --period-start <YYYY-MM-DD> --period-end <YYYY-MM-DD> --issue-date <YYYY-MM-DD> --cutoff <ISO-8601> --report-timezone Asia/Shanghai --json
+   ```
+2. **原子归档发布（`status=VALID` 时执行）**：
+   ```powershell
+   python -X utf8 C:\Users\shich\.pi\agent\skills\shared\scripts\report_archive.py validate --source <draft.md> --target C:\Users\shich\MEMORY\raw\DigitalHealthWeeklyBrief\DHWB-<YYYYMMDD>.md --skill hit-weekly-brief
+   python -X utf8 C:\Users\shich\.pi\agent\skills\shared\scripts\report_archive.py commit --plan <plan.json> --target C:\Users\shich\MEMORY\raw\DigitalHealthWeeklyBrief\DHWB-<YYYYMMDD>.md
+   ```

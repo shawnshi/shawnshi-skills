@@ -1010,7 +1010,29 @@ def _readable_challenge(text):
 
 
 def _readable_long_paragraphs(text):
-    return [p.strip() for p in re.split(r"\n\s*\n", text) if len(p.strip()) >= 120]
+    """Count prose, not contact furniture; CJK length is measured in UTF-8 bytes.
+
+    Keep two substantive paragraphs and the separate 400-byte body gate.
+    A Chinese sentence need not contain 120 codepoints to carry 120 bytes.
+    """
+    paragraphs = []
+    for paragraph in re.split(r"\n\s*\n", text):
+        value = paragraph.strip()
+        visible = re.sub(r"^[*_]+", "", value)
+        if re.match(
+            r"^(?:联系我们|举报电话|举报邮箱|中国医保，一生守护|版权所有|"
+            r"Copyright|政府网站标识码|索引号|访问次数|字号)\s*[:：]?",
+            visible,
+            re.I,
+        ):
+            continue
+        cjk_count = len(re.findall(r"[\u3400-\u9fff]", value))
+        if cjk_count >= 30:
+            if len(value.encode("utf-8")) >= 120 and re.search(r"[。！？；]", value):
+                paragraphs.append(value)
+        elif len(value) >= 120:
+            paragraphs.append(value)
+    return paragraphs
 
 
 def _readable_portal(url):
@@ -2509,7 +2531,7 @@ def operate(
             bound_urls = {
                 c["url"]
                 for c in lane["candidates"]
-                if c["candidate_ref"] in lane["required_bound_candidate_ids"]
+                if isinstance(c, dict) and c.get("url")
             }
             discovered = {
                 r["url"]

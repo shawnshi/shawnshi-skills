@@ -3,68 +3,79 @@ name: hit-lectures-scout
 description: 检索、筛选和解释医疗AI、数字医疗与临床信息学论文及预印本，按研究类型评估证据质量，并将学术信号转化为可验证的研发、产品或市场假设。用于医疗AI论文扫描、临床文献追踪、前沿研究周报、专题证据综述或数字医疗研究发现；必须标明同行评审状态、来源与局限，不能把预印本或探索性结果写成临床定论；正式侦察报告生成后默认自动归档。
 ---
 
-# 医疗数字化文献侦察
+# 医疗数字化文献侦察（HIT Lectures Scout）
 
-## 研究边界
+## 1. 职责边界与模式路由
 
-- 优先使用论文原文、期刊页面、会议官网、注册平台和作者公开材料。
-- 明确区分同行评审论文、会议论文、预印本、技术报告和新闻稿。
-- 按研究设计评价证据，不强求每篇论文都有 N 值、P 值或真实世界研究数据。
-- 不因缺少商业映射而删除方法学或基础研究；应说明它与当前任务的相关性。
-- 样本量、P 值、置信区间、效应量、真实世界证据和临床终点只在研究设计适用且原文报告时填写；否则标明“不适用”或“原文未报告”，不得据此淘汰研究。
-- 不把统计显著性等同于临床重要性，不把回顾性关联写成因果关系。
-- 除非用户明确要求并提供业务背景，不映射到特定公司、产品或销售立场；涉及厂商时采用可核验的中性比较，不生成攻击话术。
-- 必须显式核查被分析版本的撤稿、撤回、更正及关注声明（expression of concern）；核查不可达时如实记录“未知”并相应保守限制结论，禁止默认未撤稿。已撤稿研究不得保留积极有效性结论，但可作为学术诚信或背景事件记录。
-- 记录分析版本选择理由与版本关系（预印本/会议/期刊），同一研究只计一次，不重复计数。
-- 明确候选采集脚本（如 arXiv 工具）仅为特定领域预印本侦察工具，不代表完整医学与临床文献扫描；必须按任务需求结合 PubMed、期刊官网等互补来源，记录主题与来源覆盖面。
-- 输出用于研究与产品决策，不替代临床诊断或治疗建议。
+1. **核心定位**：针对指定周期内的**医疗 AI、临床信息学与数字健康学术文献（同行评审期刊 + 预印本）**开展系统侦察、方法学与证据强度审查，并提炼可验证的研发与产品假设。
+   - 深入精读单篇指定论文交 `academic-paper-reader`；综合管理层周报交 `hit-weekly-brief`；政策与招投标事件扫描交 `hit-industry-radar`。
+2. **输出模式**：
+   - `formal_scout`（默认）：生成完整文献侦察报告，通过 `validate_lectures_scout.py` 校验后自动调用 `shared/scripts/report_archive.py` 归档至 `C:\Users\shich\MEMORY\raw\DigitalHealthLecturesScout\DHLS-YYYYMMDD.md`。
+   - `topic_brief`（专题文献速览）：针对特定临床 AI 方向（如大模型临床决策、电子病历生成、医学影像或路径质控）输出结构化证据简报，不自动归档。
+   - `single_study_check`（单篇核验）：快速核验单篇论文发表状态、样本量、终点指标与局限，不自动归档。
+   - 正式文献侦察报告默认自动归档。若用户明确要求预览或不保存，则只在答复交付，不落盘报告。
 
-## 执行流程
+---
 
-1. 定义问题、日期范围、疾病或场景、技术类别和纳入排除标准。未指定窗口时默认报告时区含当天的滚动 7 日；先读 [有限研究工作流](references/research-workflow.md)，确定来源覆盖、预算和预留核查额度。
-2. 搜索多个互补来源，记录标题、作者、发布日期、版本、DOI或永久链接以及同行评审状态。搜索摘要只用于候选，实际打开后的标题/主体/日期不匹配时弃用摘要，不以检索成功证明原文可用。
-3. 去重同一研究的预印本、会议版和期刊版，优先分析最新且证据更完整的版本。
-4. 提取研究问题、设计、样本、数据集、对照、主要终点、结果、置信区间或统计量以及作者声明的局限。
-5. 按研究设计使用合适的评价维度：
-   - 临床试验：随机化、对照、终点、样本量和外部有效性。
-   - 观察性研究：偏倚、混杂、数据完整性和因果边界。
-   - 模型研究：数据泄漏、外部验证、基线、校准、亚组与部署漂移。
-   - 方法或系统论文：复现性、数据与代码可得性、计算成本和适用条件。
-6. 将学术结论与业务建议分开。每项研发或产品建议都写明它仍需验证的假设。
-7. 范围较大且可拆分为不同来源或主题时，可在当前环境支持下并行检索；小型扫描直接完成。
-8. 生成正式报告后默认直接归档，无需再次询问或等待用户确认。用户明确要求预览、草稿或不保存时，只在答复中交付并保持只读，不写入归档目录。
+## 2. 双轨自动化侦察工作流（`deepxiv` 脚本 + Pi `codemode` 并发）
 
-## 正式报告分支
+详见 `references/research-workflow.md`。在 `formal_scout` 模式下，通过 `codemode` 并行调度以下三条证据轨道：
 
-编制正式正文前先运行自有校验器 `--describe-contract` 获取只读机器合同，再完整读取 [正式侦察报告合同](references/formal-report.md)，保存前另须完整读取 [共享安全归档契约](../shared/references/report_archive.md)。其中命名、表格文法、校验 CLI、身份核对、权限与写后回读全部是必经门，不因搬移而省略。
+1. **轨道一：arXiv 预印本自动化侦察（`assets/deepxiv_preprints_scout.py`）**
+   ```powershell
+   python -X utf8 C:\Users\shich\.pi\agent\skills\hit-lectures-scout\assets\deepxiv_preprints_scout.py --window <DAYS> --output <temp_preprints.md>
+   ```
+   - 当 `deepxiv-sdk` 可用时直接获取候选预印本结构化草稿；若通道受阻则按 `assets/task_preprints_fallback.md` 使用 Pi `web_search` / `google_search` 检索 arXiv / medRxiv / bioRxiv。
+2. **轨道二：国际同行评审期刊并发检索（`codemode` + `assets/task_journals_en.md`）**
+   - 在 `codemode` 中并发调用 `google_search` 与 `web_search(queries=[...])`，扫描 *Nature Medicine*、*npj Digital Medicine*、*The Lancet Digital Health*、*NEJM AI*、*JAMIA* 在 `[period_start, period_end]` 窗口内发表的临床 AI 与医疗信息化研究，并用 `fetch_content` 提取 DOI、发表日、研究设计与核心指标。
+3. **轨道三：中文权威期刊与规范指南检索（`codemode` + `assets/task_journals_cn.md`）**
+   - 扫描《中华医学杂志》《中国数字医学》《中国医院管理》及国家卫健委/医疗信息学会发布的医疗 AI 临床应用规范、评测标准与多中心研究。
+4. **证据分层铁律**：
+   - 严格区分 `已同行评审` 与 `预印本`；预印本及回顾性单中心模型基准测试**严禁**表述为“已证实临床有效性”或“可直接用于临床诊断”；
+   - 每项入选研究的研发/产品转化建议必须表述为**可验证假设**（含验证指标与证伪条件）。
 
-正式侦察报告沿用窄化自动归档授权，无需再次确认；complete 或披露缺口的 partial 按原门归档，blocked 只交付诊断/只读预览；预览、草稿或不保存保持只读。唯一目标按用户指定 > 稳定归档目录 > 既有 MEMORY 的 raw/DigitalHealthLecturesScout 解析；路径歧义、身份/快照冲突或能力缺失即 BLOCKED，保留草稿与恢复证据，不绕过门禁，不扩权或写入其他系统。
+---
 
-## 可选资源
+## 3. 正式报告结构契约（内联速查，详见 `references/formal-report.md` 与 `assets/report_template.md`）
 
-- 完整报告可参考 [assets/report_template.md](assets/report_template.md)。
-- `assets/task_journals_cn.md`、`assets/task_journals_en.md` 和预印本任务文件可用于制定检索式与记录字段，不得作为论文证据，也不得把其中的建议字段当作纳入门槛。
-- 只有在脚本与当前环境兼容且确有需要时，才检查并运行 `assets/deepxiv_preprints_scout.py`；不得自动安装依赖。候选 CLI 最短用法与边界见 [assets/task_preprints.md](assets/task_preprints.md)：默认上海时区含当天共 7 日，可指定历史闭区间/主题，`--max-enrich 0` 保留候选但省去 brief。候选仅写已存在任务隔离目录中的新文件，不是正式 DHLS 报告；partial 不等于空结果，候选写入成功须有终端 verified/hash。预览、草稿或不保存请求仍只读，不运行文件输出。
-- 政策/标准只用于独立背景或环境说明，引用来源仍编号；不进入七列研究表，不计研究数量，不以“未同行评审”代替政策分类。
+### 3.1 标题与头部元数据（H1 与第一个 `##` 之间，精确单次出现）
+```markdown
+# 医疗数字化文献侦察报告 - YYYY-MM-DD
 
-## 输出结构
+报告周期：YYYY-MM-DD 至 YYYY-MM-DD
+出刊日期：YYYY-MM-DD（explicit 模式下等于 period_end；generated 模式下等于生成时点所在时区日期）
+生成时点：YYYY-MM-DDTHH:MM:SS+08:00
+报告时区：Asia/Shanghai
+命名依据：explicit | generated
+主题范围：[如：医疗大模型临床决策支持、电子病历质控与多中心评测]
+```
 
-1. 一句话结论与检索范围
-2. 研究矩阵：研究类型、样本、核心结果、证据强度、局限、链接
-3. 值得跟踪的技术或临床信号
-4. 对研发、产品或市场的可验证假设
-5. 争议、复现风险和信息缺口
-6. 检索方法与来源
+### 3.2 必选二级章节与固定表头
+1. `## 执行摘要`：提炼本期核心学术信号、证据强度分布与主要方法学趋势。
+2. `## 本期研究`（无符合标准研究时写独行 `本周期未发现符合纳入标准的研究`；有研究时先输出固定 6 列汇总表，再按 `### R1 ...` 展开详情）：
+   - **汇总表头**：`| 研究编号 | 发表日期 | 类型与评审状态 | 研究主题 | 证据强度 | 来源 |`
+     - `研究编号`：`R1`、`R2`...（按递增顺序）；
+     - `类型与评审状态`：必须同时包含 `已同行评审` 或 `预印本` 标记及具体研究设计（如 `已同行评审 / 多中心随机对照试验`、`预印本 / 回顾性多任务基准研究`）；
+     - `来源`：填 `S1`、`S1, S2`。
+   - **逐项研究卡片（每个 `R#` 必须对应一个 `### R# [标题]` 小节）**：
+     - **事实与方法**：研究设计、数据来源、样本规模、核心结果数字（标注 `[S#]`）；
+     - **局限与外推风险**：单中心偏差、基准泄漏、缺乏前瞻性临床结局等限制；
+     - **可验证转化假设**：面向 HIS/EMR/CDSS 或临床智能体的工程验证方案与验收指标。
+3. `## 转化假设与建议动作`：汇总研发预研、产品评测与客户沟通层面的验证路线。
+4. `## 检索覆盖与证据缺口`：说明检索轨道覆盖情况、排除原因与未闭合缺口。
+5. `## 来源`（固定 2 列表头，所有被引用 `S#` 必须在此定义，且第 2 列必须包含真实 HTTP(S) 链接或 DOI 链接）：
+   `| 来源编号 | 来源信息 |`
 
-若符合标准的研究少于用户期望数量，报告实际数量并解释原因，不用低质量材料补齐。
+---
 
-## 完成检查
+## 4. 一键校验与事务归档流程
 
-- DOI、论文链接和版本状态已核实。
-- 撤稿、更正、关注声明状态已显式核验并记录（含核查日期与来源），不存在以撤稿研究支撑未受限结论的情况。
-- 跨版本去重与分析版本理由清楚，同研究未被双计。
-- 预印本和同行评审结果已清楚区分。
-- 结论强度没有超过研究设计能够支持的范围。
-- 统计结果、临床意义和业务推断没有混为一谈。
-- 没有为了凑数量、补齐 N/P/RWE 字段或形成商业映射而排除相关研究或引入低质量材料。
-- 正式报告已按约定路径归档，并通过发布后回读检查；只读退出请求除外。
+1. **执行结构与日期门禁校验**：
+   ```powershell
+   python -X utf8 C:\Users\shich\.pi\agent\skills\hit-lectures-scout\scripts\validate_lectures_scout.py --file <draft.md> --period-start <YYYY-MM-DD> --period-end <YYYY-MM-DD> --issue-date <YYYY-MM-DD> --cutoff <ISO-8601> --report-timezone Asia/Shanghai --window-mode <explicit|generated> --json
+   ```
+2. **原子归档发布（`status=VALID` 时执行）**：
+   ```powershell
+   python -X utf8 C:\Users\shich\.pi\agent\skills\shared\scripts\report_archive.py validate --source <draft.md> --target C:\Users\shich\MEMORY\raw\DigitalHealthLecturesScout\DHLS-<YYYYMMDD>.md --skill hit-lectures-scout
+   python -X utf8 C:\Users\shich\.pi\agent\skills\shared\scripts\report_archive.py commit --plan <plan.json> --target C:\Users\shich\MEMORY\raw\DigitalHealthLecturesScout\DHLS-<YYYYMMDD>.md
+   ```

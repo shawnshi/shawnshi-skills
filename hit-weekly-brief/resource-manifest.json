@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "hit-weekly-brief",
-  "generated_at": "2026-10-19T09:59:43+08:00",
+  "generated_at": "2026-10-24T10:50:43+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "e662c143fa6a46accecb7d36f3cb5e321955163e1047e4857e8f3cf971845d3f",
+  "skill_md_sha256": "4b7be84851f09e4c95e7af2399000da89f42365f7b210852b369af2b3b572016",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "e662c143fa6a46accecb7d36f3cb5e321955163e1047e4857e8f3cf971845d3f"
+      "sha256": "4b7be84851f09e4c95e7af2399000da89f42365f7b210852b369af2b3b572016"
     }
   ],
   "top_level_directories": [
@@ -99,6 +99,42 @@
   ],
   "declared_local_dependencies": [
     {
+      "path": "assets/Task_policy.md",
+      "exists": true,
+      "resolved_path": "hit-weekly-brief/assets/Task_policy.md",
+      "sha256": "7a2b8c6e9cc0b9b0b5e397d851e76b898b0f013481267baaab540c66139c1641"
+    },
+    {
+      "path": "assets/Task_serendipity.md",
+      "exists": true,
+      "resolved_path": "hit-weekly-brief/assets/Task_serendipity.md",
+      "sha256": "928c55f6aced0ad5f88f1f4f117694d40d3d9b992e77a404268d0a87bfb7555c"
+    },
+    {
+      "path": "assets/Task_strategy.md",
+      "exists": true,
+      "resolved_path": "hit-weekly-brief/assets/Task_strategy.md",
+      "sha256": "eb4197b48b77d9179bb9e77ae7d24c7ae75e8495a81b425bbcdb6ae45a89f8d6"
+    },
+    {
+      "path": "assets/Task_tech.md",
+      "exists": true,
+      "resolved_path": "hit-weekly-brief/assets/Task_tech.md",
+      "sha256": "6f3a81482a07798eb1d706d2b46214df803b020b2eb67a59b4186aa8c6d547ef"
+    },
+    {
+      "path": "hit-weekly-brief/scripts/inspect_report_headers.py",
+      "exists": true,
+      "resolved_path": "hit-weekly-brief/scripts/inspect_report_headers.py",
+      "sha256": "5af0c0d94dd0955778651042a3f443f71c6ad76d7d8238ecb235b66bc209338c"
+    },
+    {
+      "path": "hit-weekly-brief/scripts/validate_weekly_brief.py",
+      "exists": true,
+      "resolved_path": "hit-weekly-brief/scripts/validate_weekly_brief.py",
+      "sha256": "dd27c80b0716aae2059d035a81bb4953226547dadc0d01274057bc0520e5a4cb"
+    },
+    {
       "path": "references/formal-report.md",
       "exists": true,
       "resolved_path": "hit-weekly-brief/references/formal-report.md",
@@ -111,16 +147,16 @@
       "sha256": "8268f11c773e2defac0d05fc8cf6aed4815d097b720324e0b6ff9e449967ccfd"
     },
     {
-      "path": "scripts/inspect_report_headers.py",
+      "path": "references/template.md",
       "exists": true,
-      "resolved_path": "hit-weekly-brief/scripts/inspect_report_headers.py",
-      "sha256": "5af0c0d94dd0955778651042a3f443f71c6ad76d7d8238ecb235b66bc209338c"
+      "resolved_path": "hit-weekly-brief/references/template.md",
+      "sha256": "46a22ed46674a2e15751c7da4d7400c5cb21913e68256b77af23107ce9b5fcf1"
     },
     {
-      "path": "shared/references/report_archive.md",
+      "path": "shared/scripts/report_archive.py",
       "exists": true,
-      "resolved_path": "shared/references/report_archive.md",
-      "sha256": "fd99761eab41ec23a56877635b269544558baad61dfe07a2d9df8e273d6be0a4"
+      "resolved_path": "shared/scripts/report_archive.py",
+      "sha256": "396e6cee27f6bc09e99ae21dab1b308ac750235fb8ef98a1adab3249b271df71"
     }
   ],
   "missing_declared_dependencies": []

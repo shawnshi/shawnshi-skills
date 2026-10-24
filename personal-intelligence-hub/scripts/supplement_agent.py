@@ -467,6 +467,16 @@ def build_agent_context(
     return context
 
 
+def _access_failure_kind(access_log):
+    """Separate returned-but-unrecognized content from source/transport failures."""
+    failed = [entry for entry in access_log if isinstance(entry, dict) and entry.get("status") != "verified"]
+    if not failed:
+        return None
+    if all(entry.get("error_code") == "NATIVE_CONTENT_NOT_VERIFIED" for entry in failed):
+        return "content_verification"
+    return "source_access"
+
+
 def assemble_result(
     request_path: str | Path,
     gap_id: str,
@@ -551,10 +561,12 @@ def assemble_result(
                         "One or more candidates have publication dates outside the request window"
                     )
             else:
-                dynamic["failure_kind"] = "source_access"
+                dynamic["failure_kind"] = _access_failure_kind(dynamic.get("access_log", [])) or "source_access"
                 if not dynamic.get("failure_reason"):
                     dynamic["failure_reason"] = (
-                        "One or more source URLs could not be verified or were blocked"
+                        "Returned source content failed body recognition; this is not a transport failure"
+                        if dynamic["failure_kind"] == "content_verification"
+                        else "One or more source URLs could not be verified or were blocked"
                     )
         elif status == "failed":
             dynamic["failure_kind"] = "infrastructure"
@@ -1091,7 +1103,9 @@ def _fillable_parent_derived(path: str) -> bool:
 
 
 def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_path: Path) -> None:
-    from article_broker import evidence, _url_path_declared_day
+    from urllib.parse import urlsplit
+    from article_broker import evidence
+    from broker_handoff import publication_options
     data = evidence(request_path, gap_id)
     if data.get("completed_at") is None and data.get("next_action", {}).get("stop_eligible"):
         from article_broker import operate
@@ -1104,7 +1118,7 @@ def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_pat
     w_start = str(window.get("start", ""))
     w_end = str(window.get("end", ""))
     lane = str(gap.get("lane") or "")
-    default_domain = "healthcare_digital" if lane in {"HealthcareRadar"} else "technology"
+    default_domain = "healthcare_digital" if lane in {"HealthcareRadar", "Sentinel"} else "technology"
 
     access_log = data.get("access_log", [])
     access_by_url = {
@@ -1121,34 +1135,37 @@ def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_pat
             continue
         pub_day = None
         date_obj = None
-        if meta.get("dates"):
-            for d in meta["dates"]:
-                day = str(d.get("published_at") or "")
-                if w_start <= day <= w_end:
-                    pub_day = day
-                    date_obj = deepcopy(d)
-                    break
-        elif meta.get("article_core"):
-            url_day = _url_path_declared_day(url)
-            if url_day and w_start <= url_day <= w_end:
-                pub_day = url_day
-                date_obj = {
-                    "field": "url_path",
-                    "raw": url_day,
-                    "published_at": url_day,
-                    "published_at_source": "url_path",
-                    "parser_rule": "url-path/1",
-                    "text_sha256": p.get("readable_text_sha256", ""),
-                }
+        for d in publication_options(p, lane_slice):
+            day = str(d.get("published_at") or "")
+            if w_start <= day <= w_end:
+                pub_day = day
+                date_obj = deepcopy(d)
+                break
         if pub_day and date_obj:
             cid = candidate_ref(url)
             cand_title = str(meta.get("title") or "Accessed publication").strip()
             source_name = urlsplit(url).netloc
+            cand_domain = default_domain
+            cand_source_type = "primary"
             for c in lane_slice.get("candidates", []):
                 if c.get("candidate_ref") == cid:
                     cand_title = str(c.get("title") or cand_title).strip()
                     source_name = str(c.get("source") or source_name).strip()
+                    dom = str(c.get("primary_domain") or c.get("provisional_domain") or "").strip()
+                    if dom in {"technology", "healthcare_digital"}:
+                        cand_domain = dom
+                    st_type = str(c.get("source_type") or "").strip()
+                    if st_type in {"primary", "secondary"}:
+                        cand_source_type = st_type
                     break
+            if p.get("access", {}).get("coverage") == "bounded_excerpt":
+                cand_source_type = "secondary"
+            raw_body = re.sub(r"\s+", " ", str(p.get("body_text") or "")).strip()
+            summary_text = (
+                raw_body[:240]
+                if len(raw_body) >= 40
+                else f"{source_name} reported on {cand_title[:90]}."
+            )
             cand_obj = {
                 "candidate_id": cid,
                 "title": cand_title,
@@ -1159,20 +1176,20 @@ def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_pat
                 "published_at_proof": date_obj,
                 "broker_body_proof_sha256": p.get("proof_sha256"),
                 "retrieved_at": p.get("access", {}).get("checked_at"),
-                "primary_domain": default_domain,
+                "primary_domain": cand_domain,
                 "secondary_domains": [],
-                "source_type": "primary",
+                "source_type": cand_source_type,
                 "identity_quality": "semantic",
                 "event_identity": {
                     "key_version": "1",
-                    "primary_domain": default_domain,
+                    "primary_domain": cand_domain,
                     "actor": source_name[:50] if source_name else "Source",
                     "action": "released",
                     "object": cand_title[:90],
                     "event_date": pub_day,
                 },
                 "access_check": deepcopy(p["access"]),
-                "summary": f"{source_name} reported on {cand_title[:90]}.",
+                "summary": summary_text,
             }
             candidates.append(cand_obj)
 
@@ -1206,15 +1223,25 @@ def _ensure_parent_broker_draft(request_path: str | Path, gap_id: str, draft_pat
             })
 
     failed = sum(1 for a in access_log if isinstance(a, dict) and a.get("status") == "blocked")
+    bound_budget_exhausted = bool(data.get("next_action", {}).get("bound_budget_exhausted", False))
+    has_bound_exclusions = any(
+        d.get("decision") in {"access_blocked", "date_disqualified"}
+        for d in bound_candidate_decisions
+    )
+    force_degraded = bound_budget_exhausted and (
+        not data.get("next_action", {}).get("bound_only_complete")
+        or has_bound_exclusions
+        or not candidates
+    )
     if candidates:
-        status = "degraded" if failed > 0 else "completed"
-        failure_kind = "source_access" if failed > 0 else None
-        failure_reason = "One or more attempted URLs were blocked" if failed > 0 else None
+        status = "degraded" if (failed > 0 or force_degraded) else "completed"
+        failure_kind = "source_access" if (failed > 0 or force_degraded) else None
+        failure_reason = "One or more attempted URLs were blocked or excluded" if (failed > 0 or force_degraded) else None
         confidence = "medium"
     else:
-        status = "degraded" if failed > 0 else "no_increment"
-        failure_kind = "source_access" if failed > 0 else None
-        failure_reason = "One or more candidate URLs were blocked or lacked recognizable document content" if failed > 0 else None
+        status = "degraded" if (failed > 0 or force_degraded) else "no_increment"
+        failure_kind = "source_access" if (failed > 0 or force_degraded) else None
+        failure_reason = "One or more candidate URLs were blocked or lacked recognizable document content" if (failed > 0 or force_degraded) else None
         confidence = "low"
 
     dynamic = {

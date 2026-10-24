@@ -22,10 +22,57 @@ CONTENT = """# 数字健康周报｜2000年1月3日—9日
 出刊日期：2000-01-09
 生成时点：2000-01-10T00:00:00+08:00
 报告时区：Asia/Shanghai
+地区：中国
+受众：医疗信息化决策者
+
+## 本周结论
+
+- **已核实事实**：本周期无合格事件。
+- **来源主张**：无。
+- **分析判断**：维持常规观察。
 
 ## 关键事件与来源
 
 本周期未发现符合纳入标准的事件
+
+## 政策和市场影响
+
+无新增政策冲击。
+
+## 技术落地信号与证据限制
+
+无新增技术信号。
+
+## 对医疗信息化业务的传导影响
+
+无直接业务传导。
+
+## 建议动作与验证节点
+
+维持周期监测。
+
+## 信息缺口
+
+本周期合格事件供给为空。
+
+## 来源清单
+
+无。
+"""
+
+SCOUT_CONTENT = """# 医疗数字化文献侦察报告 - 2000-01-09
+
+报告周期：2000-01-03 至 2000-01-09
+出刊日期：2000-01-09
+生成时点：2000-01-10T00:00:00+08:00
+报告时区：Asia/Shanghai
+命名依据：explicit
+
+## 本期研究
+
+本周期未发现符合纳入标准的研究
+
+## 来源
 """
 
 
@@ -239,16 +286,7 @@ class ReportArchiveWindowsTests(unittest.TestCase):
 
     def test_cross_skill_custom_filename_collision_preserves_both_files(self):
         self.target = self.parent / "custom.md"
-        scout = CONTENT.replace(
-            "# 数字健康周报｜2000年1月3日—9日", "# 医疗数字化文献侦察报告 - 2000-01-09"
-        )
-        scout = scout.replace(
-            "报告时区：Asia/Shanghai", "报告时区：Asia/Shanghai\n命名依据：explicit"
-        )
-        scout = scout.replace("## 关键事件与来源", "## 本期研究").replace(
-            "本周期未发现符合纳入标准的事件",
-            "本周期未发现符合纳入标准的研究\n\n## 来源",
-        )
+        scout = SCOUT_CONTENT
         self.target.write_text(scout, encoding="utf-8")
         before = (
             self.source.read_bytes(),
@@ -766,12 +804,7 @@ class ReportArchiveRadarWindowsTests(unittest.TestCase):
                 "报告时区：Asia/Shanghai", "报告时区：UTC"
             ),
             "weekly": CONTENT,
-            "scout": CONTENT.replace(
-                "# 数字健康周报｜2000年1月3日—9日",
-                "# 医疗数字化文献侦察报告 - 2000-01-09",
-            ).replace(
-                "报告时区：Asia/Shanghai", "报告时区：Asia/Shanghai\n命名依据：explicit"
-            ),
+            "scout": SCOUT_CONTENT,
         }
         for custom in (False, True):
             self.target = self.parent / (
@@ -1025,20 +1058,7 @@ class ReportArchiveRadarWindowsTests(unittest.TestCase):
     def test_radar_cannot_overwrite_weekly_or_scout_in_reverse(self):
         self.target = self.parent / "custom.md"
         self.target.write_text(RADAR_CONTENT, encoding="utf-8")
-        scout = (
-            CONTENT.replace(
-                "# 数字健康周报｜2000年1月3日—9日",
-                "# 医疗数字化文献侦察报告 - 2000-01-09",
-            )
-            .replace(
-                "报告时区：Asia/Shanghai", "报告时区：Asia/Shanghai\n命名依据：explicit"
-            )
-            .replace("## 关键事件与来源", "## 本期研究")
-            .replace(
-                "本周期未发现符合纳入标准的事件",
-                "本周期未发现符合纳入标准的研究\n\n## 来源",
-            )
-        )
+        scout = SCOUT_CONTENT
         for skill, content in (
             ("hit-weekly-brief", CONTENT),
             ("hit-lectures-scout", scout),

@@ -3,97 +3,69 @@ name: personal-investment-advisor
 description: 开展证券财报与估值研究、已授权持仓及未购观察清单的风险审计、Daily Sync 行情及观察边界核验、主动研究（含 Rank & Yank）和判断复盘；默认免费公开来源，支持 `research_only` / `advisory` / `actionable` 三级产出标注；不代客下单、不执行订单。用于用户要求股票调研、财报分析、持仓审计、批量筛选、情景压力测试或投资判断复盘时。
 ---
 
-# 投资研究与组合分析
+# Personal Investment Advisor（个人投资助理）
 
-## 任务范围与双轨分析
+## 1. 核心定位与安全隐私红线
 
-- 先按当次请求选择任务。单一证券、所供文档摘要或假设权重算术不自动扩展为全清单研究；只读取已授权且本次需要的数据源。
-- 用户要求完整清单研究时，全部非现金证券进入范围，包括 `quantity=0` 的未购标的；inactive 不代表 Thesis 通过。仅实仓核验使用 `daily-run --analysis-scope held_only`，将零股列为范围外，不称其已评估。
-- `daily-run --analysis-scope all` 为完整清单默认，独立执行 `unpurchased_analysis`。未购实际数量、市值、投入成本均为零，不进实仓权重分母；参考成本不用于浮盈亏或成本止损，不能假设一股绕过持仓门。
-- 未购轨核验身份、时效、财务估值、Thesis 与已有观察边界；第三方 EPS/PE 仅作筛查。缺证据、范围外与已评估分开报告。实仓报价与权重完成不代表完整清单完成。
-- 持仓授权不扩展到旁边的 Dashboard、Thesis 或政策。Dashboard 根与风险政策须分别显式传入 `--dashboard-root`、`--risk-bounds-policy`；没有前者时报告边界未评估，或按限定任务显式 `--skip-watchlist`。不从父目录或环境变量发现政策。
-- Thesis 声明、已确认条件与数值原件分离：`daily-sync`、`daily-run`、`build thesis-pack` 仅以显式 `--conditions-file` / `--evidence-root` 绑定原件，不从包中推断读取权限。历史声明包不升级为验证；局部 `verified_hits` 在全局不足时仍报警，未决约束及已知 `weight_cap_breached` 不遮蔽。数值验证不证明宏观/板块/监管语义覆盖或全局安全。
-- 新买入情景需另有明确情景授权，不修改真实持仓。双轨流程细节仅在日常核验时读取 [daily-sync.md](references/daily-sync.md)。
+1. **职责边界**：面向个人投资者提供基于一手财报、监管披露与可核验行情的深度证券研究、持仓与观察清单审计、Daily Sync 边界监测、主动筛选（Rank & Yank）与事前/事后复盘。**严禁代客下单、登录券商或执行任何交易指令**。
+2. **隐私隔离（`PRIVACY-SESSION-02`）**：
+   - 公开行情与披露检索（包括调用 `yf.py`、`sec_edgar_fundamentals.py`、Pi `web_search` / `google_search` / `fetch_content`）**仅允许发送公开证券代码（Ticker/Symbol）与公开市场查询词**；
+   - **严禁**将用户的持仓股数、持仓成本、账户金额、现金余额或私有 Thesis 原文发送至外部网络搜索或第三方行情服务；
+   - 未经用户显式提供或授权，禁止跨目录自动扫描发现本地持仓或 Dashboard 文件。
+3. **三级决策范围（`decision_scope`）**：
+   - `research_only`：仅输出研究事实、财务与估值分析，不含仓位或操作建议；
+   - `advisory`（默认）：在证据门闭合前提下提供观察边界、目标仓位区间或调仓研究草案，供用户人工决策；
+   - `actionable`：须额外通过当日交易时段、最新行情时效与 `actionability-gate` 交易规则核验，且仍须由人工最终复核（`human_review_required_no_order`）。
 
-## 不可突破的边界
+---
 
-- **股票集中度硬上限**：单只股票占组合总市值的比例不得高于 **30%**；按该比例排序的前三只股票合计不得大于 **65%**，等于上限允许。组合审计、Daily Sync 及涉及股票仓位的建议必须核验两项，不因未显式提供独立风险政策而省略。计算口径、缺证据处理及既有更严约束见 [portfolio-audit.md](references/portfolio-audit.md#股票集中度硬上限)。本规则不自动改写持仓、Dashboard、Thesis 或政策文件，也不替代基本面致命条件判断。
+## 2. 模型与 Pi 工具链协同范式
 
-- 产出按声明的 `decision_scope` 分三级，且标注必须与实际内容一致：`research_only`（仅结论，不含方向、价格或仓位指令）、`advisory`（允许买卖倾向，以及供用户手动执行的具体价格、数量或目标仓位指令；不修改实际持仓、不执行订单；其他本地维护仍须明确授权）、`actionable`（对已满足适用可执行性前置条件的参数方案作行动级标注，仍由用户执行）。高标（把 `research_only` 内容标成 `actionable`）与低标（把 `advisory`/`actionable` 内容标成 `research_only`）同为契约违反。未声明时默认 `advisory`；`research_only` 仅在明确指定时使用。默认范围不豁免证据门，缺少一手事件证据时不得给出有依据的完整方向判断。
-- 主动研究链路仍须先通过 P0 Alpha 推广门禁才可产出候选或目标权重：`candidate_weight`、`allocation_gap` 限用于 `research_only`/`advisory` 产出，`target_weight` 可用于 `advisory` 或 `actionable` 的建议方案，但不是实际持仓字段回写。不因 advisory 获准给参数而绕过 P0，也不得把 `experimental_weight` 直接升级为 `target_weight`。非主动收益的既有约束风控建议按自身证据、计算与交易可行性门执行，不冒充 Alpha 候选。
-- 不执行、调度或路由订单，不登录券商，不自动同步真实账户。只读取用户提供或明确授权的文件；本地修改、导入、归档、日记及其他持久化按当前明确授权执行。`advisory` 不再统一限定为只读，具体边界见下节；模式名称、数据读取或验证通过均不能单独授权写入。
-- 本技能不因用户明确指定并授权读取的本地持仓、Dashboard、Thesis 或观察边界字段本身而强制使用临时会话。可在当前本地 Pi 会话中按任务所需的最小范围读取，但不得把读取授权扩展为归档、记忆写入、对外传输或扫描同目录其他文件。若输入同时包含账户号、凭证、身份证明、税务材料、完整净资产等高度敏感内容，或更高层隐私合同明确要求隔离，仍须遵守相应隔离门；本技能不得覆盖更高层规则。
-- 当前价格、财报、监管披露和公司事件必须联网核验并标注数据时间。优先发行人、交易所、监管机构和审计财报；新闻与聚合页只作线索。
-- 默认按 [free-data-policy.md](references/free-data-policy.md) 使用免费公开来源，不把付费终端、机构数据库或学术授权设为完成前提。用户主动提供的专业数据可以使用，但不得假定存在。免费数据缺口只阻断依赖该字段的结论；独立可完成的身份、披露、持仓、风险和情景工作继续进行并降低结论强度。
-- 明确证券市场、资产类型、研究截止日、期限、基准、币种和用户目标。缺失、冲突、未来日期、陈旧或无法定位到原始材料的数据必须失败关闭，不得用零值、默认通过或模拟内容补齐。
-- 顶层状态遵循 [status-contract.md](references/status-contract.md)。事实、计算、假设和观点分层呈现；证据不足时降低结论强度并列出补证项。
-- 使用脚本前检查 `scripts/requirements.txt` 与对应 `--help`；不要自动安装依赖或修改全局环境。
+| 能力层 | 核心职责 | 推荐工具与入口 |
+| :--- | :--- | :--- |
+| **定量底座与门禁（Python CLI）** | 行情与汇率抓取、点时（Point-in-Time）财务提取、权重与风险计算、Schema 与哈希校验 | `python -X utf8 scripts/pia.py <subcommand>`、`scripts/yf.py` |
+| **公开市场取证（Pi `codemode`）** | 并发检索最新财报原文、管理层业绩会纪要、行业竞争格局、监管公告与反方证据 | `codemode` 编排 `google_search`、`web_search(queries=[...])`、`fetch_content` |
+| **专业投研推演（LLM 核心区）** | 商业模式与护城河拆解、ROIC/自由现金流质量审计、核心假设与预期差、估值锚与安全边际、证伪条件（Kill Criteria） | 结构化研究报告、Dashboard 7.2（`.json` + `.md`） |
 
-## advisory 下的本地修改
+---
 
-建议模式、读取权限或验证通过不产生写入权限；当前明确授权覆盖时直接推进，不逐文件重复确认。准备维护 Dashboard、Thesis、独立政策、导入数据或技能时，读取 [local-maintenance.md](references/local-maintenance.md)；纯研究不加载维护细则。
+## 3. 五大核心工作流路由
 
-## 任务路由
+详细命令参数见 [references/command-catalog.md](references/command-catalog.md)。
 
-- 显式捕获→数值投影→基本面/机会成本诊断与预期反馈：使用 `pia.py fact-prepare`、`fundamental-diagnostic`、`expectation-feedback` 或薄编排 `research-workflow`，只在该任务读取 [p1p2-research-workflow.md](references/p1p2-research-workflow.md)。不隐式抓取/扫描私域，不默认策略参数；研究 complete 不升级 Alpha、正式校准或交易就绪。
-- 显式离线事件→已确认条件关联→补证任务→人工复核记录：使用 `pia.py research-loop`，只在该任务读取 [research-loop.md](references/research-loop.md)。仅 `research_only`，不联网、不扫描私域、不写真实 Thesis、不加入 daily-run；complete 仅指列明事件关联的人工记录闭合，不是投资批准或最新事实外部核验。
-- 单一公司、财报、估值、股票筛选或 Thesis 证伪：读取 [company-research.md](references/company-research.md)；A 股深度研究另读 [cn-equity-research.md](references/cn-equity-research.md)，公告数字或更正链另读 [cn-equity-evidence.md](references/cn-equity-evidence.md)，非金融经营公司采用 DCF 企业价值桥时另读 [cn-equity-valuation.md](references/cn-equity-valuation.md)。
-- 持仓审计、集中度、情景压力测试或分配实验：读取 [portfolio-audit.md](references/portfolio-audit.md)；仅当用户明确提供个人损失、期限与现金预算时另读 [personal-risk-budget.md](references/personal-risk-budget.md)。
-- 日常行情刷新、观察边界或事件红队：读取 [daily-sync.md](references/daily-sync.md)。
-- 研究日记、结果同步或方法校准：读取 [calibration.md](references/calibration.md)。
-- 主动 Alpha 验证、Rank & Yank、风险平价候选组合或再平衡研究提案：读取 [active-research.md](references/active-research.md)。`advisory` 或 `actionable` 拟给出可执行 A 股价格、数量或仓位指令时另读 [cn-actionability.md](references/cn-actionability.md)；来源或规则无法核实时保留可独立成立的判断或条件方案，参数明确待核验，不声称立即可执行。
-- 涉及数据选择、免费来源能力或降级边界：读取 [free-data-policy.md](references/free-data-policy.md)。
-- 需要选择脚本或稳定子命令：读取 [command-catalog.md](references/command-catalog.md)。
+### 工作流 A：Daily Sync 日常行情与观察边界同步
+详见 [references/daily-sync.md](references/daily-sync.md)。
+- **一键执行闭环**：
+  ```powershell
+  # 1. 采集公开披露证据（可选，用于闭合 Thesis 红队门禁）
+  python -X utf8 scripts/pia.py collect-evidence --task-dir <run_dir> --symbols <SYM1> <SYM2> --window-start <ISO> --window-end <ISO>
+  # 2. 执行固定时点 Daily Run 并自动渲染报告（支持主源 Yahoo + 腾讯/备用源无缝权重计算）
+  python -X utf8 scripts/pia.py daily-run --positions-file <positions.json> --task-dir <run_dir> --dashboard-root <dash_dir> --render-report
+  ```
+- **范围控制**：`--analysis-scope all`（默认，含零股未购观察清单双轨研究）或 `held_only`（仅实仓）；支持 `--holiday-calendar-file references/market_holidays_sse_szse_2026.json` 放宽法定休市日行情时效。
 
-只加载与当前任务直接相关的上述引用；一个复杂请求跨越多个工作流时，按身份与输入门禁、证据采集、计算、反证、输出验证的顺序组合。
+### 工作流 B：个股与 ETF 深度投研（Company & ETF Research）
+详见 [references/company-research.md](references/company-research.md) 与 [references/p1p2-research-workflow.md](references/p1p2-research-workflow.md)。
+1. **快速事实与披露探针（局部任务）**：
+   - 用户仅要求查询某标的的**基础事实与披露**时，直接调用 `pia.py research`、`pia.py edgar-fundamentals` 或 `yf.py`，**不要求 Brief、预期差或公司估值**，交付时明确标注为局部数据核查，**不得称为完整深度研究**。
+2. **完整深度个股/ETF 研究**：
+   - **定量数据采集**：
+     - 美股财务与披露：`pia.py edgar-fundamentals <SYM> --as-of <YYYY-MM-DD> --artifact-dir <dir>` 与 `pia.py research --symbol <SYM> [--allow-foreign-issuer]`；
+     - 多市场行情与指标：`python -X utf8 scripts/yf.py <SYM> --cache-dir <cache_dir> --json`（A 股补充指标可结合 `akshare_fetcher.py`；ETF 净值与历史完整性使用 `pia.py etf-packet`）。
+   - **公开定性取证**：使用 Pi `codemode` 并发调用 `google_search` / `web_search` 与 `fetch_content` 抓取最新财报电话会、行业竞争动态与看空反例。
+   - **财务诊断与研究合成**：
+     - 运行 `pia.py fact-prepare` $\rightarrow$ `pia.py fundamental-diagnostic` $\rightarrow$ `pia.py research-workflow`；
+     - 撰写/更新 Dashboard 时，通过 `dashboard_gate.py` 与 `dashboard_math_gate.py` 双门校验后使用 `save_dashboard.py` 持久化。
 
-## 机器契约索引
+### 工作流 C：持仓全景与未购观察清单审计（Portfolio & Watchlist Audit）
+详见 [references/portfolio-audit.md](references/portfolio-audit.md)。
+- 结合 `pia.py portfolio-audit`、`rebalance_weights.py`、`watchlist_gate.py`、`pia.py risk-diagnostic` 与 `pia.py dilution`（A 股股本稀释/回购经济变动评估），全面审查组合集中度、单标的权重偏离、汇率暴露与基本面破位信号。
 
-- 研究：`references/research_brief_schema.json`、`references/method_profiles.json`、`references/dashboard_schema.json`
-- 组合：`references/portfolio_schema.json`、`references/inverse_volatility_policy_schema.json`
-- 主动研究：`references/alpha_evidence_schema.json`、`references/alpha_promotion_policy_schema.json`、`references/active_scan_policy_schema.json`、`references/active_construction_policy_schema.json`、`references/rebalance_proposal_policy_schema.json`
-- 日常红队：`references/thesis_red_team_schema.json`
-- 免费数据：`references/free-data-policy.md`、`scripts/sec_edgar_fundamentals.py`
-- 稳定入口与依赖：`scripts/pia.py`、`scripts/status_contract.py`、`scripts/requirements.txt`
-- Pi 显式调用：`/skill:personal-investment-advisor`；`agents/openai.yaml` 仅为其他宿主的兼容元数据，Pi 不将其加载为运行界面。
+### 工作流 D：主动机会筛选与组合构建（Active Research / Rank & Yank）
+详见 [references/active-research.md](references/active-research.md)。
+- 遵循四阶段不可变交接链：`pia.py alpha-validate` $\rightarrow$ `pia.py alpha-scan`（Rank & Yank 关注池）$\rightarrow$ `pia.py portfolio-construct` $\rightarrow$ `pia.py rebalance-proposal`。
 
-## 任务适用范围
-
-- **基础事实与披露**：身份、来源、截止时间与事实覆盖门；不要求 Brief、预期差或公司估值。仅摘要用户所供文档且不声称最新、当前或已外部核验时，不要求实时行情探针；仍须归因来源、发行人、期间、单位与材料限制，当前身份、价格或估值结论仍须适用的身份、时间与实时证据门。
-- **行情刷新**：身份、报价时间/币种/时效门；不因缺少预测阻断报价，事件未评估须单列。
-- **组合风险**：真实持仓适用授权输入、组合 Schema、权重与风险计算门；仅对明确标记的假设资产标签与用户给定权重做算术时，按组合引用中的限定输入门执行，不得称为当前组合审计。集中度不依赖公司估值，相关性、流动性和情景缺口按依赖逐项报告。
-- **深度公司 Thesis / 估值**：下述 Brief、数值预期差、三情景及 Dashboard 双门适用。ETF 完整 Dashboard 使用公司研究引用中的 NAV 专属分支，不套企业价值。
-- **主动研究**：额外推广、扫描、构造和提案门保持不变，不由基础任务通过替代。
-
-所有路径保留身份、来源、时间、隐私、`decision_scope` 标注与自身输入门。先声明本次范围、完成覆盖与未评估项；局部事实完成不得称为完整深度研究，不为凑齐模板伪造共识或预测。基础任务交付 scoped 结果，不要求生成完整 Dashboard。
-
-## 运行与自动化
-
-进入多阶段日常核验、批量取证、缓存并发、时效恢复或运行诊断时，先读 [runtime-operation.md](references/runtime-operation.md)。优先原生 `daily-run --plan-only` 与已有证据、风险、覆盖及准备度入口；只有当前能力确有缺口时才补任务脚本。复用与自动化不放宽来源、时效或授权门。
-
-## 按适用范围执行
-
-1. **核验输入与身份**：真实证券代码、市场和资产类型必须闭合；真实持仓组合必须通过 `portfolio_schema.json`。明确假设标签的给定权重算术与所供文档限定摘要按上述适用范围执行，不替代真实持仓或当前研究门禁。
-2. **深度研究锁定契约**：按 `research_brief_schema.json` 建立 Brief，并通过 `research_brief_gate.py`。市场共识、独立估计、数值预期差、核心假设、证伪阈值和关键变量必须可计算。
-3. **选择方法**：从 `method_profiles.json` 选择匹配配置并记录版本、适用范围和截止日。筛选是描述性初筛，不等于预测能力；`insufficient_data` 不能视为通过。
-4. **采集点时证据**：默认先用免费一手来源；美股历史财务优先 SEC EDGAR `companyfacts` 的真实 `filed` 日期，A/H 股优先交易所、巨潮与发行人公告。A 股公告数字可用独立离线门闭合原件字节与更正链，但结构通过不证明摘录语义、历史可得性或更正覆盖完整；未独立核对原文时不得升级为估值输入。保存来源定位、发布日期、获取时间、单位、币种、会计期间、复权方式与数据缺口；Yahoo/Akshare 当前基本面不得用于历史重放。
-5. **深度研究建立预期差账本**：逐变量对照市场共识、公司指引或事实、独立估计、估值影响和证伪证据。
-6. **双层验证**：机器层重算数字并核对来源、日期、单位、币种和字段；判断层检查最强反方、历史基准率、已定价程度、敏感性和 Thesis 失效条件。多代理结果必须保留冲突，不以多数票替代证据。
-7. **验证输出**：新 Dashboard 必须通过 `dashboard_gate.py --strict-current-contract` 和 `dashboard_math_gate.py`。旧归档兼容通过不能升级为当前新建契约完成。
-8. **主动研究加门**：任何 Rank/Yank 或候选权重之前，必须依次通过 `alpha-validate`、`alpha-scan`；组合构造必须核验完整协方差矩阵、成本、约束与收敛，原生计算输出仍是非执行研究候选；另行形成 advisory 具体参数方案时须闭合适用的行情、规则、资源和成本门，不通过改标签把候选变成已就绪交易。
-
-## 输出契约
-
-按已声明任务范围输出（不适用项说明边界，不造数补齐）：
-
-- 截止时间、证据层级、原始来源定位和覆盖缺口；
-- 深度公司研究：市场共识或公开参考、核心假设、数值预期差、反证与结论强度，以及适用的财务质量、估值方法、三情景和敏感性；
-- ETF Dashboard：来源绑定的 NAV、费率、跟踪证据、覆盖缺口与 NAV 压力情景；企业估值明确不适用；
-- 风险、催化剂、需继续核验的问题和观察指标；
-- 涉及持仓时的原始权重、集中度、相关性与流动性证据或缺口、下行情景和约束状态；只有用户明确提供目标、期限与损失预算时，才给出相对于其个人风险预算的判断，不能从净值和风险等级猜测。
-
-给出买卖参数前读取 [advisory-output.md](references/advisory-output.md)，闭合价格／币种、数量／分母、有效期、触发与失效、下行情景及适用交易前置条件；缺口保留为待核验，不改真实持仓、不执行订单。仅事实或计算任务不加载参数建议细则。
-
-## Dashboard 7.2：真实权益桥与公开来源时间精度
-
-采用新语义时显式设置 `dashboard_contract_version="7.2"`，按 [company-research.md](references/company-research.md) 的 stock3.0 / ETF1.1 分支构建。不得机械改旧版本、把其他索偿塞入净债务、把账面值冒充市场值，或以获取时间冒充首次发布时间。来源观测可支持当前研究，但不能反推历史可得性。新建/发布验收除双门外，还须对获授权的原件显式调用 `source_timing_contract.verify_source_capture` 重算 SHA，并独立核对真实来源和取证时刻；结构回执不是外部真实性证明。原文不内嵌 Dashboard，定位符不自动打开。本条不授权归档。
+### 工作流 E：情景压力测试与投资判断复盘（Scenario & Calibration）
+详见 [references/calibration.md](references/calibration.md)。
+- **压力测试**：`pia.py scenario --portfolio <file> --assumptions <file> --output <out.json>`；
+- **预期反馈与校准复盘**：`pia.py expectation-feedback`、`pia.py calibrate`、`pia.py history {index,diff}` 与 `pia.py trigger-ledger`。

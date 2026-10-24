@@ -380,10 +380,24 @@ def _validate_daily_sync_report(
             position.get("asset_type") or ""
         ).lower():
             errors.append(f"{symbol}: quote position_asset_type is not bound to the portfolio")
-        if snapshot.get("source") != "Yahoo Finance":
-            errors.append(f"{symbol}: quote source is not the Daily Sync provider")
-        if snapshot.get("source_locator") != f"yfinance:{symbol}:quote":
-            errors.append(f"{symbol}: quote source_locator is not contract-bound")
+        quote_tier = str(snapshot.get("quote_tier") or "primary")
+        raw_prov = (
+            matches[0].get("quote_provenance")
+            if len(matches) == 1 and isinstance(matches[0].get("quote_provenance"), dict)
+            else {}
+        )
+        if quote_tier == "secondary" and str(raw_prov.get("tier") or "") == "secondary":
+            expected_src = str(raw_prov.get("source") or "").strip()
+            expected_loc = str(raw_prov.get("source_locator") or "").strip()
+            if not expected_src or snapshot.get("source") != expected_src:
+                errors.append(f"{symbol}: quote source is not the Daily Sync provider")
+            if not expected_loc or snapshot.get("source_locator") != expected_loc:
+                errors.append(f"{symbol}: quote source_locator is not contract-bound")
+        else:
+            if snapshot.get("source") != "Yahoo Finance":
+                errors.append(f"{symbol}: quote source is not the Daily Sync provider")
+            if snapshot.get("source_locator") != f"yfinance:{symbol}:quote":
+                errors.append(f"{symbol}: quote source_locator is not contract-bound")
         quote_as_of = _parse_aware_iso(snapshot.get("as_of"))
         if quote_as_of is None:
             errors.append(f"{symbol}: quote as_of must be a timezone-aware ISO datetime")

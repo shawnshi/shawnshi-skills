@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-musicbee-dj",
-  "generated_at": "2026-10-19T09:59:44+08:00",
+  "generated_at": "2026-10-24T10:47:50+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -221,27 +221,27 @@
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/mid3cp.1",
-      "sha256": "7fc66175ca544b6001741891e574ccffe5d4c30554e0f4c3747b3e51452f4f9d"
+      "sha256": "6f704bab62901a68193b95f2896464ada4264fe85237a14ba658a78d1b68a60d"
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/mid3iconv.1",
-      "sha256": "dc61e0f83c04c531ac8d1349df0c255f064ba91a60ccc338411a5868e45894e4"
+      "sha256": "071a125fc78520b7a024f8463e0623d58ec175d94bab6a9ee32c864ca65fc6d7"
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/mid3v2.1",
-      "sha256": "1dd9474b0eff1d8d9cb7be8c3082b3f4b667113fe03d64989d92e0ade8a7443c"
+      "sha256": "a759b1d530ca1aae6c0aa897257079de08b4c996a82eb70a382d0c013ae1bead"
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/moggsplit.1",
-      "sha256": "6fe0e31881553aecd7793d3dd48e2dd18ac83dab0373dc537a9db244eb5c7b56"
+      "sha256": "f6f4eb3072d6e2df80b3280f4aeb349687bc4007d65788ef306410f56940d225"
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/mutagen-inspect.1",
-      "sha256": "fb055854f8276cfebd1b4bd283e34d8e60e7401a7258de84cf01824e466ee9ea"
+      "sha256": "69fde91fe9d98815ade0f3033da68eab50e52159d153729d604e9ff69625ccbc"
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.data/data/share/man/man1/mutagen-pony.1",
-      "sha256": "a3dac63866c23359c759088e0b959749fe50db5e8bba0cec3b6f595f3130f3d7"
+      "sha256": "40470bd643eae1a776cba0a78d6aae82bb2290b2902feeeff83f0edf8f680a56"
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/entry_points.txt",
@@ -249,15 +249,15 @@
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/licenses/COPYING",
-      "sha256": "189b1af95d661151e054cea10c91b3d754e4de4d3fecfb074c1fb29476f7167b"
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/METADATA",
-      "sha256": "eb09eba9fa279bfbeac65da84ff92f7e4b770a0a210579d481ca1049565bc839"
+      "sha256": "cd882f5f900d6d0ef2951b0c9898d14b6ab881fda89b924dbebbe12441f94118"
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/RECORD",
-      "sha256": "58ed36bd7a8fab3373e798af9fe19bdb960d3f48987338276b864c36b2a47941"
+      "sha256": "c59bd241b5f7b3c80a6aea710be9882a8c7ff403d08a1b2a485599b512e34751"
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/top_level.txt",
@@ -265,7 +265,7 @@
     },
     {
       "path": "vendor-tag-metadata/mutagen-1.48.1.dist-info/WHEEL",
-      "sha256": "e4d420e73bd68281a553a64686a99f6eebd4fe13d5273658642ca513c5ed6e2c"
+      "sha256": "69e6228a0d35958183cc1812f07c565ce837b95eb51bd8a33acba9fa4f68d6c9"
     },
     {
       "path": "vendor-tag-metadata/mutagen/__init__.py",

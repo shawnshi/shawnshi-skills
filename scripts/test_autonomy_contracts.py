@@ -8,10 +8,12 @@ import unittest
 
 
 SKILLS = Path(__file__).resolve().parents[1]
-AGENT = SKILLS.parent
+AGENT = SKILLS.parent if (SKILLS.parent / "pai" / "coding.md").exists() else (Path.home() / ".pi" / "agent")
 
 
 def text(relative: str) -> str:
+    if relative.startswith("skills/"):
+        return (SKILLS / relative.removeprefix("skills/")).read_text(encoding="utf-8")
     return (AGENT / relative).read_text(encoding="utf-8")
 
 

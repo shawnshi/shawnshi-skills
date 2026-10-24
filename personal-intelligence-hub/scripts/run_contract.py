@@ -58,6 +58,7 @@ SUPPLEMENT_FAILURE_KIND_ALIASES = {
     "infrastructure": "infrastructure",
     "source_access": "source_access",
     "source_access_blocked": "source_access",
+    "content_verification": "content_verification",
     "bound_source_access_blocked": "source_access",
     "published_at_conflict": "published_at_conflict",
     "publication_date_conflict": "published_at_conflict",
@@ -66,6 +67,7 @@ SUPPLEMENT_FAILURE_KIND_ALIASES = {
 SUPPLEMENT_FAILURE_KIND_STATUS = {
     "infrastructure": "failed",
     "source_access": "degraded",
+    "content_verification": "degraded",
     "published_at_conflict": "degraded",
 }
 # Owner-authorized 2026-09-16: the run-level Token/cost ceilings are removed.

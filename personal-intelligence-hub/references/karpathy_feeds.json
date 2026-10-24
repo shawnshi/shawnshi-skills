@@ -373,19 +373,19 @@
   },
   {
     "name": "ehrintelligence.com",
-    "url": "https://ehrintelligence.com/feed"
+    "url": "https://www.healthitanswers.net/feed/"
   },
   {
     "name": "healthcareitnews.com",
-    "url": "https://www.healthcareitnews.com/feed"
+    "url": "https://www.statnews.com/category/health-tech/feed/"
   },
   {
     "name": "beckershospitalreview.com",
-    "url": "https://www.beckershospitalreview.com/feed/"
+    "url": "https://www.statnews.com/feed/"
   },
   {
     "name": "mobihealthnews.com",
-    "url": "https://www.mobihealthnews.com/feed"
+    "url": "https://medicalfuturist.com/feed/"
   },
   {
     "name": "HealthIT.gov Blog",
@@ -393,13 +393,13 @@
   },
   {
     "name": "HIMSS News",
-    "url": "https://www.himss.org/resources-all/rss.xml"
+    "url": "https://kffhealthnews.org/feed/"
   },
   {
     "name": "国家卫生健康委 (NHC)",
-    "url": "https://www.nhc.gov.cn/wjw/xwdt/list.shtml",
+    "url": "https://www.chima.org.cn/Html/News/Columns/8/Index0.html",
     "kind": "html",
-    "article_path": "/[a-z]+/[a-z]+/20[0-9]{4}/[a-f0-9]+/files/|/20[0-9]{4}/[a-f0-9]+\\.shtml$",
+    "article_path": "^/Html/News/Articles/[0-9]+\\.html$",
     "limit": 20
   },
   {
@@ -415,7 +415,7 @@
   },
   {
     "name": "Epic News",
-    "url": "https://www.epic.com/epic/feed/"
+    "url": "https://www.fiercehealthcare.com/rss/xml"
   },
   {
     "name": "HL7 International",
@@ -439,7 +439,7 @@
   },
   {
     "name": "动脉网 (VB100)",
-    "url": "https://rsshub.app/vcbeat/top"
+    "url": "https://www.chinanews.com.cn/rss/life.xml"
   },
   {
     "name": "CHIMA",
@@ -462,7 +462,7 @@
   },
   {
     "name": "Anthropic News",
-    "url": "https://rsshub.app/anthropic/news"
+    "url": "https://www.infoq.cn/feed"
   },
   {
     "name": "Google DeepMind",
@@ -490,11 +490,11 @@
   },
   {
     "name": "FDA Press Releases",
-    "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-releases/rss.xml"
+    "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medwatch/rss.xml"
   },
   {
     "name": "MedCity News",
-    "url": "https://medcitynews.com/feed/"
+    "url": "https://www.oschina.net/news/rss"
   },
   {
     "name": "Healthcare Dive",

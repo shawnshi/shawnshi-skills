@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "hit-lectures-scout",
-  "generated_at": "2026-10-19T09:59:43+08:00",
+  "generated_at": "2026-10-24T10:50:43+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "f09910e8892bd19cf3ef1ea2a802b02ecbe3961073a3e2fa5d2f7f488133c51a",
+  "skill_md_sha256": "37e127fb900f1af3f77db95f0ac70cba08ddd7a3fdc1f9ded34fde8583aa9578",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "f09910e8892bd19cf3ef1ea2a802b02ecbe3961073a3e2fa5d2f7f488133c51a"
+      "sha256": "37e127fb900f1af3f77db95f0ac70cba08ddd7a3fdc1f9ded34fde8583aa9578"
     }
   ],
   "top_level_directories": [
@@ -110,10 +110,22 @@
       "sha256": "6e68918648dba9b043823f0a67b0032c8d3a70d35081e70f01c587d0c122d4d7"
     },
     {
-      "path": "assets/task_preprints.md",
+      "path": "assets/task_preprints_fallback.md",
       "exists": true,
-      "resolved_path": "hit-lectures-scout/assets/task_preprints.md",
-      "sha256": "64027d8fbf72ff7ae7c15844dca72d1e0a54c1e3479374aa3e0550e6c54df3c3"
+      "resolved_path": "hit-lectures-scout/assets/task_preprints_fallback.md",
+      "sha256": "d5c202bf7c6249604a19c1eb7bc90a33ba9020b790c94858619d7a8f21395533"
+    },
+    {
+      "path": "hit-lectures-scout/assets/deepxiv_preprints_scout.py",
+      "exists": true,
+      "resolved_path": "hit-lectures-scout/assets/deepxiv_preprints_scout.py",
+      "sha256": "b8e99a87d04971f99147a7ed0e30f58cac8e41282766f6ed045c18d1cb2cfe5b"
+    },
+    {
+      "path": "hit-lectures-scout/scripts/validate_lectures_scout.py",
+      "exists": true,
+      "resolved_path": "hit-lectures-scout/scripts/validate_lectures_scout.py",
+      "sha256": "9df358443806c4c6e5588acd531f12b4f0d9b02cfd6f4e32ef287dc6581f3de1"
     },
     {
       "path": "references/formal-report.md",
@@ -128,10 +140,10 @@
       "sha256": "75cf5d0196e1db1c77766dca40d91ed1b498e787ffde986965c4e6e79405e95b"
     },
     {
-      "path": "shared/references/report_archive.md",
+      "path": "shared/scripts/report_archive.py",
       "exists": true,
-      "resolved_path": "shared/references/report_archive.md",
-      "sha256": "fd99761eab41ec23a56877635b269544558baad61dfe07a2d9df8e273d6be0a4"
+      "resolved_path": "shared/scripts/report_archive.py",
+      "sha256": "396e6cee27f6bc09e99ae21dab1b308ac750235fb8ef98a1adab3249b271df71"
     }
   ],
   "missing_declared_dependencies": []

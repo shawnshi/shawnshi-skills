@@ -1040,6 +1040,51 @@ def _mix(manifest: dict[str, Any], items: list[dict[str, Any]]) -> dict[str, Any
     return mix
 
 
+def _auto_resolve_claim_grounding(
+    review: dict[str, Any], candidate: dict[str, Any], manifest: dict[str, Any]
+) -> None:
+    """Resolve evidence_ref='auto' from registered readable text so LLM need not hand-compute offsets."""
+    ledger = review.get("claim_grounding")
+    if not isinstance(ledger, dict) or not isinstance(ledger.get("claims"), list):
+        return
+    if candidate.get("access_check", {}).get("method") != "native_readable":
+        return
+    for claim in ledger["claims"]:
+        if not isinstance(claim, dict):
+            continue
+        quote = claim.get("evidence")
+        ref = claim.get("evidence_ref")
+        if isinstance(quote, str) and quote.strip() and (ref is None or ref == "auto"):
+            span = _registered_evidence_excerpt(candidate, manifest, quote=quote)
+            claim["evidence_ref"] = {
+                "readable_text_sha256": span["readable_text_sha256"],
+                "start": span["start"],
+                "end": span["end"],
+            }
+    fact_str = str(review.get("fact") or "")
+    bound_nums = {
+        n
+        for c in ledger["claims"]
+        if isinstance(c, dict) and c.get("kind") == "number"
+        for n in CLAIM_GROUNDING_DIGITS.findall(str(c.get("value") or ""))
+    }
+    missing_nums = set(CLAIM_GROUNDING_DIGITS.findall(fact_str)) - bound_nums
+    if missing_nums:
+        for num in sorted(missing_nums):
+            for c in list(ledger["claims"]):
+                q = str(c.get("evidence") or "")
+                if num in set(CLAIM_GROUNDING_DIGITS.findall(q)) and isinstance(c.get("evidence_ref"), dict):
+                    ledger["claims"].append({
+                        "kind": "number",
+                        "statement": fact_str,
+                        "status": "grounded",
+                        "value": num,
+                        "evidence": q,
+                        "evidence_ref": deepcopy(c["evidence_ref"]),
+                    })
+                    break
+
+
 def _validate_claim_grounding(review: dict[str, Any], fact: str, index: int) -> None:
     """Validate the optional AUD-F05 ledger that briefing_gate.py binds at publication.
 
@@ -1160,6 +1205,7 @@ def assemble_and_finalize(
         major_reason = _nonempty(review.get("major_signal_reason"), f"selected_items[{index}].major_signal_reason")
         decision_reason = _nonempty(review.get("decision_impact_reason"), f"selected_items[{index}].decision_impact_reason")
         fact = _nonempty(review.get("fact"), f"selected_items[{index}].fact")
+        _auto_resolve_claim_grounding(review, candidate, manifest)
         _validate_claim_grounding(review, fact, index)
         validate_item_grounding(review, candidate, manifest)
         item = {

@@ -48,6 +48,12 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _source_failure_status(error: Exception) -> str:
+    # TimeoutError and some connector exceptions have an empty message.
+    # Preserve their type instead of persisting an unexplained blank failure.
+    return str(error).strip() or type(error).__name__
+
+
 def _consume_task_result(task: asyncio.Task) -> None:
     with contextlib.suppress(BaseException):
         task.exception()
@@ -831,7 +837,12 @@ async def _scan_all_impl(
         limit_per_host=max(1, min(4, max_concurrency)),
         ttl_dns_cache=300,
     )
-    async with aiohttp.ClientSession(connector=connector) as session:
+    async with aiohttp.ClientSession(
+        connector=connector,
+        max_line_size=65536,
+        max_field_size=65536,
+        trust_env=True,
+    ) as session:
         tasks_meta = [
             ("Hacker News", fetch_hackernews(session, cache, semaphore=semaphore)),
             ("GitHub", fetch_github_trending(session, cache, semaphore=semaphore)),
@@ -894,7 +905,7 @@ async def _scan_all_impl(
     source_meta = {}
     for (name, _), result in zip(tasks_meta, results, strict=True):
         if isinstance(result, Exception):
-            source_meta[name] = str(result)
+            source_meta[name] = _source_failure_status(result)
             continue
         if isinstance(result, dict) and result.get("status") == "TIMEOUT":
             source_meta[name] = result

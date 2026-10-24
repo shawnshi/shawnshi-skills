@@ -92,7 +92,7 @@ class MeasurementTests(unittest.TestCase):
         command = [sys.executable, '-B', '-c', "import pia_evidence; print(pia_evidence.scope_request_key('macro','https://example.test/x'))"]
         values = []
         for seed in ('1', '2'):
-            r = subprocess.run(command, env={**os.environ, 'PYTHONHASHSEED': seed}, capture_output=True, text=True, timeout=10)
+            r = subprocess.run(command, cwd=str(Path(__file__).resolve().parent), env={**os.environ, 'PYTHONHASHSEED': seed}, capture_output=True, text=True, timeout=10)
             self.assertEqual(r.returncode, 0, r.stderr); values.append(r.stdout)
         self.assertEqual(values[0], values[1])
         self.assertRegex(values[0], r'^scope_macro_[a-f0-9]{64}')

@@ -100,7 +100,14 @@ def record_fetch(
     return run_cmd(record_cmd)
 
 
-def reserve_query(scripts_dir: Path, request_path: Path, gap_id: str, query: str, num_results: int = 5) -> dict:
+def reserve_query(
+    scripts_dir: Path,
+    request_path: Path,
+    gap_id: str,
+    query: str,
+    num_results: int = 5,
+    provider: str | None = None,
+) -> dict:
     cmd = [
         sys.executable, "-B", "-X", "utf8",
         str(scripts_dir / "supplement_agent.py"),
@@ -111,6 +118,8 @@ def reserve_query(scripts_dir: Path, request_path: Path, gap_id: str, query: str
         "--query", query,
         "--num-results", str(num_results),
     ]
+    if provider:
+        cmd.extend(["--provider", provider])
     res = run_cmd(cmd)
     res_id = res["query_reservations"][-1]["id"]
     return {"reservation_id": res_id, "data": res}
@@ -125,6 +134,8 @@ def record_query(
     response_id: str,
     results_list: list[dict],
     out_receipt_file: Path,
+    provider: str | None = None,
+    query_response_file: Path | None = None,
 ) -> dict:
     run_dir = request_path.resolve().parent
     manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
@@ -139,6 +150,18 @@ def record_query(
 
     outcome = "matched" if cleaned_results else "empty"
 
+    if query_response_file is not None and query_response_file.exists():
+        sys.path.insert(0, str(scripts_dir))
+        from query_proof import build_query_proof
+        raw_resp = query_response_file.read_bytes().decode("utf-8", errors="strict")
+        proof_subset = build_query_proof(raw_resp)
+    else:
+        proof_subset = {
+            "query": query,
+            "count": len(cleaned_results),
+            "responseId": response_id,
+        }
+
     receipt = {
         "request_sha256": ledger["request_sha256"],
         "gap_id": gap_id,
@@ -149,13 +172,11 @@ def record_query(
         "outcome": outcome,
         "error": None,
         "results": cleaned_results,
-        "proof_subset": {
-            "query": query,
-            "count": len(cleaned_results),
-            "responseId": response_id,
-        },
+        "proof_subset": proof_subset,
         "parent_attestation": "actual_public_tool_receipt",
     }
+    if provider:
+        receipt["provider"] = provider
 
     out_receipt_file.write_text(json.dumps(receipt, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -195,6 +216,7 @@ def main() -> int:
     rq.add_argument("--gap-id", required=True)
     rq.add_argument("--query", required=True)
     rq.add_argument("--num-results", type=int, default=5)
+    rq.add_argument("--provider", default=None)
 
     rcq = subparsers.add_parser("record-query")
     rcq.add_argument("--request", type=Path, required=True)
@@ -204,6 +226,8 @@ def main() -> int:
     rcq.add_argument("--response-id", required=True)
     rcq.add_argument("--results-json", type=Path, required=True)
     rcq.add_argument("--out-receipt", type=Path, required=True)
+    rcq.add_argument("--provider", default=None)
+    rcq.add_argument("--query-response", type=Path, default=None)
 
     args = parser.parse_args()
     scripts_dir = Path(__file__).resolve().parent
@@ -227,7 +251,9 @@ def main() -> int:
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0
     if args.command == "reserve-query":
-        res = reserve_query(scripts_dir, args.request, args.gap_id, args.query, args.num_results)
+        res = reserve_query(
+            scripts_dir, args.request, args.gap_id, args.query, args.num_results, args.provider
+        )
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0
     if args.command == "record-query":
@@ -241,6 +267,8 @@ def main() -> int:
             args.response_id,
             results,
             args.out_receipt,
+            args.provider,
+            args.query_response,
         )
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0

@@ -745,6 +745,11 @@ def _build_parser() -> JsonArgumentParser:
         help=("Allow the refresh stage to overwrite an existing derived FX snapshot when "
               "re-running the pinned workflow in the same task directory."),
     )
+    daily_run.add_argument(
+        "--render-report",
+        action="store_true",
+        help="Automatically render out/report.md upon completing the daily run.",
+    )
     daily_run.add_argument("--now-epoch", type=float)
 
     build = subparsers.add_parser(
@@ -1113,6 +1118,8 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         _append_option(child, "--ledger", args.ledger)
         if args.force:
             child.append("--force")
+        if args.render_report:
+            child.append("--render-report")
         envelope, code = _run_child(
             public_command=args.command,
             script_name="pia_daily.py",

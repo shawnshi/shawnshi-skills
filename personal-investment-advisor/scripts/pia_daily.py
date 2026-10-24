@@ -671,6 +671,11 @@ def main(argv: list[str] | None = None) -> int:
         help=("Allow the refresh stage to overwrite an existing derived FX snapshot "
               "when re-running in the same task directory."),
     )
+    parser.add_argument(
+        "--render-report",
+        action="store_true",
+        help="Automatically render out/report.md after finalizing the daily run summary.",
+    )
     args = parser.parse_args(argv)
 
     global DECISION_SCOPE
@@ -1482,6 +1487,20 @@ def main(argv: list[str] | None = None) -> int:
                 skip_watchlist=bool(args.skip_watchlist),
                 analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
             write_run_summary(task_dir, summary)
+    if args.render_report and not args.plan_only:
+        import pia_report  # noqa: E402
+        report_target = task_dir / "out" / "report.md"
+        rep_code, rep_payload = run_module(
+            pia_report.main,
+            ["--run-dir", str(task_dir), "--out", str(report_target)],
+        )
+        summary["rendered_report"] = {
+            "report_file": str(report_target),
+            "status": rep_payload.get("status"),
+            "detail_status": rep_payload.get("detail_status"),
+            "exit_code": rep_code,
+        }
+        write_run_summary(task_dir, summary)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return exit_code_for(summary["status"])
 

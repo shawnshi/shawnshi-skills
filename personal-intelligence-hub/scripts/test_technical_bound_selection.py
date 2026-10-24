@@ -155,7 +155,7 @@ def test_registered_two_bound_context_and_frozen_finalization(tmp_path):
     packet = request["execution_packets"][0]
     lane = json.loads(Path(packet["lane_slice"]["path"]).read_text(encoding="utf-8"))
     required = lane["required_bound_candidate_ids"]
-    assert len(required) == 2
+    assert len(required) == 3
     with patch.object(
         rc,
         "select_supplement_bound_candidates",

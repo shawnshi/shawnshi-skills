@@ -159,7 +159,13 @@ class ResearchLoopTests(unittest.TestCase):
     def test_cli_help_and_router_proposal_decision_receipt(self):
         script=Path(__file__).with_name('pia.py')
         env=dict(os.environ)
-        guard=Path(__file__).parent.parent/'audits/staged-20261010/offline_guard'
+        guard=self.root/'offline_guard'
+        guard.mkdir(exist_ok=True)
+        (guard/'sitecustomize.py').write_text(
+            "import socket\ndef deny_network(*a, **k): raise PermissionError('outbound network prohibited')\n"
+            "socket.socket.connect = deny_network\nsocket.socket.connect_ex = deny_network\nsocket.create_connection = deny_network\n",
+            encoding='utf-8'
+        )
         env['PYTHONPATH']=str(guard)
         help_result=subprocess.run([sys.executable,'-B',str(script),'research-loop','--help'],capture_output=True,text=True,timeout=15,env=env)
         self.assertEqual(help_result.returncode,0,help_result.stderr)

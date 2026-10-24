@@ -157,7 +157,7 @@ def _technical_lead_evidence(
     if (
         (parsed.hostname or "").endswith(".wikipedia.org")
         or re.search(
-            r"/(?:wiki|encyclopedia|search|login|signin|sign-in|challenge)(?:/|$)", path
+            r"/(?:wiki|encyclopedia|search|login|signin|sign-in|challenge|shitposts?)(?:/|$)", path
         )
         or re.search(r"(?:^|&)(?:q|query|search)=", parsed.query)
     ):
@@ -235,10 +235,18 @@ def _lane_slice_candidates(
                             item,
                         )
                     )
-        return [
-            _candidate_lane_summary(item)
-            for _, _, item in sorted(ranked, key=lambda row: row[:2])
+        ordered = [item for _, _, item in sorted(ranked, key=lambda row: row[:2])]
+        non_arxiv = [
+            item
+            for item in ordered
+            if "arxiv.org" not in (urlparse(str(item.get("url") or "")).hostname or "")
         ]
+        arxiv = [
+            item
+            for item in ordered
+            if "arxiv.org" in (urlparse(str(item.get("url") or "")).hostname or "")
+        ]
+        return [_candidate_lane_summary(item) for item in (non_arxiv + arxiv)]
     domain_by_lane = {
         "TechRadar": "technology",
         "HealthcareRadar": "healthcare_digital",
@@ -301,7 +309,7 @@ def select_supplement_bound_candidates(
         gap["lane"] == "TechRadar"
         or (gap["lane"] == "HealthcareRadar" and "bound_reading_budget" in gap)
     ):
-        bound_cap = 2 if gap["lane"] == "TechRadar" else max(2, int(gap.get("bound_reading_budget", 2)))
+        bound_cap = max(2, int(gap.get("bound_reading_budget", 2)))
         limit = min(limit, bound_cap)
         unique = {}
         for candidate in candidates:

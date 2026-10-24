@@ -24,7 +24,7 @@ class FeedbackTests(unittest.TestCase):
         self.network = mock.patch.object(socket.socket, 'connect', side_effect=AssertionError('network forbidden'))
         self.network.start()
         self.addCleanup(self.network.stop)
-        self.tmp = tempfile.TemporaryDirectory(dir=os.environ['PIA_TEST_TMP'])
+        self.tmp = tempfile.TemporaryDirectory(dir=os.environ.get('PIA_TEST_TMP'))
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         self.today = date.today().isoformat()

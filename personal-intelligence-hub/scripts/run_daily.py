@@ -233,6 +233,10 @@ def assess_supplement_gaps(
             domain = "technology" if gap["lane"] == "TechRadar" else "healthcare_digital"
             count = sum(domain == item.get("provisional_domain") for item in items)
             cap = int(budget.get("max_urls_per_gap_cap", 8))
+            # Sparse discovery is not proof of sparse supply when critical sources failed.
+            # Use the existing URL ceiling for original-source repair, never extra queries.
+            if gap["lane"] == "HealthcareRadar" and critical_health_gap:
+                count = max(count, cap)
             gap["max_urls"] = min(cap, max(max_urls, count))
             gap["bound_reading_budget"] = max(2, gap["max_urls"] - max_queries)
         if article_broker_version in {2, 3}:
