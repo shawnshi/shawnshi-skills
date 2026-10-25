@@ -383,7 +383,7 @@ def build_expert_advisory(
         ).fetchall()
         stress_by_day = {r["d"]: dict(r) for r in stress_segment_rows}
 
-        # 5. Weight & Blood Pressure trajectory
+        # 5. Weight & Blood Pressure & Fitness Age & Endurance Score trajectory
         weight_rows = g_conn.execute(
             """
             SELECT date(day) AS d, ROUND(weight, 2) AS weight
@@ -393,6 +393,24 @@ def build_expert_advisory(
             """,
             (start_90d.isoformat(), anchor_end.isoformat()),
         ).fetchall()
+
+        fa_table_exists = bool(
+            g_conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='fitness_age'").fetchone()
+        )
+        latest_fitness_age = None
+        if fa_table_exists:
+            fa_r = g_conn.execute("SELECT * FROM fitness_age ORDER BY day DESC LIMIT 1").fetchone()
+            if fa_r:
+                latest_fitness_age = dict(fa_r)
+
+        es_table_exists = bool(
+            g_conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='endurance_score'").fetchone()
+        )
+        latest_endurance_score = None
+        if es_table_exists:
+            es_r = g_conn.execute("SELECT * FROM endurance_score ORDER BY day DESC LIMIT 1").fetchone()
+            if es_r:
+                latest_endurance_score = {k: es_r[k] for k in es_r.keys() if k != "json_data"}
 
         bp_table_exists = bool(
             g_conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='blood_pressure'").fetchone()
@@ -793,6 +811,26 @@ def build_expert_advisory(
             }
         )
 
+    # Check 6: Fitness Age Potential & Aerobic Ageing Gap
+    if latest_fitness_age and latest_fitness_age.get("fitness_age") is not None:
+        f_age = latest_fitness_age["fitness_age"]
+        ach_age = latest_fitness_age.get("achievable_fitness_age")
+        chron_age = latest_fitness_age.get("chronological_age")
+        if ach_age is not None and f_age > ach_age + 2.0:
+            phenotypes.append(
+                {
+                    "id": "FITNESS_AGE_REDUCTION_POTENTIAL",
+                    "severity": "positive",
+                    "title": "生理与健身年龄优化空间显著（具备再年轻 4 岁的生理重构潜力）",
+                    "evidence": (
+                        f"实足生理年龄 {chron_age} 岁，当前 Garmin 健身年龄估测为 {f_age:.1f} 岁（优于实足年龄），"
+                        f"算法评估理论可达成健身年龄为 {ach_age:.1f} 岁（潜在缩减空间 -{f_age - ach_age:.1f} 岁）；"
+                        f"首要优化杠杆为 BMI（当前 {latest_fitness_age.get('bmi_value')}，达标可年轻 -1.5 岁），"
+                        f"次要杠杆为剧烈运动（当前周均 {latest_fitness_age.get('vigorous_minutes_avg')} 分钟，提升至 75 分钟可再年轻 -1.3 岁）。"
+                    ),
+                }
+            )
+
     # Build 4-Domain Verifiable Management Playbook
     cutoff_clock = "21:30"
     if mean_bedtime_str:
@@ -897,6 +935,8 @@ def build_expert_advisory(
             "weight_90d_records": [dict(w) for w in weight_rows[-5:]],
             "blood_pressure_90d_records_count": len(blood_pressure_records),
             "blood_pressure_latest_summary": latest.get("blood_pressure_daily_summary"),
+            "fitness_age_assessment": latest_fitness_age,
+            "endurance_score_assessment": latest_endurance_score,
         },
         "detected_phenotypes": phenotypes,
         "management_playbook": management_playbook,

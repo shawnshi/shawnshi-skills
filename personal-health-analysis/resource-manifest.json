@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-10-25T17:35:10+08:00",
+  "generated_at": "2026-10-25T17:41:28+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -76,7 +76,7 @@
     },
     {
       "path": "assets/dashboard_v2.html",
-      "sha256": "7e1b1220881b30e4c7459d94dac90acaeb8eeeedd4f4aed9796479ebb1a46626"
+      "sha256": "e84ef701905ad1c216c0e46c018da8b7d77ba614d3ac0419db34446afc040abd"
     },
     {
       "path": "references/advanced_tools.md",
@@ -164,7 +164,7 @@
     },
     {
       "path": "scripts/garmin_expert_advisor.py",
-      "sha256": "4d157daf9a0429c8c6518cee9169d16a0bd25d06afd52ff4025ebcbd7ddeb72b"
+      "sha256": "b664b022eae9f8313e4b9f931085925b1aafcf80ac6854d0a27996348e9f035b"
     },
     {
       "path": "scripts/garmin_fhir_adapter.py",
@@ -216,7 +216,7 @@
     },
     {
       "path": "scripts/sync_extended_metrics.py",
-      "sha256": "2e3a7cbf5b7cbb218e89a5b63498a56c2186d4914109804b9652ebc1dc534237"
+      "sha256": "8c7943374d30d4585630e9a49617d834967743be10ff65a27b22aeb7349bf1e4"
     },
     {
       "path": "scripts/sync_health_data.py",
@@ -280,7 +280,7 @@
     },
     {
       "path": "scripts/test_garmin_expert_advisor.py",
-      "sha256": "b5ed99ec39f633ead6c6cfef32a9607eb3aa5af0be319b76a6db8d0aefb2b93d"
+      "sha256": "94fb1351a1db72288d1eba2436bebec8497802617da36876d2a31031213396e2"
     },
     {
       "path": "scripts/test_garmin_fhir_adapter.py",
@@ -352,7 +352,7 @@
     },
     {
       "path": "scripts/test_sync_extended_metrics.py",
-      "sha256": "ad51beb608f0c812a7cccacca6188ca17a30aafa9ae3a4b730e367e4f3109b4f"
+      "sha256": "2a69b99bda1b40e60870a22796be0f8382b17408117601af0e368ead9fb3866c"
     },
     {
       "path": "scripts/test_sync_health_data.py",

@@ -19,7 +19,12 @@ import garmin_auth
 from garmin_capabilities import consume_capability, issue_capability, require_capability
 
 SYNC_EXTENDED_OPERATION = "garmin_extended_sync"
-EXTENDED_METRICS = ("blood_pressure", "training_readiness")
+EXTENDED_METRICS = (
+    "blood_pressure",
+    "training_readiness",
+    "fitness_age",
+    "endurance_score",
+)
 
 
 def _resolve_garmin_db_path() -> Path:
@@ -78,6 +83,35 @@ def _init_extended_tables(conn: sqlite3.Connection) -> None:
             valid_sleep INTEGER
         );
         CREATE INDEX IF NOT EXISTS idx_training_readiness_day ON training_readiness (day);
+
+        CREATE TABLE IF NOT EXISTS fitness_age (
+            day TEXT PRIMARY KEY,
+            chronological_age INTEGER,
+            fitness_age REAL,
+            achievable_fitness_age REAL,
+            previous_fitness_age REAL,
+            bmi_value REAL,
+            bmi_target REAL,
+            bmi_potential_age REAL,
+            vigorous_minutes_avg REAL,
+            vigorous_minutes_target REAL,
+            vigorous_days_avg REAL,
+            vigorous_days_target REAL,
+            rhr_value INTEGER,
+            last_updated TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_fitness_age_day ON fitness_age (day);
+
+        CREATE TABLE IF NOT EXISTS endurance_score (
+            day TEXT PRIMARY KEY,
+            overall_score INTEGER,
+            classification INTEGER,
+            feedback_phrase TEXT,
+            top_contributor_type_id INTEGER,
+            top_contributor_pct REAL,
+            json_data TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_endurance_score_day ON endurance_score (day);
         """
     )
     conn.commit()
@@ -217,6 +251,120 @@ def sync_training_readiness_range(
     return {"days_probed": (end_date - start_date).days + 1, "records_inserted": records_inserted}
 
 
+def sync_fitness_age_range(
+    client: Any,
+    target_date: date,
+    conn: sqlite3.Connection,
+    cache_dir: Path | None = None,
+) -> dict[str, Any]:
+    if cache_dir:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+    d_str = target_date.isoformat()
+    try:
+        raw = client.get_fitnessage_data(d_str)
+    except Exception:
+        return {"records_inserted": 0, "status": "no_data_or_error"}
+    if not isinstance(raw, dict) or raw.get("fitnessAge") is None:
+        return {"records_inserted": 0, "status": "no_data"}
+
+    if cache_dir:
+        dump_file = cache_dir / f"fitness_age_{d_str}.json"
+        dump_file.write_text(json.dumps(raw, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    comps = raw.get("components", {})
+    bmi = comps.get("bmi", {})
+    vig_m = comps.get("vigorousMinutesAvg", {})
+    vig_d = comps.get("vigorousDaysAvg", {})
+    rhr = comps.get("rhr", {})
+
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT OR REPLACE INTO fitness_age (
+            day, chronological_age, fitness_age, achievable_fitness_age, previous_fitness_age,
+            bmi_value, bmi_target, bmi_potential_age,
+            vigorous_minutes_avg, vigorous_minutes_target,
+            vigorous_days_avg, vigorous_days_target,
+            rhr_value, last_updated
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            d_str,
+            int(raw["chronologicalAge"]) if raw.get("chronologicalAge") is not None else None,
+            float(raw["fitnessAge"]) if raw.get("fitnessAge") is not None else None,
+            float(raw["achievableFitnessAge"]) if raw.get("achievableFitnessAge") is not None else None,
+            float(raw["previousFitnessAge"]) if raw.get("previousFitnessAge") is not None else None,
+            float(bmi["value"]) if bmi.get("value") is not None else None,
+            float(bmi["targetValue"]) if bmi.get("targetValue") is not None else None,
+            float(bmi["potentialAge"]) if bmi.get("potentialAge") is not None else None,
+            float(vig_m["value"]) if vig_m.get("value") is not None else None,
+            float(vig_m["targetValue"]) if vig_m.get("targetValue") is not None else None,
+            float(vig_d["value"]) if vig_d.get("value") is not None else None,
+            float(vig_d["targetValue"]) if vig_d.get("targetValue") is not None else None,
+            int(rhr["value"]) if rhr.get("value") is not None else None,
+            raw.get("lastUpdated"),
+        ),
+    )
+    conn.commit()
+    return {"records_inserted": 1, "fitness_age": raw.get("fitnessAge")}
+
+
+def sync_endurance_score_range(
+    client: Any,
+    start_str: str,
+    end_str: str,
+    conn: sqlite3.Connection,
+    cache_dir: Path | None = None,
+) -> dict[str, Any]:
+    if cache_dir:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        raw = client.get_endurance_score(start_str, end_str)
+    except Exception:
+        return {"records_inserted": 0, "status": "no_data_or_error"}
+    if not isinstance(raw, dict):
+        return {"records_inserted": 0, "status": "no_data"}
+
+    if cache_dir:
+        dump_file = cache_dir / f"endurance_{start_str}_{end_str}.json"
+        dump_file.write_text(json.dumps(raw, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    dto = raw.get("enduranceScoreDTO", {})
+    cal_date = dto.get("calendarDate") or end_str
+    score = dto.get("overallScore")
+    if score is None:
+        return {"records_inserted": 0, "status": "no_score"}
+
+    contributors = dto.get("contributors", [])
+    top_c_type = None
+    top_c_pct = None
+    if contributors:
+        sorted_c = sorted(contributors, key=lambda x: x.get("contribution", 0), reverse=True)
+        top_c_type = sorted_c[0].get("activityTypeId")
+        top_c_pct = sorted_c[0].get("contribution")
+
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT OR REPLACE INTO endurance_score (
+            day, overall_score, classification, feedback_phrase,
+            top_contributor_type_id, top_contributor_pct, json_data
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            cal_date,
+            int(score),
+            dto.get("classification"),
+            str(dto.get("feedbackPhrase")) if dto.get("feedbackPhrase") is not None else None,
+            int(top_c_type) if top_c_type is not None else None,
+            float(top_c_pct) if top_c_pct is not None else None,
+            json.dumps(dto, ensure_ascii=False),
+        ),
+    )
+    conn.commit()
+    return {"records_inserted": 1, "overall_score": score, "date": cal_date}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Sync extended metrics (Blood Pressure, Training Readiness) from Garmin Connect."
@@ -307,6 +455,20 @@ def main(argv: list[str] | None = None) -> int:
                 client, start_d, end_d, conn, cache_dir=tr_cache
             )
             results["training_readiness"] = tr_res
+
+        if "fitness_age" in args.metrics:
+            fa_cache = base_data_dir / "FitnessAge"
+            fa_res = sync_fitness_age_range(
+                client, end_d, conn, cache_dir=fa_cache
+            )
+            results["fitness_age"] = fa_res
+
+        if "endurance_score" in args.metrics:
+            es_cache = base_data_dir / "EnduranceScore"
+            es_res = sync_endurance_score_range(
+                client, start_d.isoformat(), end_d.isoformat(), conn, cache_dir=es_cache
+            )
+            results["endurance_score"] = es_res
 
     print(
         json.dumps(

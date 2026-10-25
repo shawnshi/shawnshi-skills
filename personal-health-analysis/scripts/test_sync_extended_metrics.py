@@ -89,6 +89,38 @@ class SyncExtendedMetricsTests(unittest.TestCase):
             )
             self.assertEqual(tr_res["records_inserted"], 1)
 
+            mock_client.get_fitnessage_data.return_value = {
+                "chronologicalAge": 42,
+                "fitnessAge": 40.3,
+                "achievableFitnessAge": 36.3,
+                "previousFitnessAge": 40.3,
+                "components": {
+                    "bmi": {"value": 26.6, "targetValue": 21.3, "potentialAge": 38.8},
+                    "vigorousMinutesAvg": {"value": 0.5, "targetValue": 75.0, "potentialAge": 39.0},
+                    "vigorousDaysAvg": {"value": 0.0, "targetValue": 3.0},
+                    "rhr": {"value": 55},
+                },
+                "lastUpdated": "2026-10-23T00:00:00.0",
+            }
+            fa_res = syncer.sync_fitness_age_range(
+                mock_client, syncer.date(2026, 10, 25), conn, cache_dir=Path(tmp)
+            )
+            self.assertEqual(fa_res["records_inserted"], 1)
+
+            mock_client.get_endurance_score.return_value = {
+                "enduranceScoreDTO": {
+                    "calendarDate": "2026-10-25",
+                    "overallScore": 4876,
+                    "classification": 1,
+                    "feedbackPhrase": "30",
+                    "contributors": [{"activityTypeId": 37, "contribution": 90.57}],
+                }
+            }
+            es_res = syncer.sync_endurance_score_range(
+                mock_client, "2026-10-01", "2026-10-25", conn, cache_dir=Path(tmp)
+            )
+            self.assertEqual(es_res["records_inserted"], 1)
+
             # Check DB rows
             bp_row = conn.execute("SELECT * FROM blood_pressure WHERE day='2026-10-25'").fetchone()
             self.assertIsNotNone(bp_row)
@@ -99,6 +131,15 @@ class SyncExtendedMetricsTests(unittest.TestCase):
             self.assertIsNotNone(tr_row)
             self.assertEqual(tr_row[3], 100)  # score
             self.assertEqual(tr_row[4], "PRIME")
+
+            fa_row = conn.execute("SELECT * FROM fitness_age WHERE day='2026-10-25'").fetchone()
+            self.assertIsNotNone(fa_row)
+            self.assertEqual(fa_row[1], 42)    # chronological_age
+            self.assertEqual(fa_row[2], 40.3)  # fitness_age
+
+            es_row = conn.execute("SELECT * FROM endurance_score WHERE day='2026-10-25'").fetchone()
+            self.assertIsNotNone(es_row)
+            self.assertEqual(es_row[1], 4876)  # overall_score
 
             conn.close()
 

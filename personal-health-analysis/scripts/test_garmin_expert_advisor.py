@@ -87,10 +87,50 @@ class GarminExpertAdvisorTests(unittest.TestCase):
                 CREATE TABLE weight (
                     day TEXT PRIMARY KEY,
                     weight REAL
+                );\n                CREATE TABLE fitness_age (
+                    day TEXT PRIMARY KEY,
+                    chronological_age INTEGER,
+                    fitness_age REAL,
+                    achievable_fitness_age REAL,
+                    previous_fitness_age REAL,
+                    bmi_value REAL,
+                    bmi_target REAL,
+                    bmi_potential_age REAL,
+                    vigorous_minutes_avg REAL,
+                    vigorous_minutes_target REAL,
+                    vigorous_days_avg REAL,
+                    vigorous_days_target REAL,
+                    rhr_value INTEGER,
+                    last_updated TEXT
+                );
+                CREATE TABLE endurance_score (
+                    day TEXT PRIMARY KEY,
+                    overall_score INTEGER,
+                    classification INTEGER,
+                    feedback_phrase TEXT,
+                    top_contributor_type_id INTEGER,
+                    top_contributor_pct REAL,
+                    json_data TEXT
+                );
+                CREATE TABLE blood_pressure (
+                    day TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    timestamp_gmt TEXT,
+                    systolic INTEGER,
+                    diastolic INTEGER,
+                    pulse INTEGER,
+                    category TEXT,
+                    category_name TEXT,
+                    source_type TEXT,
+                    version INTEGER,
+                    PRIMARY KEY (day, timestamp)
                 );
                 """
             )
             g.execute("INSERT INTO devices VALUES (1234567890, 'Garmin', 'Fenix')")
+            g.execute("INSERT INTO fitness_age VALUES ('2026-10-24', 42, 40.3, 36.3, 40.3, 26.6, 21.3, 38.8, 0.5, 75.0, 0.0, 3.0, 55, '2026-10-23')")
+            g.execute("INSERT INTO endurance_score VALUES ('2026-10-24', 4876, 1, '30', 37, 90.57, '{}')")
+            g.execute("INSERT INTO blood_pressure VALUES ('2026-10-24', '2026-10-24 10:00:00', '2026-10-24 02:00:00', 126, 89, 63, 'STAGE_1_HIGH', 'STAGE_1_HIGH', 'MANUAL', 1)")
             anchor = date(2026, 10, 24)
             for i in range(14):
                 d = anchor - timedelta(days=13 - i)
@@ -189,6 +229,10 @@ class GarminExpertAdvisorTests(unittest.TestCase):
         self.assertEqual(
             result["cardiorespiratory_and_activity_load"]["latest_vo2_max"], 46.5
         )
+        self.assertIsNotNone(result["cardiorespiratory_and_activity_load"]["fitness_age_assessment"])
+        self.assertEqual(result["cardiorespiratory_and_activity_load"]["fitness_age_assessment"]["fitness_age"], 40.3)
+        self.assertIsNotNone(result["cardiorespiratory_and_activity_load"]["endurance_score_assessment"])
+        self.assertEqual(result["cardiorespiratory_and_activity_load"]["endurance_score_assessment"]["overall_score"], 4876)
         self.assertTrue(len(result["detected_phenotypes"]) >= 1)
         self.assertIn("4_n_of_1_verification_targets", result["management_playbook"])
 

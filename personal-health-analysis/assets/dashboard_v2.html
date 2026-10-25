@@ -290,9 +290,11 @@
         </div>
         <span class="badge">多尺度基线 + 5min级微结构</span>
       </div>
-      <h3>1. 主导生理表型识别（非医疗诊断）</h3>
+      <h3>1. 长期代谢、健身年龄与心肺耐力画像（云端黄金资产）</h3>
+      <div id="expert-fitness-summary" class="interpret-grid"></div>
+      <h3>2. 主导生理表型识别（非医疗诊断）</h3>
       <div id="expert-phenotypes" class="interpret-grid"></div>
-      <h3>2. 三尺度个人基线与 Z-Score 矩阵（7日急性窗 / 28日滚动基线 / 90日季节基线）</h3>
+      <h3>3. 三尺度个人基线与 Z-Score 矩阵（7日急性窗 / 28日滚动基线 / 90日季节基线）</h3>
       <div class="table-wrap">
         <table class="coverage-table">
           <thead>
@@ -307,7 +309,7 @@
           <tbody id="expert-baseline-rows"></tbody>
         </table>
       </div>
-      <h3>3. 跨库深度机制链透视：日间/睡前交感卸载 → 夜间 5min HRV 恢复斜率 → 睡眠微结构</h3>
+      <h3>4. 跨库深度机制链透视：日间/睡前交感卸载 → 血压与准备度 → 夜间 5min HRV 恢复斜率 → 睡眠微结构</h3>
       <div class="table-wrap">
         <table class="coverage-table">
           <thead>
@@ -326,7 +328,7 @@
           <tbody id="expert-mechanism-rows"></tbody>
         </table>
       </div>
-      <h3>4. 四维 N-of-1 个体化健康管理处方与下次同步闭环验证靶标</h3>
+      <h3>5. 四维 N-of-1 个体化健康管理处方与下次同步闭环验证靶标</h3>
       <div id="expert-playbook" class="interpret-grid"></div>
     </section>
 
@@ -674,6 +676,30 @@
     panel.hidden=false;
     const win=adv.requested_window||{},circ=adv.circadian_and_sleep_hygiene||{},cardio=adv.cardiorespiratory_and_activity_load||{};
     text('expert-advisor-meta',`分析窗口：${win.start||'—'} 至 ${win.end||'—'}（${win.days||0} 天） · 28日入睡均值：${circ.bedtime_28d_mean_clock||'—'}（±${circ.bedtime_28d_sd_minutes??'—'}m，周末/工作日节律差 ${circ.social_jetlag_weekend_vs_workday_minutes??'—'}m） · 周累计 MVPA：${cardio['7d_mvpa_minutes']??'—'} 分钟（WHO 150m 达标：${cardio.who_150min_mvpa_target_met?'是':'否'}） · 最新 VO2max：${cardio.latest_vo2_max??'—'} mL/kg/min`);
+    const fitRoot=byId('expert-fitness-summary');
+    if(fitRoot){
+      const fa=cardio.fitness_age_assessment||{},es=cardio.endurance_score_assessment||{};
+      const cards=[];
+      if(fa.fitness_age!=null){
+        const card1=el('div','interpret-card');
+        card1.append(
+          el('h3',null,`Garmin 健身年龄：${fa.fitness_age.toFixed(1)} 岁（实足 ${fa.chronological_age||'—'} 岁）`),
+          el('p','meta',`可达成潜力目标：${fa.achievable_fitness_age!=null?fa.achievable_fitness_age.toFixed(1)+' 岁（可再减 '+(fa.fitness_age-fa.achievable_fitness_age).toFixed(1)+' 岁）':'—'}`),
+          el('p',null,`首要杠杆 (Priority 1)：BMI 当前 ${fa.bmi_value}（目标 ${fa.bmi_target}，达标可年轻至 ${fa.bmi_potential_age?fa.bmi_potential_age.toFixed(1)+'岁':'-1.5岁'}）；次要杠杆 (Priority 2)：剧烈运动当前周均 ${fa.vigorous_minutes_avg} 分钟（目标 ${fa.vigorous_minutes_target} 分钟，达标可再减 -1.3 岁）。静息心率 ${fa.rhr_value} bpm 保持优良。`)
+        );
+        cards.push(card1);
+      }
+      if(es.overall_score!=null){
+        const card2=el('div','interpret-card');
+        card2.append(
+          el('h3',null,`Garmin 耐力得分：${es.overall_score} 分`),
+          el('p','meta',`长周期有氧能力储备 · 主要贡献活动类型 ID ${es.top_contributor_type_id||'37'}（贡献占比 ${es.top_contributor_pct!=null?es.top_contributor_pct.toFixed(1)+'%':'—'}）`),
+          el('p',null,'耐力得分综合考量全部运动与日常活动所产生的长期有氧抗疲劳机能容量，处于平稳充沛区间。')
+        );
+        cards.push(card2);
+      }
+      if(cards.length)fitRoot.replaceChildren(...cards);
+    }
     const phenoRoot=byId('expert-phenotypes');
     if(phenoRoot){
       const phenos=Array.isArray(adv.detected_phenotypes)?adv.detected_phenotypes:[];
