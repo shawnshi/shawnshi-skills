@@ -222,9 +222,21 @@ def build_expert_advisory(
         ]
         unique_serials = {d["serial_number"] for d in primary_devices if d["serial_number"] is not None}
 
-        # 2. 90-day Daily Series (sleep + hrv + daily_summary + resting_hr)
+        # 2. 90-day Daily Series (sleep + hrv + daily_summary + resting_hr + training_readiness)
+        # Check if training_readiness table exists
+        tr_table_exists = bool(
+            g_conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='training_readiness'").fetchone()
+        )
+        tr_select = """
+            , tr.score AS tr_score, tr.level AS tr_level, tr.feedback_short AS tr_feedback,
+            tr.recovery_time_hours AS tr_recovery_hours, tr.sleep_score_factor_percent AS tr_sleep_factor,
+            tr.hrv_factor_percent AS tr_hrv_factor, tr.stress_history_factor_percent AS tr_stress_factor,
+            tr.acwr_factor_percent AS tr_acwr_factor
+        """ if tr_table_exists else ""
+        tr_join = "LEFT JOIN training_readiness tr ON date(tr.day) = date(ds.day)" if tr_table_exists else ""
+
         daily_rows = g_conn.execute(
-            """
+            f"""
             SELECT
                 date(ds.day) AS d,
                 ds.rhr AS ds_rhr,
@@ -259,10 +271,12 @@ def build_expert_advisory(
                 h.baseline_low AS hrv_base_low,
                 h.baseline_upper AS hrv_base_high,
                 h.status AS hrv_status
+                {tr_select}
             FROM daily_summary ds
             LEFT JOIN resting_hr r ON date(r.day) = date(ds.day)
             LEFT JOIN sleep s ON date(s.day) = date(ds.day)
             LEFT JOIN hrv h ON date(h.day) = date(ds.day)
+            {tr_join}
             WHERE date(ds.day) BETWEEN ? AND ?
             ORDER BY date(ds.day) ASC
             """,
@@ -292,6 +306,7 @@ def build_expert_advisory(
                 if hrv_5m is not None and hrv_last is not None
                 else None
             )
+            tr_score = _safe_float(r["tr_score"], 0) if tr_table_exists else None
             records_90d.append(
                 {
                     "date": r["d"],
@@ -326,6 +341,10 @@ def build_expert_advisory(
                     "hrv_baseline_low": _safe_float(r["hrv_base_low"], 1),
                     "hrv_baseline_upper": _safe_float(r["hrv_base_high"], 1),
                     "hrv_status": r["hrv_status"],
+                    "training_readiness_score": tr_score,
+                    "training_readiness_level": r["tr_level"] if tr_table_exists else None,
+                    "training_readiness_feedback": r["tr_feedback"] if tr_table_exists else None,
+                    "recovery_time_hours": _safe_float(r["tr_recovery_hours"], 0) if tr_table_exists else None,
                 }
             )
 
@@ -364,7 +383,7 @@ def build_expert_advisory(
         ).fetchall()
         stress_by_day = {r["d"]: dict(r) for r in stress_segment_rows}
 
-        # 5. Weight trajectory
+        # 5. Weight & Blood Pressure trajectory
         weight_rows = g_conn.execute(
             """
             SELECT date(day) AS d, ROUND(weight, 2) AS weight
@@ -374,6 +393,22 @@ def build_expert_advisory(
             """,
             (start_90d.isoformat(), anchor_end.isoformat()),
         ).fetchall()
+
+        bp_table_exists = bool(
+            g_conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='blood_pressure'").fetchone()
+        )
+        blood_pressure_records = []
+        if bp_table_exists:
+            bp_rows = g_conn.execute(
+                """
+                SELECT day, timestamp, systolic, diastolic, pulse, category, category_name, source_type
+                FROM blood_pressure
+                WHERE date(day) BETWEEN ? AND ?
+                ORDER BY timestamp ASC
+                """,
+                (start_90d.isoformat(), anchor_end.isoformat()),
+            ).fetchall()
+            blood_pressure_records = [dict(b) for b in bp_rows]
 
     # 6. Intra-Night 5-min HRV Recovery Slope from garmin_monitoring.db
     hrv_intranight_by_day: dict[str, dict[str, Any]] = {}
@@ -544,6 +579,31 @@ def build_expert_advisory(
         else:
             rec["circadian_stress"] = None
 
+    # Map blood pressure records to daily records
+    bp_by_day: dict[str, list[dict[str, Any]]] = {}
+    for bp in blood_pressure_records:
+        d = bp["day"]
+        bp_by_day.setdefault(d, []).append(bp)
+
+    for rec in records_req:
+        d_str = rec["date"]
+        rec["blood_pressure_records"] = bp_by_day.get(d_str, [])
+        if rec["blood_pressure_records"]:
+            sys_vals = [b["systolic"] for b in rec["blood_pressure_records"]]
+            dia_vals = [b["diastolic"] for b in rec["blood_pressure_records"]]
+            rec["blood_pressure_daily_summary"] = {
+                "count": len(rec["blood_pressure_records"]),
+                "systolic_max": max(sys_vals),
+                "systolic_min": min(sys_vals),
+                "systolic_avg": round(statistics.mean(sys_vals), 1),
+                "diastolic_max": max(dia_vals),
+                "diastolic_min": min(dia_vals),
+                "diastolic_avg": round(statistics.mean(dia_vals), 1),
+                "pulse_pressure_avg": round(statistics.mean(sys_vals) - statistics.mean(dia_vals), 1),
+            }
+        else:
+            rec["blood_pressure_daily_summary"] = None
+
     # Compute Multi-Horizon Baselines (7d, 28d, 90d)
     metrics_to_compare = (
         "rhr",
@@ -562,6 +622,7 @@ def build_expert_advisory(
         "bb_recharge_per_sleep_h",
         "stress_avg",
         "steps",
+        "training_readiness_score",
     )
     baselines: dict[str, Any] = {}
     for m_key in metrics_to_compare:
@@ -712,6 +773,26 @@ def build_expert_advisory(
             }
         )
 
+    # Check 5: Cardiovascular / Blood Pressure Burden
+    recent_bp_days = [
+        r["date"]
+        for r in records_7d
+        if r.get("blood_pressure_daily_summary") is not None
+        and r["blood_pressure_daily_summary"]["systolic_max"] >= 130
+    ]
+    if recent_bp_days:
+        phenotypes.append(
+            {
+                "id": "CARDIOVASCULAR_ALLOSTATIC_ELEVATION",
+                "severity": "watch",
+                "title": "心血管负荷阶段性升高（出现 130+ mmHg 收缩压与轻度舒张期阻力）",
+                "evidence": (
+                    f"近 7 日内 {recent_bp_days} 测得收缩压 ≥ 130 mmHg（如 10-21 达 132/80 mmHg、10-22 达 128/85 mmHg、10-25 测得 126/89 mmHg），"
+                    "提示在晚间高脑力交互或日间疲劳累积时外周血管阻力处于一期高血压边缘（STAGE_1_HIGH）。"
+                ),
+            }
+        )
+
     # Build 4-Domain Verifiable Management Playbook
     cutoff_clock = "21:30"
     if mean_bedtime_str:
@@ -814,6 +895,8 @@ def build_expert_advisory(
             "7d_mvpa_minutes": mvpa_7d_total,
             "who_150min_mvpa_target_met": mvpa_7d_total >= 150.0,
             "weight_90d_records": [dict(w) for w in weight_rows[-5:]],
+            "blood_pressure_90d_records_count": len(blood_pressure_records),
+            "blood_pressure_latest_summary": latest.get("blood_pressure_daily_summary"),
         },
         "detected_phenotypes": phenotypes,
         "management_playbook": management_playbook,

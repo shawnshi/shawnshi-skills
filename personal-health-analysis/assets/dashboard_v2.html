@@ -314,6 +314,8 @@
             <tr>
               <th scope="col">日期</th>
               <th scope="col">下午 / 睡前2h压力</th>
+              <th scope="col">血压 (收缩/舒张)</th>
+              <th scope="col">准备度评分 (等级)</th>
               <th scope="col">前半夜 / 后半夜 HRV (斜率)</th>
               <th scope="col">HRV均值 / 5min峰值 (走廊)</th>
               <th scope="col">前半夜深睡占比 / 微觉醒</th>
@@ -686,7 +688,8 @@
       const mb=adv.multi_horizon_baselines||{};
       const specs=[
         ['rhr','静息心率','bpm'],['hrv_last_night','夜间 HRV 均值','ms'],['hrv_5min_high','夜间 HRV 5min 峰值','ms'],
-        ['hrv_ceiling_spread','副交感天花板储备 (峰值-均值)','ms'],['sleep_hours','睡眠总时长','h'],['deep_pct','深睡占比','%'],
+        ['hrv_ceiling_spread','副交感天花板储备 (峰值-均值)','ms'],['training_readiness_score','晨起训练准备度','分'],
+        ['sleep_hours','睡眠总时长','h'],['deep_pct','深睡占比','%'],
         ['rem_pct','REM 睡眠占比','%'],['sleep_score','Garmin 睡眠评分','分'],['bb_max','晨起最高身体电量','点'],
         ['bb_recharge_per_sleep_h','每小时睡眠电量回充率','点/h'],['stress_avg','全天平均压力','分'],['steps','每日步数','步']
       ];
@@ -708,12 +711,16 @@
     if(mechRoot){
       const recs=Array.isArray(adv.window_daily_records)?adv.window_daily_records.slice().reverse():[];
       mechRoot.replaceChildren(...recs.map(r=>{
-        const cs=r.circadian_stress||{},inHrv=r.intra_night_hrv||{},arch=r.sleep_micro_architecture||{};
+        const cs=r.circadian_stress||{},inHrv=r.intra_night_hrv||{},arch=r.sleep_micro_architecture||{},bp=r.blood_pressure_daily_summary;
         const slope=inHrv.intra_night_hrv_slope!=null?`${inHrv.intra_night_hrv_slope>=0?'+':''}${inHrv.intra_night_hrv_slope} ms`:'—';
+        const bpStr=bp?`${bp.systolic_max}/${bp.diastolic_max} mmHg`:'—';
+        const trStr=r.training_readiness_score!=null?`${r.training_readiness_score}分 (${r.training_readiness_level||'PRIME'})`:'—';
         const tr=el('tr');
         tr.append(
           el('td',null,r.date||'—'),
           el('td',null,`${cs.afternoon_12_18??'—'} / 睡前 ${cs.pre_sleep_21_23??'—'}`),
+          el('td',null,bpStr),
+          el('td',null,trStr),
           el('td',null,inHrv.first_half_hrv_avg!=null?`${inHrv.first_half_hrv_avg} → ${inHrv.second_half_hrv_avg} ms (${slope})`:'—'),
           el('td',null,r.hrv_last_night!=null?`${r.hrv_last_night} / 峰值 ${r.hrv_5min_high??'—'} ms (${r.hrv_baseline_low??'—'}–${r.hrv_baseline_upper??'—'})`:'—'),
           el('td',null,arch.deep_first_half_pct!=null?`前半夜深睡 ${arch.deep_first_half_pct}% / 醒 ${arch.awake_episode_count??0} 次`:'—'),
