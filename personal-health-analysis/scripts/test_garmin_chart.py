@@ -583,7 +583,7 @@ class GarminChartProblemInsightTests(unittest.TestCase):
                 assert match is not None
                 payload = json.loads(base64.b64decode(match.group(1)))
                 self.assertEqual(payload["user_context_review"] is not None, supplied)
-                self.assertIn("重点问题与证据", html)
+                self.assertIn("智能个人健康管理专家中心", html)
                 self.assertNotIn(str(context), html)
                 self.assertLessEqual(len(payload["problem_insights"]["optional_actions"]), 2)
 

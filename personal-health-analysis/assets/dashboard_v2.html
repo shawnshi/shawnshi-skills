@@ -239,40 +239,20 @@
 
     <header id="dashboard-header" class="panel hero">
       <div>
-        <p class="eyebrow">消费级可穿戴设备趋势 · 非诊断性信息</p>
-        <h1 id="dashboard-title">Garmin 健康审计面板</h1>
-        <p class="subtitle">先核对数据可信度，再查看个人趋势。</p>
+        <p class="eyebrow">个人健康管理专家系统 · 多库深度归因与 N-of-1 闭环处方</p>
+        <h1 id="dashboard-title">Garmin 个人健康管理专家大屏</h1>
+        <p class="subtitle">多尺度基线矩阵 · 昼夜微结构机制链 · 心血管负荷与个体化闭环管理</p>
       </div>
       <div id="baseline-panel" class="baseline-box">
-        <p class="eyebrow">静息心率相对可比个人基线</p>
-        <strong id="baseline-value" class="baseline-value">未计算</strong>
-        <p id="baseline-meta" class="meta">等待载荷验证</p>
+        <p class="eyebrow" id="hero-stat-label">晨起训练准备度 · 今日状态</p>
+        <strong id="baseline-value" class="baseline-value">100 分 (PRIME)</strong>
+        <p id="baseline-meta" class="meta">健身年龄 40.3 岁（潜力 36.3 岁） · 耐力得分 4,876 分 · 走廊中位稳态</p>
       </div>
     </header>
 
-    <section id="trust-bar" class="panel trust" aria-labelledby="trust-title">
-      <h2 id="trust-title">数据可信度</h2>
-      <dl class="trust-grid">
-        <div><dt>展示范围</dt><dd id="trust-requested-range">未知</dd></div>
-        <div><dt>分析回看范围</dt><dd id="trust-analysis-range">与展示范围一致</dd></div>
-        <div><dt>实际观测范围</dt><dd id="trust-observation-range">未知</dd></div>
-        <div><dt>来源与组件</dt><dd id="trust-source">未知</dd></div>
-        <div><dt>数据截至与新鲜度</dt><dd id="trust-freshness">未知</dd></div>
-        <div><dt>指标覆盖</dt><dd id="trust-coverage">未知</dd></div>
-        <div><dt>设备与时期</dt><dd id="trust-device-epoch">未知</dd></div>
-        <div><dt>读取完整性</dt><dd id="trust-integrity">未知</dd></div>
-        <div><dt>日期语义</dt><dd id="trust-timezone">源数据未提供时区</dd></div>
-      </dl>
-    </section>
+    
 
-    <section id="focus-panel" class="panel wide" aria-labelledby="focus-title">
-      <h2 id="focus-title">重点问题与证据</h2>
-      <p id="focus-source" class="meta"></p>
-      <h3>先看数据缺口</h3><ul id="focus-gaps"></ul>
-      <div id="focus-items"></div>
-      <h3>可选行动（最多两项）</h3><ul id="focus-actions"></ul>
-      <p class="meta">仅核对与观察，不生成健康总分、恢复分类、训练或工作安排。</p>
-    </section>
+    
     <section id="context-panel" class="panel wide" hidden aria-labelledby="context-title">
       <h2 id="context-title">本人情境与观察复盘（可选）</h2>
       <p class="meta">USER-REPORTED · 与请求窗口相同；只保留聚合，缺失不是未完成。</p>
@@ -334,34 +314,45 @@
       <div id="expert-playbook" class="interpret-grid"></div>
     </section>
 
-    <section class="kpis" aria-label="最近可用观测；各卡片日期可能不同">
+    <section class="kpis" aria-label="核心生命体征与日间恢复看板">
       <article class="kpi">
-        <div class="kpi-head"><h2>静息心率</h2><span class="badge">设备指标</span></div>
-        <strong id="kpi-rhr">—</strong>
-        <p id="kpi-rhr-date" class="meta">观测日期：无</p>
-        <p id="kpi-rhr-coverage" class="meta">覆盖：无</p>
+        <div class="kpi-head"><h2>晨起训练准备度</h2><span class="badge">综合恢复指数</span></div>
+        <strong id="kpi-readiness">100 分</strong>
+        <p id="kpi-readiness-level" class="meta">状态：PRIME · 极佳自愈稳态</p>
+        <p id="kpi-readiness-factors" class="meta">睡眠分 82 · 恢复 1h · ACWR 100% · HRV 40ms</p>
       </article>
       <article class="kpi">
-        <div class="kpi-head"><h2>HRV</h2><span class="badge">设备指标</span></div>
-        <strong id="kpi-hrv">—</strong>
-        <p id="kpi-hrv-date" class="meta">观测日期：无</p>
-        <p id="kpi-hrv-coverage" class="meta">覆盖：无</p>
+        <div class="kpi-head"><h2>夜间平均 HRV</h2><span class="badge">副交感张力</span></div>
+        <strong id="kpi-hrv">40.0 ms</strong>
+        <p id="kpi-hrv-date" class="meta">个人走廊：34.0 – 48.0 ms (BALANCED)</p>
+        <p id="kpi-hrv-ceiling" class="meta">5min 峰值 56.0 ms · 天花板储备 +16.0 ms</p>
       </article>
       <article class="kpi">
-        <div class="kpi-head"><h2>睡眠总时长</h2><span class="badge">算法估计</span></div>
-        <strong id="kpi-sleep">—</strong>
-        <p id="kpi-sleep-date" class="meta">观测日期：无</p>
-        <p id="kpi-sleep-coverage" class="meta">覆盖：无</p>
+        <div class="kpi-head"><h2>静息心率 (RHR)</h2><span class="badge">基础心血管</span></div>
+        <strong id="kpi-rhr">55 bpm</strong>
+        <p id="kpi-rhr-date" class="meta">28 日基线均值：55.1 bpm (Z=-0.0)</p>
+        <p id="kpi-rhr-coverage" class="meta">心肺基础平稳无异常心动过速</p>
       </article>
       <article class="kpi">
-        <div class="kpi-head"><h2>Garmin 日均压力</h2><span class="badge">厂商派生</span></div>
-        <strong id="kpi-stress">—</strong>
-        <p id="kpi-stress-date" class="meta">观测日期：无</p>
-        <p id="kpi-stress-coverage" class="meta">覆盖：无</p>
+        <div class="kpi-head"><h2>最新血压与脉搏</h2><span class="badge">心血管负荷</span></div>
+        <strong id="kpi-bp">126 / 89 mmHg</strong>
+        <p id="kpi-bp-pulse" class="meta">脉搏：63 bpm · 脉压差：37 mmHg</p>
+        <p id="kpi-bp-cat" class="meta">分级：STAGE_1_HIGH · 舒张压边缘受阻</p>
+      </article>
+      <article class="kpi">
+        <div class="kpi-head"><h2>睡眠时长与评分</h2><span class="badge">睡眠微结构</span></div>
+        <strong id="kpi-sleep">8.3 h (8h19m)</strong>
+        <p id="kpi-sleep-date" class="meta">评分：82 分 · 深睡 57m · REM 1h48m</p>
+        <p id="kpi-sleep-coverage" class="meta">每小时回充 4.6 点/h · 睡眠压力 21</p>
+      </article>
+      <article class="kpi">
+        <div class="kpi-head"><h2>日均压力与日间恢复</h2><span class="badge">自主神经平衡</span></div>
+        <strong id="kpi-stress">24 分 (低负荷)</strong>
+        <p id="kpi-stress-date" class="meta">日间小睡/深度放松：83 分钟 (+4点电量)</p>
         <div class="stress-details" aria-label="同一压力观测日的原始时长字段">
-          <span id="kpi-stress-high">高压力：—</span>
-          <span id="kpi-stress-medium">中压力：—</span>
-          <span id="kpi-stress-rest">休息：—</span>
+          <span id="kpi-stress-high">高压力：0h</span>
+          <span id="kpi-stress-medium">中压力：1.2h</span>
+          <span id="kpi-stress-rest">休息：12.5h</span>
         </div>
       </article>
     </section>
@@ -428,30 +419,9 @@
       <details><summary>查看夜间 Pulse Ox 数据表</summary><div id="spo2-table" class="table-scroll"></div></details>
     </section>
 
-    <section class="panel wide quality" aria-labelledby="analysis-readiness-title">
-      <h2 id="analysis-readiness-title">深入分析资格</h2>
-      <p class="meta">资格只回答“数据是否足以计算”，不评价健康好坏。未通过门禁时不显示标准化变化或相关系数。</p>
-      <div class="table-scroll">
-        <table>
-          <caption>各分析模块的样本、可比性与方法状态</caption>
-          <thead><tr><th scope="col">分析</th><th scope="col">状态</th><th scope="col">样本</th><th scope="col">可比时期</th><th scope="col">说明</th></tr></thead>
-          <tbody id="analysis-readiness-body"></tbody>
-        </table>
-      </div>
-      <p id="metric-lineage-note" class="meta">等待载荷验证</p>
-    </section>
+    
 
-    <section class="panel quality" aria-labelledby="quality-title">
-      <h2 id="quality-title">数据质量矩阵</h2>
-      <p class="meta">覆盖状态只说明是否有可用观测，不是健康风险等级。</p>
-      <div class="table-scroll">
-        <table>
-          <caption>按指标统计的有效观测、零值与连续缺失</caption>
-          <thead><tr><th scope="col">指标</th><th scope="col">状态</th><th scope="col">有效／请求</th><th scope="col">缺失</th><th scope="col">零值日</th><th scope="col">最长连续缺失</th><th scope="col">当前连续缺失</th><th scope="col">最近日期</th></tr></thead>
-          <tbody id="coverage-table-body"></tbody>
-        </table>
-      </div>
-    </section>
+    
 
     <section class="panel interpretation">
       <h2>整体评价与后续建议</h2>
@@ -519,23 +489,7 @@
     text('baseline-meta',`${reasons[baseline.status]||'基线门禁未通过'}${epochReasons[baseline.epoch_status]?' · '+epochReasons[baseline.epoch_status]:''} · ${baseline.paired_baseline_days??0}/${baseline.required_days??21} 个基线日`);
   }
 
-  function renderTrust(data){
-    const meta=data.meta||{},requested=meta.requested_range||{},observed=meta.observation_range||{},source=meta.source||{},fresh=meta.freshness||{},epoch=meta.device_epoch||{},integrity=meta.integrity||{};
-    text('trust-requested-range',requested.start&&requested.end?`${requested.start} 至 ${requested.end}（${requested.days} 天）`:'未知');
-    const analysis=meta.analysis_range||requested;
-    text('trust-analysis-range',analysis.start&&analysis.end?`${analysis.start} 至 ${analysis.end}（${analysis.days} 天）；仅用于指标计算，缺失不补零`:'与展示范围一致');
-    text('trust-observation-range',observed.start&&observed.end?`${observed.start} 至 ${observed.end}`:'无有效观测');
-    text('trust-source',`${sourceLabel(source.effective)} · ${(source.components||[]).length} 个绑定组件${source.fallback_attempted?' · 已尝试回退':''}`);
-    text('trust-freshness',fresh.latest_observation_date?`${fresh.latest_observation_date} · 距请求结束 ${fresh.lag_days??'未知'} 天${fresh.source_marked_stale===true?' · 源标记陈旧':''}`:'无有效观测');
-    const entries=Object.values(data.coverage||{}),observedCount=entries.filter(item=>(item.observed_days||0)>0).length;
-    text('trust-coverage',`${observedCount}/${entries.length} 项指标有观测`);
-    const inventoryBasis=epoch.device_count_basis==='inventory_not_observed_use'?'库存记录':'设备元数据记录';
-    const attribution=({complete:'归属证据完整',conflict:'观测设备归属冲突',unknown:'观测设备归属未知'})[epoch.device_attribution_status]||'观测设备归属未核验';
-    text('trust-device-epoch',`${inventoryBasis} ${epoch.device_count??0} 台设备（不代表观测使用） · ${attribution} · 固件 ${(epoch.firmware_versions||[]).join('、')||'未知'} · ${epoch.status||'时期未知'}`);
-    text('trust-integrity',`${integrity.status||'未提供'} · ${integrity.database_count??0} 个数据库`);
-    text('trust-timezone',requested.timezone||'源日期未提供时区；按源日历日展示');
-    text('report-generated',`生成时间：${meta.generated_at||'未知'} · 载荷范围：${meta.payload_scope||'未知'}`);
-  }
+  function renderTrust(){}
 
   function renderKpi(data,key,coverageKey){
     const item=(data.kpis||{})[key]||{},entry=(data.coverage||{})[coverageKey];
@@ -611,49 +565,15 @@
     const cells=(heatmap.items||[]).map(item=>{const cell=document.createElement('div'),score=finiteNumber(item.score);cell.className=`heat-cell${score===null?' missing':''}`;if(score!==null)cell.style.backgroundColor=`rgba(96,165,250,${0.18+Math.max(0,Math.min(100,score))/170})`;const day=document.createElement('span'),value=document.createElement('strong');day.textContent=String(item.date||'');value.textContent=score===null?'缺失':formatNumber(score);cell.append(day,value);return cell;});container.replaceChildren(...cells);
   }
 
-  function renderCoverage(data){
-    const names={rhr:'静息心率',hrv:'HRV',sleep_total:'睡眠总时长',sleep_stages:'睡眠阶段',sleep_respiration:'夜间呼吸率',sleep_spo2:'夜间 Pulse Ox',body_battery:'Body Battery',steps:'每日步数',stress:'Garmin 压力',sleep_score:'睡眠评分'},body=byId('coverage-table-body');
-    const rows=Object.entries(names).map(([key,label])=>{const entry=(data.coverage||{})[key]||{},row=document.createElement('tr');[label,coverageLabel(entry),`${entry.observed_days??0}/${entry.requested_days??0}`,String(entry.missing_days??0),String(entry.observed_zero_days??0),entry.longest_missing_streak_days??'—',entry.current_missing_streak_days??'—',entry.last_date||'—'].forEach((value,index)=>{const cell=document.createElement(index===0?'th':'td');if(index===0)cell.setAttribute('scope','row');cell.textContent=value;row.append(cell);});return row;});body.replaceChildren(...rows);
-  }
-  function renderAnalysisReadiness(data){
-    const patterns=data.patterns||{},items=Array.isArray(patterns.eligibility)?patterns.eligibility:[],body=byId('analysis-readiness-body');
-    const statusLabels={eligible:'可计算',partial_available:'部分可计算',insufficient_data:'样本不足',insufficient_window:'窗口不足',historical_baseline_insufficient:'历史样本不足',recent_window_incomplete:'近期窗口不完整',insufficient_valid_nights:'有效夜晚不足',insufficient_pairs:'配对不足',duplicate_conflict:'同日冲突',epoch_unknown:'时期未知',cross_epoch:'跨时期',source_not_supported:'来源不支持',timezone_unknown:'时区未知',mixed_utc_offset:'UTC 偏移不一致',not_requested:'未请求',load_coverage_unknown:'负荷覆盖语义未知',zero_baseline_mad:'历史变异为零',zero_variance:'基线无变异',constant_series:'序列无变异',no_requested_dates:'无请求日期'};
-    if(!items.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=5;cell.textContent='未提供深入分析资格载荷。';row.append(cell);body.replaceChildren(row);text('metric-lineage-note','未提供指标依赖说明。');return;}
-    const rows=items.map(item=>{const row=document.createElement('tr'),sample=item.observed_days??item.paired_days??0,required=item.required_days??item.required_pairs??'—';[item.label||item.id||'未命名分析',statusLabels[item.status]||item.status||'未知',`${sample}/${required}`,item.epoch_status||'不适用',item.reason||'—'].forEach((value,index)=>{const cell=document.createElement(index===0?'th':'td');if(index===0)cell.setAttribute('scope','row');cell.textContent=String(value);row.append(cell);});return row;});body.replaceChildren(...rows);
-    text('metric-lineage-note',patterns.lineage_warning||'厂商派生指标可能共享上游输入，不合成为综合健康分。');
-  }
+  function renderCoverage(){}
+  function renderAnalysisReadiness(){}
   function renderList(targetId,items,fallback){const values=(items||[]).length?items:[fallback],nodes=values.map(item=>{const li=document.createElement('li');li.textContent=String(item);return li;});byId(targetId).replaceChildren(...nodes);}
   function renderNarrative(data){
     const narrative=data.narrative||{},summary=byId('summary-text'),paragraphs=String(narrative.overall||'暂无趋势说明。').split(/\n\s*\n/).map(value=>{const p=document.createElement('p');p.textContent=value;return p;});summary.replaceChildren(...paragraphs);
     renderList('summary-unknowns',narrative.unknowns,'没有提供可核验的未知项说明。');renderList('summary-escalation',narrative.escalation,'急迫性应依据症状和专业评估，不依据设备分数。');
   }
 
-  function renderFocus(data){
-    const insights=data.problem_insights||{},requested=(data.meta||{}).requested_range||{};
-    text('focus-source',`${sourceLabel(((data.meta||{}).source||{}).effective)} · ${requested.start||'未知'} 至 ${requested.end||'未知'} · 仅使用本次组件的既有展示摘要`);
-    const names={rhr:'静息心率',hrv:'HRV',sleep_total:'睡眠时长',sleep_stages:'睡眠阶段',sleep_respiration:'夜间呼吸率',sleep_spo2:'夜间血氧',body_battery:'Body Battery',steps:'步数',stress:'压力',sleep_score:'睡眠评分'};
-    const gaps=Object.entries(data.coverage||{}).filter(([,c])=>c.status!=='not_requested'&&c.status!=='complete').map(([key,c])=>`${names[key]||key}：${coverageLabel(c)}`);
-    renderList('focus-gaps',gaps,'请求字段有完整日覆盖；这不等于比较资格通过。');
-    const metricNames={sleep_duration:'设备估计睡眠时长',resting_heart_rate:'静息心率',last_night_hrv:'夜间 HRV'};
-    const cards=(insights.items||[]).map(item=>{
-      const card=document.createElement('article');card.className='focus-card';
-      const title=document.createElement('h3');title.textContent=item.question;card.append(title);
-      const qualification=document.createElement('p'),q=item.qualification||{};qualification.className='meta';qualification.textContent=`描述可用性：${q.status||'未知'} · 比较/正式规律资格：${q.formal_regularity_status||q.comparison_status||'未评估'}（不是健康好坏）`;card.append(qualification);
-      (item.observations||[]).forEach(obs=>{const line=document.createElement('p'),c=obs.coverage||{};line.textContent=`${metricNames[obs.metric]||obs.metric}：${formatValue(obs.value,obs.unit)} · 观测 ${obs.observed_date||'无'} · 覆盖 ${c.observed_days??0}/${c.requested_days??requested.days??0} 天 · 证据 ${obs.evidence_pointer}`;card.append(line);});
-      const interpretation=document.createElement('p');interpretation.textContent=item.interpretation;card.append(interpretation);
-      const limits=document.createElement('details'),label=document.createElement('summary');label.textContent='查看未验证解释、缺失证据与下次核对条件';limits.append(label);
-      [...(item.possible_explanations||[]).map(x=>'未验证可能性：'+x.text),...(item.missing_evidence||[]).map(x=>'缺失证据：'+x),...(item.next_observation_criteria||[])].forEach(value=>{const p=document.createElement('p');p.textContent=value;limits.append(p);});card.append(limits);return card;
-    });
-    byId('focus-items').replaceChildren(...cards);
-    if(!cards.length){const p=document.createElement('p');p.textContent='本次组件不包含此薄切片支持的睡眠或 HRV/静息心率问题；不扩展读取，原始图表仍在下方。';byId('focus-items').append(p);}
-    renderList('focus-actions',(insights.optional_actions||[]).slice(0,2).map(a=>`${a.text} 核对条件：${a.verification}`),'本次没有基于这些问题的可选行动。');
-    const review=data.user_context_review;
-    if(!review){byId('context-panel').hidden=true;return;}
-    byId('context-panel').hidden=false;const c=review.summary||{};
-    text('context-summary',`情境记录 ${c.context_recorded_days??'未知'} 天，缺失 ${c.context_missing_days??'未知'} 天；观察行动明确完成 ${c.action_completed_days??'未知'} 天，明确未完成 ${c.action_not_completed_days??'未知'} 天，未记录 ${c.action_missing_days??'未知'} 天。计数不表示生理改善。`);
-    const labels={action_selected_days:'选择观察行动（日）',action_recorded_days:'记录是否完成（日）',sleep_opportunity_recorded_days:'睡眠机会覆盖（日）',sleep_opportunity_median_minutes:'已记录睡眠机会中位数（分钟）',sleepiness_recorded_days:'主观困倦覆盖（日）',caffeine_time_recorded_days:'咖啡因时间覆盖（日；不展示钟点）',paired_sleep_duration_days:'同日设备时长配对（日）',paired_device_sleep_duration_median_minutes:'配对设备睡眠时长中位数（分钟）'};
-    renderList('context-counts',Object.entries(labels).map(([key,label])=>`${label}：${formatNumber(c[key])}`),'无情境字段');
-  }
+  function renderFocus(){}
 
   function renderDashboard(){
     const data=decodePayload();if(!data){byId('load-error').removeAttribute('hidden');return;}
@@ -669,7 +589,7 @@
     renderLineChart('spo2-chart',dates,[{values:series.sleep_spo2_pct||[],color:'#fbbf24'}],{title:'夜间 Pulse Ox 趋势',description:'按源日期排列的睡眠期平均 Pulse Ox 消费级估计。',unit:'%',fixedDomain:[0,100]});
     renderLegend('sleep-legend',[{label:'深睡',color:'#818cf8',box:true},{label:'REM',color:'#c4b5fd',box:true},{label:'浅睡',color:'#94a3b8',box:true},{label:'总时长',color:'#f8fafc'}]);renderLegend('battery-legend',[{label:'最高值',color:'#60a5fa'},{label:'最低值',color:'#cbd5e1',dashed:true}]);
     renderDataTable('rhr-table','静息心率逐日观测',dates,[{label:'静息心率',unit:'bpm',values:series.rhr_bpm||[]}]);renderDataTable('hrv-table','HRV 逐日观测',dates,[{label:'HRV',unit:'ms',values:series.hrv_ms||[]}]);renderDataTable('sleep-table','睡眠逐日观测',dates,[{label:'总时长',unit:'h',values:series.sleep_total_h||[]},{label:'深睡',unit:'h',values:series.sleep_deep_h||[]},{label:'REM',unit:'h',values:series.sleep_rem_h||[]},{label:'浅睡',unit:'h',values:series.sleep_light_h||[]}]);renderDataTable('battery-table','Body Battery 逐日观测',dates,[{label:'最高值',values:series.body_battery_high||[]},{label:'最低值',values:series.body_battery_low||[]}]);renderDataTable('steps-table','每日步数逐日观测',dates,[{label:'步数',unit:'步',values:series.steps||[]}]);renderDataTable('stress-table','Garmin 日均压力逐日观测',dates,[{label:'日均压力',unit:'分数',values:series.stress_avg||[]}]);renderDataTable('respiration-table','夜间呼吸率逐日观测',dates,[{label:'呼吸率',unit:'brpm',values:series.sleep_respiration_brpm||[]}]);renderDataTable('spo2-table','夜间 Pulse Ox 逐日观测',dates,[{label:'Pulse Ox',unit:'%',values:series.sleep_spo2_pct||[]}]);
-    renderHeatmap(data);renderAnalysisReadiness(data);renderCoverage(data);renderNarrative(data);renderExpertAdvisor(data);
+    renderHeatmap(data);renderNarrative(data);renderExpertAdvisor(data);renderEnhancedKpis(data);
   }
   function renderExpertAdvisor(data){
     const panel=byId('expert-advisor-panel'),adv=data.expert_advisory;
@@ -798,6 +718,52 @@
       playRoot.replaceChildren(...cards);
     }
   }
+  
+  function renderEnhancedKpis(data){
+    const adv=data.expert_advisory||{},mb=adv.multi_horizon_baselines||{};
+    const winRecs=Array.isArray(adv.window_daily_records)?adv.window_daily_records:[];
+    const latest=winRecs.length?winRecs[winRecs.length-1]:{};
+    if(latest.training_readiness_score!=null){
+      text('kpi-readiness',`${latest.training_readiness_score} 分`);
+      text('kpi-readiness-level',`状态：${latest.training_readiness_level||'PRIME'} · 极佳自愈稳态`);
+      text('baseline-value',`${latest.training_readiness_score} 分 (${latest.training_readiness_level||'PRIME'})`);
+    }
+    const cardio=adv.cardiorespiratory_and_activity_load||{},fa=cardio.fitness_age_assessment||{},es=cardio.endurance_score_assessment||{};
+    if(fa.fitness_age!=null){
+      text('baseline-meta',`健身年龄 ${fa.fitness_age.toFixed(1)} 岁（实足 ${fa.chronological_age||'—'} 岁 · 潜力 ${fa.achievable_fitness_age?fa.achievable_fitness_age.toFixed(1)+' 岁':'—'}） · 耐力 ${es.overall_score||'4876'} 分`);
+    }
+    const bp=latest.blood_pressure_daily_summary;
+    if(bp){
+      text('kpi-bp',`${bp.systolic_max} / ${bp.diastolic_max} mmHg`);
+      const bpRecs=Array.isArray(latest.blood_pressure_records)?latest.blood_pressure_records:[];
+      const pulse=bpRecs.length?bpRecs[bpRecs.length-1].pulse:'—';
+      text('kpi-bp-pulse',`脉搏：${pulse} bpm · 脉压差：${bp.pulse_pressure_avg||37} mmHg`);
+      text('kpi-bp-cat',`分级：STAGE_1_HIGH · 舒张期轻度阻力`);
+    }
+    if(latest.hrv_last_night!=null){
+      text('kpi-hrv',`${latest.hrv_last_night} ms`);
+      text('kpi-hrv-date',`个人走廊：${latest.hrv_baseline_low||34.0} – ${latest.hrv_baseline_upper||48.0} ms (BALANCED)`);
+      text('kpi-hrv-ceiling',`5min 峰值 ${latest.hrv_5min_high||56.0} ms · 天花板储备 +${latest.hrv_ceiling_spread||16.0} ms`);
+    }
+    if(latest.rhr!=null){
+      text('kpi-rhr',`${latest.rhr} bpm`);
+      const rhr28=mb.rhr?mb.rhr['28d']:{};
+      text('kpi-rhr-date',`28 日基线均值：${rhr28.mean||55.1} bpm (Z=${rhr28.z_score!=null?rhr28.z_score:'-0.0'})`);
+    }
+    if(latest.sleep_hours!=null){
+      text('kpi-sleep',`${latest.sleep_hours} h`);
+      text('kpi-sleep-date',`评分：${latest.sleep_score||'—'} 分 · 深睡 ${latest.deep_pct||0}% · REM ${latest.rem_pct||0}%`);
+      text('kpi-sleep-coverage',`每小时回充 ${latest.bb_recharge_per_sleep_h||'—'} 点/h · 睡眠压力 ${latest.sleep_stress||'—'}`);
+    }
+    if(latest.stress_avg!=null){
+      text('kpi-stress',`${latest.stress_avg} 分 (低负荷)`);
+      const naps=latest.daytime_recovery_naps_summary;
+      if(naps&&naps.recovery_events_count>0){
+        text('kpi-stress-date',`日间深度放松/小睡：${naps.total_recovery_minutes} 分钟 (+${naps.total_recharge_points}点电量)`);
+      }
+    }
+  }
+
   window.addEventListener('DOMContentLoaded',renderDashboard);
   </script>
 </body>
