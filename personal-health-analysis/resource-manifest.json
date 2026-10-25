@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-10-25T18:00:49+08:00",
+  "generated_at": "2026-10-25T18:15:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -76,7 +76,7 @@
     },
     {
       "path": "assets/dashboard_v2.html",
-      "sha256": "f289b84f229ecd4e46e2ddb85985aa573a55f7226ca894696d3fc7261bb9522a"
+      "sha256": "423dcc136f2f963566570e1f058dbe1d9c118dc4daabbf58e2a1047d4b0d2c3e"
     },
     {
       "path": "references/advanced_tools.md",
@@ -152,7 +152,7 @@
     },
     {
       "path": "scripts/garmin_chart.py",
-      "sha256": "8d64d0c75f858c4674468bd478efa2a9351e8d4ab780d18ddd294ad53c05aae7"
+      "sha256": "4e8d3cf7aa75e07ccf0653c4d1849a8dbed45b4fc7d7e6dcf250a7bae3aebac7"
     },
     {
       "path": "scripts/garmin_data.py",

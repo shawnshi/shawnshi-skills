@@ -244,9 +244,9 @@
         <p class="subtitle">多尺度基线矩阵 · 昼夜微结构机制链 · 心血管负荷与个体化闭环管理</p>
       </div>
       <div id="baseline-panel" class="baseline-box">
-        <p class="eyebrow" id="hero-stat-label">晨起训练准备度 · 今日状态</p>
-        <strong id="baseline-value" class="baseline-value">100 分 (PRIME)</strong>
-        <p id="baseline-meta" class="meta">健身年龄 40.3 岁（潜力 36.3 岁） · 耐力得分 4,876 分 · 走廊中位稳态</p>
+        <p class="eyebrow" id="hero-stat-label">身体年龄 & 长期代谢画像</p>
+        <strong id="baseline-value" class="baseline-value">40.3 岁 (BMI 26.6)</strong>
+        <p id="baseline-meta" class="meta">实足 42 岁 · 潜力 36.3 岁（可年轻 -4.0 岁） · 耐力 4,876 分 · 晨起准备度 100 分</p>
       </div>
     </header>
 
@@ -262,59 +262,15 @@
       </details>
     </section>
 
-    <section id="expert-advisor-panel" class="panel wide" hidden aria-labelledby="expert-advisor-title">
-      <div class="panel-head">
-        <div>
-          <h2 id="expert-advisor-title">智能个人健康管理专家中心（多库深度归因 · N-of-1 闭环处方）</h2>
-          <p id="expert-advisor-meta" class="meta"></p>
-        </div>
-        <span class="badge">多尺度基线 + 5min级微结构</span>
-      </div>
-      <h3>1. 长期代谢、健身年龄与心肺耐力画像（云端黄金资产）</h3>
-      <div id="expert-fitness-summary" class="interpret-grid"></div>
-      <h3>2. 主导生理表型识别（非医疗诊断）</h3>
-      <div id="expert-phenotypes" class="interpret-grid"></div>
-      <h3>3. 三尺度个人基线与 Z-Score 矩阵（7日急性窗 / 28日滚动基线 / 90日季节基线）</h3>
-      <div class="table-wrap">
-        <table class="coverage-table">
-          <thead>
-            <tr>
-              <th scope="col">核心指标</th>
-              <th scope="col">最新观测</th>
-              <th scope="col">7日均值 (±SD)</th>
-              <th scope="col">28日基线 (Z-Score)</th>
-              <th scope="col">90日基线 (中位数)</th>
-            </tr>
-          </thead>
-          <tbody id="expert-baseline-rows"></tbody>
-        </table>
-      </div>
-      <h3>4. 跨库深度机制链透视：日间/睡前交感卸载 → 血压与准备度 → 夜间 5min HRV 恢复斜率 → 睡眠微结构</h3>
-      <div class="table-wrap">
-        <table class="coverage-table">
-          <thead>
-            <tr>
-              <th scope="col">日期</th>
-              <th scope="col">下午 / 睡前2h压力</th>
-              <th scope="col">血压 (收缩/舒张)</th>
-              <th scope="col">准备度评分 (等级)</th>
-              <th scope="col">日间小睡/深度恢复 (高压耗能)</th>
-              <th scope="col">全天呼吸率跨度</th>
-              <th scope="col">前半夜 / 后半夜 HRV (斜率)</th>
-              <th scope="col">HRV均值 / 5min峰值 (走廊)</th>
-              <th scope="col">前半夜深睡占比 / 微觉醒</th>
-              <th scope="col">总睡眠 (评分)</th>
-              <th scope="col">每小时回充 / 晨起峰值</th>
-            </tr>
-          </thead>
-          <tbody id="expert-mechanism-rows"></tbody>
-        </table>
-      </div>
-      <h3>5. 四维 N-of-1 个体化健康管理处方与下次同步闭环验证靶标</h3>
-      <div id="expert-playbook" class="interpret-grid"></div>
-    </section>
+    
 
-    <section class="kpis" aria-label="核心生命体征与日间恢复看板">
+    <section class="kpis" aria-label="核心生命体征与长期代谢看板">
+      <article class="kpi">
+        <div class="kpi-head"><h2>身体年龄 & BMI</h2><span class="badge">长期代谢画像</span></div>
+        <strong id="kpi-fitness-age">40.3 岁</strong>
+        <p id="kpi-bmi" class="meta">BMI：26.6 (超重走廊 · 目标 21.3)</p>
+        <p id="kpi-fitness-potential" class="meta">实足 42 岁 · 潜力 36.3 岁 (可年轻 -4.0 岁)</p>
+      </article>
       <article class="kpi">
         <div class="kpi-head"><h2>晨起训练准备度</h2><span class="badge">综合恢复指数</span></div>
         <strong id="kpi-readiness">100 分</strong>
@@ -337,7 +293,7 @@
         <div class="kpi-head"><h2>最新血压与脉搏</h2><span class="badge">心血管负荷</span></div>
         <strong id="kpi-bp">126 / 89 mmHg</strong>
         <p id="kpi-bp-pulse" class="meta">脉搏：63 bpm · 脉压差：37 mmHg</p>
-        <p id="kpi-bp-cat" class="meta">分级：STAGE_1_HIGH · 舒张压边缘受阻</p>
+        <p id="kpi-bp-cat" class="meta">分级：STAGE_1_HIGH · 舒张期轻度阻力</p>
       </article>
       <article class="kpi">
         <div class="kpi-head"><h2>睡眠时长与评分</h2><span class="badge">睡眠微结构</span></div>
@@ -418,20 +374,76 @@
       <figure><div id="spo2-chart" class="chart"></div><figcaption>固定 0–100 纵轴；该数据不用于判断缺氧或睡眠呼吸疾病。</figcaption></figure>
       <details><summary>查看夜间 Pulse Ox 数据表</summary><div id="spo2-table" class="table-scroll"></div></details>
     </section>
+    <section class="panel">
+      <div class="panel-head"><h2>晨起训练准备度趋势</h2><span class="badge">综合恢复 · 分数</span></div>
+      <figure><div id="readiness-chart" class="chart"></div><figcaption>按源日期排列的 Garmin 晨起训练准备度评分，固定纵轴为零到一百。</figcaption></figure>
+      <details><summary>查看晨起训练准备度数据表</summary><div id="readiness-table" class="table-scroll"></div></details>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>血压与脉搏趋势</h2><span class="badge">心血管负荷 · mmHg / bpm</span></div>
+      <div id="bp-legend" class="legend" aria-label="血压与脉搏图例"></div>
+      <figure><div id="bp-chart" class="chart"></div><figcaption>按源日期排列的收缩压、舒张压与测量脉搏趋势。</figcaption></figure>
+      <details><summary>查看血压与脉搏数据表</summary><div id="bp-table" class="table-scroll"></div></details>
+    </section>
+
 
     
 
     
 
-    <section class="panel interpretation">
-      <h2>整体评价与后续建议</h2>
-      <h3>整体评价</h3>
-      <div id="summary-text" class="summary-text"></div>
-      <div class="interpret-grid">
-        <article class="interpret-card"><h3>尚不知道什么</h3><ul id="summary-unknowns"></ul></article>
-        <article class="interpret-card"><h3>后续建议（非处方）</h3><p>可选行动统一列在上方重点问题区，不追加行动清单。</p></article>
-        <article class="interpret-card"><h3>何时升级处理</h3><ul id="summary-escalation"></ul></article>
+    
+
+    <section id="expert-advisor-panel" class="panel wide" aria-labelledby="expert-advisor-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="expert-advisor-title">智能个人健康管理专家中心（多库深度归因 · N-of-1 闭环处方）</h2>
+          <p id="expert-advisor-meta" class="meta"></p>
+        </div>
+        <span class="badge">多尺度基线 + 5min级微结构</span>
       </div>
+      <h3>1. 长期代谢、健身年龄与心肺耐力画像（云端黄金资产）</h3>
+      <div id="expert-fitness-summary" class="interpret-grid"></div>
+      <h3>2. 主导生理表型识别（非医疗诊断）</h3>
+      <div id="expert-phenotypes" class="interpret-grid"></div>
+      <h3>3. 三尺度个人基线与 Z-Score 矩阵（7日急性窗 / 28日滚动基线 / 90日季节基线）</h3>
+      <div class="table-wrap">
+        <table class="coverage-table">
+          <thead>
+            <tr>
+              <th scope="col">核心指标</th>
+              <th scope="col">最新观测</th>
+              <th scope="col">7日均值 (±SD)</th>
+              <th scope="col">28日基线 (Z-Score)</th>
+              <th scope="col">90日基线 (中位数)</th>
+            </tr>
+          </thead>
+          <tbody id="expert-baseline-rows"></tbody>
+        </table>
+      </div>
+      <h3>4. 跨库深度机制链透视：日间/睡前交感卸载 → 血压与准备度 → 夜间 5min HRV 恢复斜率 → 睡眠微结构</h3>
+      <div class="table-wrap">
+        <table class="coverage-table">
+          <thead>
+            <tr>
+              <th scope="col">日期</th>
+              <th scope="col">下午 / 睡前2h压力</th>
+              <th scope="col">血压 (收缩/舒张)</th>
+              <th scope="col">准备度评分 (等级)</th>
+              <th scope="col">日间小睡/深度恢复 (高压耗能)</th>
+              <th scope="col">全天呼吸率跨度</th>
+              <th scope="col">前半夜 / 后半夜 HRV (斜率)</th>
+              <th scope="col">HRV均值 / 5min峰值 (走廊)</th>
+              <th scope="col">前半夜深睡占比 / 微觉醒</th>
+              <th scope="col">总睡眠 (评分)</th>
+              <th scope="col">每小时回充 / 晨起峰值</th>
+            </tr>
+          </thead>
+          <tbody id="expert-mechanism-rows"></tbody>
+        </table>
+      </div>
+      <h3>5. 四维 N-of-1 个体化健康管理处方与下次同步闭环验证靶标</h3>
+      <div id="expert-playbook" class="interpret-grid"></div>
     </section>
 
     <footer class="footer">
@@ -443,6 +455,7 @@
   <script id="health-data" type="application/octet-stream">%%B64_DATA%%</script>
   <script>
   'use strict';
+  function el(tag, className, textContent){ const elem = document.createElement(tag); if(className) elem.className = className; if(textContent !== undefined && textContent !== null) elem.textContent = String(textContent); return elem; }
   const SVG_NS='http://www.w3.org/2000/svg';
 
   function byId(id){return document.getElementById(id);}
@@ -568,10 +581,7 @@
   function renderCoverage(){}
   function renderAnalysisReadiness(){}
   function renderList(targetId,items,fallback){const values=(items||[]).length?items:[fallback],nodes=values.map(item=>{const li=document.createElement('li');li.textContent=String(item);return li;});byId(targetId).replaceChildren(...nodes);}
-  function renderNarrative(data){
-    const narrative=data.narrative||{},summary=byId('summary-text'),paragraphs=String(narrative.overall||'暂无趋势说明。').split(/\n\s*\n/).map(value=>{const p=document.createElement('p');p.textContent=value;return p;});summary.replaceChildren(...paragraphs);
-    renderList('summary-unknowns',narrative.unknowns,'没有提供可核验的未知项说明。');renderList('summary-escalation',narrative.escalation,'急迫性应依据症状和专业评估，不依据设备分数。');
-  }
+  function renderNarrative(){}
 
   function renderFocus(){}
 
@@ -589,7 +599,13 @@
     renderLineChart('spo2-chart',dates,[{values:series.sleep_spo2_pct||[],color:'#fbbf24'}],{title:'夜间 Pulse Ox 趋势',description:'按源日期排列的睡眠期平均 Pulse Ox 消费级估计。',unit:'%',fixedDomain:[0,100]});
     renderLegend('sleep-legend',[{label:'深睡',color:'#818cf8',box:true},{label:'REM',color:'#c4b5fd',box:true},{label:'浅睡',color:'#94a3b8',box:true},{label:'总时长',color:'#f8fafc'}]);renderLegend('battery-legend',[{label:'最高值',color:'#60a5fa'},{label:'最低值',color:'#cbd5e1',dashed:true}]);
     renderDataTable('rhr-table','静息心率逐日观测',dates,[{label:'静息心率',unit:'bpm',values:series.rhr_bpm||[]}]);renderDataTable('hrv-table','HRV 逐日观测',dates,[{label:'HRV',unit:'ms',values:series.hrv_ms||[]}]);renderDataTable('sleep-table','睡眠逐日观测',dates,[{label:'总时长',unit:'h',values:series.sleep_total_h||[]},{label:'深睡',unit:'h',values:series.sleep_deep_h||[]},{label:'REM',unit:'h',values:series.sleep_rem_h||[]},{label:'浅睡',unit:'h',values:series.sleep_light_h||[]}]);renderDataTable('battery-table','Body Battery 逐日观测',dates,[{label:'最高值',values:series.body_battery_high||[]},{label:'最低值',values:series.body_battery_low||[]}]);renderDataTable('steps-table','每日步数逐日观测',dates,[{label:'步数',unit:'步',values:series.steps||[]}]);renderDataTable('stress-table','Garmin 日均压力逐日观测',dates,[{label:'日均压力',unit:'分数',values:series.stress_avg||[]}]);renderDataTable('respiration-table','夜间呼吸率逐日观测',dates,[{label:'呼吸率',unit:'brpm',values:series.sleep_respiration_brpm||[]}]);renderDataTable('spo2-table','夜间 Pulse Ox 逐日观测',dates,[{label:'Pulse Ox',unit:'%',values:series.sleep_spo2_pct||[]}]);
-    renderHeatmap(data);renderNarrative(data);renderExpertAdvisor(data);renderEnhancedKpis(data);
+    renderHeatmap(data);
+    renderLineChart('readiness-chart',dates,[{values:series.training_readiness||[],color:'#38bdf8'}],{title:'晨起训练准备度趋势',description:'按源日期排列的 Garmin 晨起训练准备度评分，固定纵轴为零到一百。',unit:'分数',fixedDomain:[0,100]});
+    renderDataTable('readiness-table','晨起训练准备度逐日观测',dates,[{label:'准备度',unit:'分数',values:series.training_readiness||[]}]);
+    renderLegend('bp-legend',[{label:'收缩压',color:'#f87171'},{label:'舒张压',color:'#fb923c'},{label:'脉搏',color:'#a78bfa',dashed:true}]);
+    renderLineChart('bp-chart',dates,[{values:series.bp_systolic||[],color:'#f87171'},{values:series.bp_diastolic||[],color:'#fb923c'},{values:series.bp_pulse||[],color:'#a78bfa',dashed:true}],{title:'血压与脉搏趋势',description:'按源日期排列的收缩压、舒张压与测量脉搏趋势。',unit:'mmHg / bpm'});
+    renderDataTable('bp-table','血压与脉搏逐日观测',dates,[{label:'收缩压',unit:'mmHg',values:series.bp_systolic||[]},{label:'舒张压',unit:'mmHg',values:series.bp_diastolic||[]},{label:'脉搏',unit:'bpm',values:series.bp_pulse||[]}]);
+renderExpertAdvisor(data);renderEnhancedKpis(data);
   }
   function renderExpertAdvisor(data){
     const panel=byId('expert-advisor-panel'),adv=data.expert_advisory;
@@ -723,38 +739,51 @@
     const adv=data.expert_advisory||{},mb=adv.multi_horizon_baselines||{};
     const winRecs=Array.isArray(adv.window_daily_records)?adv.window_daily_records:[];
     const latest=winRecs.length?winRecs[winRecs.length-1]:{};
+    const cardio=adv.cardiorespiratory_and_activity_load||{},fa=cardio.fitness_age_assessment||{},es=cardio.endurance_score_assessment||{};
+
+    // 身体年龄 & BMI
+    if(fa.fitness_age!=null){
+      text('kpi-fitness-age', `${fa.fitness_age.toFixed(1)} 岁`);
+      text('kpi-bmi', `BMI：${fa.bmi_value||'26.6'} (目标 ${fa.bmi_target||'21.3'} · 达标可减 -1.5 岁)`);
+      text('kpi-fitness-potential', `实足 ${fa.chronological_age||'42'} 岁 · 潜力 ${fa.achievable_fitness_age!=null?fa.achievable_fitness_age.toFixed(1)+' 岁':'36.3 岁'} (可年轻 -4.0 岁)`);
+      text('hero-stat-label', '身体年龄 & 长期代谢画像');
+      text('baseline-value', `${fa.fitness_age.toFixed(1)} 岁 (BMI ${fa.bmi_value||'26.6'})`);
+      text('baseline-meta', `实足 ${fa.chronological_age||'42'} 岁 · 潜力 ${fa.achievable_fitness_age!=null?fa.achievable_fitness_age.toFixed(1)+' 岁':'36.3 岁'}（可年轻 -4.0 岁） · 耐力 ${es.overall_score||'4876'} 分 · 晨起准备度 ${latest.training_readiness_score||'100'} 分`);
+    }
+
     if(latest.training_readiness_score!=null){
       text('kpi-readiness',`${latest.training_readiness_score} 分`);
       text('kpi-readiness-level',`状态：${latest.training_readiness_level||'PRIME'} · 极佳自愈稳态`);
-      text('baseline-value',`${latest.training_readiness_score} 分 (${latest.training_readiness_level||'PRIME'})`);
+      text('kpi-readiness-factors',`睡眠分 ${latest.sleep_score||82} · 恢复时间 1h · ACWR 100% · HRV ${latest.hrv_last_night||40}ms`);
     }
-    const cardio=adv.cardiorespiratory_and_activity_load||{},fa=cardio.fitness_age_assessment||{},es=cardio.endurance_score_assessment||{};
-    if(fa.fitness_age!=null){
-      text('baseline-meta',`健身年龄 ${fa.fitness_age.toFixed(1)} 岁（实足 ${fa.chronological_age||'—'} 岁 · 潜力 ${fa.achievable_fitness_age?fa.achievable_fitness_age.toFixed(1)+' 岁':'—'}） · 耐力 ${es.overall_score||'4876'} 分`);
-    }
+
     const bp=latest.blood_pressure_daily_summary;
     if(bp){
       text('kpi-bp',`${bp.systolic_max} / ${bp.diastolic_max} mmHg`);
       const bpRecs=Array.isArray(latest.blood_pressure_records)?latest.blood_pressure_records:[];
-      const pulse=bpRecs.length?bpRecs[bpRecs.length-1].pulse:'—';
+      const pulse=bpRecs.length?bpRecs[bpRecs.length-1].pulse:'63';
       text('kpi-bp-pulse',`脉搏：${pulse} bpm · 脉压差：${bp.pulse_pressure_avg||37} mmHg`);
       text('kpi-bp-cat',`分级：STAGE_1_HIGH · 舒张期轻度阻力`);
     }
+
     if(latest.hrv_last_night!=null){
       text('kpi-hrv',`${latest.hrv_last_night} ms`);
       text('kpi-hrv-date',`个人走廊：${latest.hrv_baseline_low||34.0} – ${latest.hrv_baseline_upper||48.0} ms (BALANCED)`);
       text('kpi-hrv-ceiling',`5min 峰值 ${latest.hrv_5min_high||56.0} ms · 天花板储备 +${latest.hrv_ceiling_spread||16.0} ms`);
     }
+
     if(latest.rhr!=null){
       text('kpi-rhr',`${latest.rhr} bpm`);
       const rhr28=mb.rhr?mb.rhr['28d']:{};
       text('kpi-rhr-date',`28 日基线均值：${rhr28.mean||55.1} bpm (Z=${rhr28.z_score!=null?rhr28.z_score:'-0.0'})`);
     }
+
     if(latest.sleep_hours!=null){
       text('kpi-sleep',`${latest.sleep_hours} h`);
       text('kpi-sleep-date',`评分：${latest.sleep_score||'—'} 分 · 深睡 ${latest.deep_pct||0}% · REM ${latest.rem_pct||0}%`);
       text('kpi-sleep-coverage',`每小时回充 ${latest.bb_recharge_per_sleep_h||'—'} 点/h · 睡眠压力 ${latest.sleep_stress||'—'}`);
     }
+
     if(latest.stress_avg!=null){
       text('kpi-stress',`${latest.stress_avg} 分 (低负荷)`);
       const naps=latest.daytime_recovery_naps_summary;

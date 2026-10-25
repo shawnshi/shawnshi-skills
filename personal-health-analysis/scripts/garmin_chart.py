@@ -70,6 +70,10 @@ DASHBOARD_SERIES_FIELDS = (
     "body_battery_low",
     "steps",
     "stress_avg",
+    "bp_systolic",
+    "bp_diastolic",
+    "bp_pulse",
+    "training_readiness",
 )
 DASHBOARD_COMPONENT_DATA_KEYS = {
     "sleep": ("sleep",),
@@ -2272,10 +2276,37 @@ def main(argv: list[str] | None = None) -> int:
         try:
             from garmin_expert_advisor import build_expert_advisory
 
-            charts_data["expert_advisory"] = build_expert_advisory(
+            adv = build_expert_advisory(
                 days=days,
                 end_date=date.fromisoformat(requested_end),
             )
+            charts_data["expert_advisory"] = adv
+            if "series" in charts_data and isinstance(charts_data["series"], dict):
+                series = charts_data["series"]
+                dates = series.get("dates") or []
+                rec_map = {
+                    r["date"]: r
+                    for r in adv.get("window_daily_records", [])
+                    if isinstance(r, dict) and "date" in r
+                }
+                bp_sys, bp_dia, bp_pls, tr_score = [], [], [], []
+                for d in dates:
+                    r = rec_map.get(d)
+                    if r:
+                        bp = r.get("blood_pressure_daily_summary")
+                        bp_sys.append(bp.get("systolic_max") if isinstance(bp, dict) else None)
+                        bp_dia.append(bp.get("diastolic_max") if isinstance(bp, dict) else None)
+                        bp_pls.append(bp.get("pulse_avg") if isinstance(bp, dict) else None)
+                        tr_score.append(r.get("training_readiness_score"))
+                    else:
+                        bp_sys.append(None)
+                        bp_dia.append(None)
+                        bp_pls.append(None)
+                        tr_score.append(None)
+                series["bp_systolic"] = bp_sys
+                series["bp_diastolic"] = bp_dia
+                series["bp_pulse"] = bp_pls
+                series["training_readiness"] = tr_score
         except Exception:
             pass
     html = render_report(charts_data)
