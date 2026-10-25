@@ -24,6 +24,8 @@ EXTENDED_METRICS = (
     "training_readiness",
     "fitness_age",
     "endurance_score",
+    "body_battery_events",
+    "daily_respiration",
 )
 
 
@@ -112,6 +114,28 @@ def _init_extended_tables(conn: sqlite3.Connection) -> None:
             json_data TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_endurance_score_day ON endurance_score (day);
+
+        CREATE TABLE IF NOT EXISTS body_battery_events (
+            event_id TEXT PRIMARY KEY,
+            day TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            start_time_gmt TEXT,
+            duration_seconds INTEGER,
+            body_battery_impact INTEGER,
+            average_stress REAL,
+            short_feedback TEXT,
+            activity_name TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_bb_events_day ON body_battery_events (day);
+
+        CREATE TABLE IF NOT EXISTS daily_respiration (
+            day TEXT PRIMARY KEY,
+            highest_respiration REAL,
+            lowest_respiration REAL,
+            waking_avg REAL,
+            latest_respiration REAL
+        );
+        CREATE INDEX IF NOT EXISTS idx_daily_respiration_day ON daily_respiration (day);
         """
     )
     conn.commit()
@@ -365,6 +389,118 @@ def sync_endurance_score_range(
     return {"records_inserted": 1, "overall_score": score, "date": cal_date}
 
 
+def sync_body_battery_events_range(
+    client: Any,
+    start_date: date,
+    end_date: date,
+    conn: sqlite3.Connection,
+    cache_dir: Path | None = None,
+) -> dict[str, Any]:
+    if cache_dir:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+
+    cur_dt = start_date
+    days_synced = 0
+    records_inserted = 0
+    cur = conn.cursor()
+
+    while cur_dt <= end_date:
+        d_str = cur_dt.isoformat()
+        try:
+            events = client.get_body_battery_events(d_str)
+        except Exception:
+            events = None
+
+        if isinstance(events, list) and events:
+            if cache_dir:
+                dump_file = cache_dir / f"bb_events_{d_str}.json"
+                dump_file.write_text(json.dumps(events, indent=2, ensure_ascii=False), encoding="utf-8")
+
+            for ev in events:
+                inner = ev.get("event") or ev
+                e_type = inner.get("eventType")
+                s_gmt = inner.get("eventStartTimeGmt")
+                if not e_type or not s_gmt:
+                    continue
+                ev_id = f"{d_str}_{e_type}_{s_gmt}"
+                dur_ms = inner.get("durationInMilliseconds")
+                dur_s = int(dur_ms / 1000) if dur_ms is not None else None
+                cur.execute(
+                    """
+                    INSERT OR REPLACE INTO body_battery_events (
+                        event_id, day, event_type, start_time_gmt, duration_seconds,
+                        body_battery_impact, average_stress, short_feedback, activity_name
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        ev_id,
+                        d_str,
+                        str(e_type),
+                        str(s_gmt),
+                        dur_s,
+                        int(inner["bodyBatteryImpact"]) if inner.get("bodyBatteryImpact") is not None else None,
+                        float(ev["averageStress"]) if ev.get("averageStress") is not None else None,
+                        inner.get("shortFeedback") or inner.get("feedbackType"),
+                        ev.get("activityName"),
+                    ),
+                )
+                records_inserted += 1
+            days_synced += 1
+        cur_dt += timedelta(days=1)
+
+    conn.commit()
+    return {"days_probed": (end_date - start_date).days + 1, "records_inserted": records_inserted}
+
+
+def sync_daily_respiration_range(
+    client: Any,
+    start_date: date,
+    end_date: date,
+    conn: sqlite3.Connection,
+    cache_dir: Path | None = None,
+) -> dict[str, Any]:
+    if cache_dir:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+
+    cur_dt = start_date
+    days_synced = 0
+    records_inserted = 0
+    cur = conn.cursor()
+
+    while cur_dt <= end_date:
+        d_str = cur_dt.isoformat()
+        try:
+            resp = client.get_respiration_data(d_str)
+        except Exception:
+            resp = None
+
+        if isinstance(resp, dict) and (resp.get("highestRespirationValue") is not None or resp.get("wakingAvg") is not None):
+            if cache_dir:
+                dump_file = cache_dir / f"resp_{d_str}.json"
+                dump_file.write_text(json.dumps(resp, indent=2, ensure_ascii=False), encoding="utf-8")
+
+            cur.execute(
+                """
+                INSERT OR REPLACE INTO daily_respiration (
+                    day, highest_respiration, lowest_respiration, waking_avg, latest_respiration
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    d_str,
+                    float(resp["highestRespirationValue"]) if resp.get("highestRespirationValue") is not None else None,
+                    float(resp["lowestRespirationValue"]) if resp.get("lowestRespirationValue") is not None else None,
+                    float(resp["wakingAvg"]) if resp.get("wakingAvg") is not None else None,
+                    float(resp["latestRespirationValue"]) if resp.get("latestRespirationValue") is not None else None,
+                ),
+            )
+            records_inserted += 1
+            days_synced += 1
+        cur_dt += timedelta(days=1)
+
+    conn.commit()
+    return {"days_probed": (end_date - start_date).days + 1, "records_inserted": records_inserted}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Sync extended metrics (Blood Pressure, Training Readiness) from Garmin Connect."
@@ -431,44 +567,62 @@ def main(argv: list[str] | None = None) -> int:
     req = {"command": "sync_extended_metrics", "window": {"start": start_d.isoformat(), "end": end_d.isoformat()}}
     net_cap = issue_capability(scope="network", operation=garmin_auth.AUTH_OPERATION, request=req)
 
-    client = garmin_auth.get_client(network_capability=net_cap, request=req, in_memory=True)
-    if not client:
-        print(json.dumps({"ok": False, "status": "authentication_required"}, ensure_ascii=False))
-        return 5
+    import garminconnect
 
-    db_path = _resolve_garmin_db_path()
-    base_data_dir = db_path.parent.parent
+    garmin_auth._force_direct_garmin_egress(os.environ)
+    with garmin_auth._tun_fake_ip_bypass_scope(garminconnect.Garmin):
+        client = garmin_auth.get_client(network_capability=net_cap, request=req, in_memory=True)
+        if not client:
+            print(json.dumps({"ok": False, "status": "authentication_required"}, ensure_ascii=False))
+            return 5
 
-    results: dict[str, Any] = {}
-    with sqlite3.connect(db_path) as conn:
-        _init_extended_tables(conn)
-        if "blood_pressure" in args.metrics:
-            bp_cache = base_data_dir / "BloodPressure"
-            bp_res = sync_blood_pressure_range(
-                client, start_d.isoformat(), end_d.isoformat(), conn, cache_dir=bp_cache
-            )
-            results["blood_pressure"] = bp_res
+        db_path = _resolve_garmin_db_path()
+        base_data_dir = db_path.parent.parent
 
-        if "training_readiness" in args.metrics:
-            tr_cache = base_data_dir / "TrainingReadiness"
-            tr_res = sync_training_readiness_range(
-                client, start_d, end_d, conn, cache_dir=tr_cache
-            )
-            results["training_readiness"] = tr_res
+        results: dict[str, Any] = {}
+        with sqlite3.connect(db_path) as conn:
+            _init_extended_tables(conn)
+            if "blood_pressure" in args.metrics:
+                bp_cache = base_data_dir / "BloodPressure"
+                bp_res = sync_blood_pressure_range(
+                    client, start_d.isoformat(), end_d.isoformat(), conn, cache_dir=bp_cache
+                )
+                results["blood_pressure"] = bp_res
 
-        if "fitness_age" in args.metrics:
-            fa_cache = base_data_dir / "FitnessAge"
-            fa_res = sync_fitness_age_range(
-                client, end_d, conn, cache_dir=fa_cache
-            )
-            results["fitness_age"] = fa_res
+            if "training_readiness" in args.metrics:
+                tr_cache = base_data_dir / "TrainingReadiness"
+                tr_res = sync_training_readiness_range(
+                    client, start_d, end_d, conn, cache_dir=tr_cache
+                )
+                results["training_readiness"] = tr_res
 
-        if "endurance_score" in args.metrics:
-            es_cache = base_data_dir / "EnduranceScore"
-            es_res = sync_endurance_score_range(
-                client, start_d.isoformat(), end_d.isoformat(), conn, cache_dir=es_cache
-            )
-            results["endurance_score"] = es_res
+            if "fitness_age" in args.metrics:
+                fa_cache = base_data_dir / "FitnessAge"
+                fa_res = sync_fitness_age_range(
+                    client, end_d, conn, cache_dir=fa_cache
+                )
+                results["fitness_age"] = fa_res
+
+            if "endurance_score" in args.metrics:
+                es_cache = base_data_dir / "EnduranceScore"
+                es_res = sync_endurance_score_range(
+                    client, start_d.isoformat(), end_d.isoformat(), conn, cache_dir=es_cache
+                )
+                results["endurance_score"] = es_res
+
+            if "body_battery_events" in args.metrics:
+                bbe_cache = base_data_dir / "BodyBatteryEvents"
+                bbe_res = sync_body_battery_events_range(
+                    client, start_d, end_d, conn, cache_dir=bbe_cache
+                )
+                results["body_battery_events"] = bbe_res
+
+            if "daily_respiration" in args.metrics:
+                dr_cache = base_data_dir / "Respiration"
+                dr_res = sync_daily_respiration_range(
+                    client, start_d, end_d, conn, cache_dir=dr_cache
+                )
+                results["daily_respiration"] = dr_res
 
     print(
         json.dumps(

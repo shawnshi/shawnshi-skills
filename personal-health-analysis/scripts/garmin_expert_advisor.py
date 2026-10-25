@@ -428,6 +428,39 @@ def build_expert_advisory(
             ).fetchall()
             blood_pressure_records = [dict(b) for b in bp_rows]
 
+        bbe_table_exists = bool(
+            g_conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='body_battery_events'").fetchone()
+        )
+        bb_events_by_day: dict[str, list[dict[str, Any]]] = {}
+        if bbe_table_exists:
+            bbe_rows = g_conn.execute(
+                """
+                SELECT day, event_type, start_time_gmt, duration_seconds, body_battery_impact, average_stress, short_feedback, activity_name
+                FROM body_battery_events
+                WHERE date(day) BETWEEN ? AND ?
+                ORDER BY start_time_gmt ASC
+                """,
+                (start_90d.isoformat(), anchor_end.isoformat()),
+            ).fetchall()
+            for er in bbe_rows:
+                bb_events_by_day.setdefault(er["day"], []).append(dict(er))
+
+        resp_table_exists = bool(
+            g_conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_respiration'").fetchone()
+        )
+        daily_resp_by_day: dict[str, dict[str, Any]] = {}
+        if resp_table_exists:
+            resp_rows = g_conn.execute(
+                """
+                SELECT day, highest_respiration, lowest_respiration, waking_avg, latest_respiration
+                FROM daily_respiration
+                WHERE date(day) BETWEEN ? AND ?
+                """,
+                (start_90d.isoformat(), anchor_end.isoformat()),
+            ).fetchall()
+            for rr in resp_rows:
+                daily_resp_by_day[rr["day"]] = dict(rr)
+
     # 6. Intra-Night 5-min HRV Recovery Slope from garmin_monitoring.db
     hrv_intranight_by_day: dict[str, dict[str, Any]] = {}
     if mon_db.is_file():
@@ -597,7 +630,7 @@ def build_expert_advisory(
         else:
             rec["circadian_stress"] = None
 
-    # Map blood pressure records to daily records
+    # Map blood pressure, body battery events, and daily respiration to daily records
     bp_by_day: dict[str, list[dict[str, Any]]] = {}
     for bp in blood_pressure_records:
         d = bp["day"]
@@ -621,6 +654,20 @@ def build_expert_advisory(
             }
         else:
             rec["blood_pressure_daily_summary"] = None
+
+        day_evs = bb_events_by_day.get(d_str, [])
+        rec["body_battery_events"] = day_evs
+        recovery_evs = [e for e in day_evs if e["event_type"] == "RECOVERY"]
+        stress_evs = [e for e in day_evs if e["event_type"] == "STRESS"]
+        rec["daytime_recovery_naps_summary"] = {
+            "recovery_events_count": len(recovery_evs),
+            "total_recovery_minutes": round(sum(e["duration_seconds"] or 0 for e in recovery_evs) / 60.0, 1),
+            "total_recharge_points": sum(e["body_battery_impact"] or 0 for e in recovery_evs),
+            "stress_events_count": len(stress_evs),
+            "total_stress_minutes": round(sum(e["duration_seconds"] or 0 for e in stress_evs) / 60.0, 1),
+            "total_stress_drain_points": sum(e["body_battery_impact"] or 0 for e in stress_evs),
+        }
+        rec["all_day_respiration"] = daily_resp_by_day.get(d_str)
 
     # Compute Multi-Horizon Baselines (7d, 28d, 90d)
     metrics_to_compare = (

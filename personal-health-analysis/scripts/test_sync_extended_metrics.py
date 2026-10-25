@@ -121,6 +121,35 @@ class SyncExtendedMetricsTests(unittest.TestCase):
             )
             self.assertEqual(es_res["records_inserted"], 1)
 
+            mock_client.get_body_battery_events.return_value = [
+                {
+                    "event": {
+                        "eventType": "RECOVERY",
+                        "eventStartTimeGmt": "2026-10-24T10:00:00.0",
+                        "durationInMilliseconds": 3600000,
+                        "bodyBatteryImpact": 5,
+                        "shortFeedback": "LONG_RESTFUL_PERIOD",
+                    },
+                    "averageStress": 12.5,
+                    "activityName": None,
+                }
+            ]
+            bbe_res = syncer.sync_body_battery_events_range(
+                mock_client, syncer.date(2026, 10, 24), syncer.date(2026, 10, 24), conn, cache_dir=Path(tmp)
+            )
+            self.assertEqual(bbe_res["records_inserted"], 1)
+
+            mock_client.get_respiration_data.return_value = {
+                "highestRespirationValue": 24.0,
+                "lowestRespirationValue": 8.0,
+                "wakingAvg": 15.0,
+                "latestRespirationValue": 14.0,
+            }
+            dr_res = syncer.sync_daily_respiration_range(
+                mock_client, syncer.date(2026, 10, 24), syncer.date(2026, 10, 24), conn, cache_dir=Path(tmp)
+            )
+            self.assertEqual(dr_res["records_inserted"], 1)
+
             # Check DB rows
             bp_row = conn.execute("SELECT * FROM blood_pressure WHERE day='2026-10-25'").fetchone()
             self.assertIsNotNone(bp_row)
@@ -140,6 +169,16 @@ class SyncExtendedMetricsTests(unittest.TestCase):
             es_row = conn.execute("SELECT * FROM endurance_score WHERE day='2026-10-25'").fetchone()
             self.assertIsNotNone(es_row)
             self.assertEqual(es_row[1], 4876)  # overall_score
+
+            bbe_row = conn.execute("SELECT * FROM body_battery_events WHERE day='2026-10-24'").fetchone()
+            self.assertIsNotNone(bbe_row)
+            self.assertEqual(bbe_row[2], "RECOVERY")
+            self.assertEqual(bbe_row[5], 5)    # body_battery_impact
+
+            dr_row = conn.execute("SELECT * FROM daily_respiration WHERE day='2026-10-24'").fetchone()
+            self.assertIsNotNone(dr_row)
+            self.assertEqual(dr_row[1], 24.0)  # highest_respiration
+            self.assertEqual(dr_row[2], 8.0)   # lowest_respiration
 
             conn.close()
 
