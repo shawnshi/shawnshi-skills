@@ -282,6 +282,52 @@
       </details>
     </section>
 
+    <section id="expert-advisor-panel" class="panel wide" hidden aria-labelledby="expert-advisor-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="expert-advisor-title">智能个人健康管理专家中心（多库深度归因 · N-of-1 闭环处方）</h2>
+          <p id="expert-advisor-meta" class="meta"></p>
+        </div>
+        <span class="badge">多尺度基线 + 5min级微结构</span>
+      </div>
+      <h3>1. 主导生理表型识别（非医疗诊断）</h3>
+      <div id="expert-phenotypes" class="interpret-grid"></div>
+      <h3>2. 三尺度个人基线与 Z-Score 矩阵（7日急性窗 / 28日滚动基线 / 90日季节基线）</h3>
+      <div class="table-wrap">
+        <table class="coverage-table">
+          <thead>
+            <tr>
+              <th scope="col">核心指标</th>
+              <th scope="col">最新观测</th>
+              <th scope="col">7日均值 (±SD)</th>
+              <th scope="col">28日基线 (Z-Score)</th>
+              <th scope="col">90日基线 (中位数)</th>
+            </tr>
+          </thead>
+          <tbody id="expert-baseline-rows"></tbody>
+        </table>
+      </div>
+      <h3>3. 跨库深度机制链透视：日间/睡前交感卸载 → 夜间 5min HRV 恢复斜率 → 睡眠微结构</h3>
+      <div class="table-wrap">
+        <table class="coverage-table">
+          <thead>
+            <tr>
+              <th scope="col">日期</th>
+              <th scope="col">下午 / 睡前2h压力</th>
+              <th scope="col">前半夜 / 后半夜 HRV (斜率)</th>
+              <th scope="col">HRV均值 / 5min峰值 (走廊)</th>
+              <th scope="col">前半夜深睡占比 / 微觉醒</th>
+              <th scope="col">总睡眠 (评分)</th>
+              <th scope="col">每小时回充 / 晨起峰值</th>
+            </tr>
+          </thead>
+          <tbody id="expert-mechanism-rows"></tbody>
+        </table>
+      </div>
+      <h3>4. 四维 N-of-1 个体化健康管理处方与下次同步闭环验证靶标</h3>
+      <div id="expert-playbook" class="interpret-grid"></div>
+    </section>
+
     <section class="kpis" aria-label="最近可用观测；各卡片日期可能不同">
       <article class="kpi">
         <div class="kpi-head"><h2>静息心率</h2><span class="badge">设备指标</span></div>
@@ -617,7 +663,94 @@
     renderLineChart('spo2-chart',dates,[{values:series.sleep_spo2_pct||[],color:'#fbbf24'}],{title:'夜间 Pulse Ox 趋势',description:'按源日期排列的睡眠期平均 Pulse Ox 消费级估计。',unit:'%',fixedDomain:[0,100]});
     renderLegend('sleep-legend',[{label:'深睡',color:'#818cf8',box:true},{label:'REM',color:'#c4b5fd',box:true},{label:'浅睡',color:'#94a3b8',box:true},{label:'总时长',color:'#f8fafc'}]);renderLegend('battery-legend',[{label:'最高值',color:'#60a5fa'},{label:'最低值',color:'#cbd5e1',dashed:true}]);
     renderDataTable('rhr-table','静息心率逐日观测',dates,[{label:'静息心率',unit:'bpm',values:series.rhr_bpm||[]}]);renderDataTable('hrv-table','HRV 逐日观测',dates,[{label:'HRV',unit:'ms',values:series.hrv_ms||[]}]);renderDataTable('sleep-table','睡眠逐日观测',dates,[{label:'总时长',unit:'h',values:series.sleep_total_h||[]},{label:'深睡',unit:'h',values:series.sleep_deep_h||[]},{label:'REM',unit:'h',values:series.sleep_rem_h||[]},{label:'浅睡',unit:'h',values:series.sleep_light_h||[]}]);renderDataTable('battery-table','Body Battery 逐日观测',dates,[{label:'最高值',values:series.body_battery_high||[]},{label:'最低值',values:series.body_battery_low||[]}]);renderDataTable('steps-table','每日步数逐日观测',dates,[{label:'步数',unit:'步',values:series.steps||[]}]);renderDataTable('stress-table','Garmin 日均压力逐日观测',dates,[{label:'日均压力',unit:'分数',values:series.stress_avg||[]}]);renderDataTable('respiration-table','夜间呼吸率逐日观测',dates,[{label:'呼吸率',unit:'brpm',values:series.sleep_respiration_brpm||[]}]);renderDataTable('spo2-table','夜间 Pulse Ox 逐日观测',dates,[{label:'Pulse Ox',unit:'%',values:series.sleep_spo2_pct||[]}]);
-    renderHeatmap(data);renderAnalysisReadiness(data);renderCoverage(data);renderNarrative(data);
+    renderHeatmap(data);renderAnalysisReadiness(data);renderCoverage(data);renderNarrative(data);renderExpertAdvisor(data);
+  }
+  function renderExpertAdvisor(data){
+    const panel=byId('expert-advisor-panel'),adv=data.expert_advisory;
+    if(!panel)return;
+    if(!adv||typeof adv!=='object'){panel.hidden=true;return;}
+    panel.hidden=false;
+    const win=adv.requested_window||{},circ=adv.circadian_and_sleep_hygiene||{},cardio=adv.cardiorespiratory_and_activity_load||{};
+    text('expert-advisor-meta',`分析窗口：${win.start||'—'} 至 ${win.end||'—'}（${win.days||0} 天） · 28日入睡均值：${circ.bedtime_28d_mean_clock||'—'}（±${circ.bedtime_28d_sd_minutes??'—'}m，周末/工作日节律差 ${circ.social_jetlag_weekend_vs_workday_minutes??'—'}m） · 周累计 MVPA：${cardio['7d_mvpa_minutes']??'—'} 分钟（WHO 150m 达标：${cardio.who_150min_mvpa_target_met?'是':'否'}） · 最新 VO2max：${cardio.latest_vo2_max??'—'} mL/kg/min`);
+    const phenoRoot=byId('expert-phenotypes');
+    if(phenoRoot){
+      const phenos=Array.isArray(adv.detected_phenotypes)?adv.detected_phenotypes:[];
+      phenoRoot.replaceChildren(...(phenos.length?phenos.map(p=>{
+        const card=el('div','interpret-card');
+        card.append(el('h3',null,`[${p.severity||'info'}] ${p.title||p.id||'生理表型'}`),el('p',null,p.evidence||'无'));
+        return card;
+      }):[el('p',null,'当前窗口未触发特定风险表型')]));
+    }
+    const baseRoot=byId('expert-baseline-rows');
+    if(baseRoot){
+      const mb=adv.multi_horizon_baselines||{};
+      const specs=[
+        ['rhr','静息心率','bpm'],['hrv_last_night','夜间 HRV 均值','ms'],['hrv_5min_high','夜间 HRV 5min 峰值','ms'],
+        ['hrv_ceiling_spread','副交感天花板储备 (峰值-均值)','ms'],['sleep_hours','睡眠总时长','h'],['deep_pct','深睡占比','%'],
+        ['rem_pct','REM 睡眠占比','%'],['sleep_score','Garmin 睡眠评分','分'],['bb_max','晨起最高身体电量','点'],
+        ['bb_recharge_per_sleep_h','每小时睡眠电量回充率','点/h'],['stress_avg','全天平均压力','分'],['steps','每日步数','步']
+      ];
+      baseRoot.replaceChildren(...specs.map(([k,label,unit])=>{
+        const item=mb[k]||{},b7=item['7d']||{},b28=item['28d']||{},b90=item['90d']||{};
+        const tr=el('tr');
+        const zStr=b28.z_score!=null?` (Z=${b28.z_score>=0?'+':''}${b28.z_score})`:'';
+        tr.append(
+          el('td',null,label),
+          el('td',null,item.latest!=null?`${item.latest} ${unit} (${item.latest_date||'—'})`:'—'),
+          el('td',null,b7.mean!=null?`${b7.mean} ${unit} (±${b7.sd??0})`:'—'),
+          el('td',null,b28.mean!=null?`${b28.mean} ${unit}${zStr}`:'—'),
+          el('td',null,b90.mean!=null?`${b90.mean} ${unit} (中位 ${b90.median??'—'})`:'—')
+        );
+        return tr;
+      }));
+    }
+    const mechRoot=byId('expert-mechanism-rows');
+    if(mechRoot){
+      const recs=Array.isArray(adv.window_daily_records)?adv.window_daily_records.slice().reverse():[];
+      mechRoot.replaceChildren(...recs.map(r=>{
+        const cs=r.circadian_stress||{},inHrv=r.intra_night_hrv||{},arch=r.sleep_micro_architecture||{};
+        const slope=inHrv.intra_night_hrv_slope!=null?`${inHrv.intra_night_hrv_slope>=0?'+':''}${inHrv.intra_night_hrv_slope} ms`:'—';
+        const tr=el('tr');
+        tr.append(
+          el('td',null,r.date||'—'),
+          el('td',null,`${cs.afternoon_12_18??'—'} / 睡前 ${cs.pre_sleep_21_23??'—'}`),
+          el('td',null,inHrv.first_half_hrv_avg!=null?`${inHrv.first_half_hrv_avg} → ${inHrv.second_half_hrv_avg} ms (${slope})`:'—'),
+          el('td',null,r.hrv_last_night!=null?`${r.hrv_last_night} / 峰值 ${r.hrv_5min_high??'—'} ms (${r.hrv_baseline_low??'—'}–${r.hrv_baseline_upper??'—'})`:'—'),
+          el('td',null,arch.deep_first_half_pct!=null?`前半夜深睡 ${arch.deep_first_half_pct}% / 醒 ${arch.awake_episode_count??0} 次`:'—'),
+          el('td',null,r.sleep_hours!=null?`${r.sleep_hours} h (${r.sleep_score??'—'}分)`:'—'),
+          el('td',null,`${r.bb_recharge_per_sleep_h??'—'} 点/h (+${r.bb_charged??'—'}) → 峰值 ${r.bb_max??'—'}`)
+        );
+        return tr;
+      }));
+    }
+    const playRoot=byId('expert-playbook');
+    if(playRoot){
+      const pb=adv.management_playbook||{};
+      const cards=[];
+      const sections=[
+        ['1_cognitive_and_schedule_pacing','认知与日程负荷配速'],
+        ['2_sleep_and_circadian_protocol','睡眠与晚间神经卸载协议'],
+        ['3_exercise_and_recovery_periodization','运动与恢复周期化处方']
+      ];
+      sections.forEach(([key,title])=>{
+        const sec=pb[key];
+        if(sec){
+          const card=el('div','interpret-card');
+          card.append(el('h3',null,title),el('p','meta',sec.current_state||''),el('p',null,sec.prescription||''));
+          cards.push(card);
+        }
+      });
+      const targets=Array.isArray(pb['4_n_of_1_verification_targets'])?pb['4_n_of_1_verification_targets']:[];
+      if(targets.length){
+        const card=el('div','interpret-card');
+        card.append(el('h3',null,'下一次 Garmin 同步闭环验证指标 (N-of-1 Targets)'));
+        const ul=el('ul');
+        targets.forEach(t=>ul.append(el('li',null,`${t.metric}：目标 ${t.target}（${t.meaning}）`)));
+        card.append(ul);
+        cards.push(card);
+      }
+      playRoot.replaceChildren(...cards);
+    }
   }
   window.addEventListener('DOMContentLoaded',renderDashboard);
   </script>

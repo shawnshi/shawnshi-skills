@@ -1543,6 +1543,24 @@ def _project_patterns(value: Any) -> dict[str, Any]:
     }
 
 
+def _project_expert_advisory(raw: Any) -> dict[str, Any] | None:
+    if not isinstance(raw, dict) or raw.get("status") != "ok":
+        return None
+    return {
+        "schema": str(raw.get("schema") or "garmin-expert-advisor.v1"),
+        "requested_window": raw.get("requested_window"),
+        "baseline_comparable": bool(
+            (raw.get("device_epoch_provenance") or {}).get("baseline_comparable", False)
+        ),
+        "multi_horizon_baselines": raw.get("multi_horizon_baselines") or {},
+        "circadian_and_sleep_hygiene": raw.get("circadian_and_sleep_hygiene") or {},
+        "cardiorespiratory_and_activity_load": raw.get("cardiorespiratory_and_activity_load") or {},
+        "detected_phenotypes": list(raw.get("detected_phenotypes") or []),
+        "management_playbook": raw.get("management_playbook") or {},
+        "window_daily_records": list(raw.get("window_daily_records") or []),
+    }
+
+
 def _project_dashboard_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Apply a recursive allowlist before health data becomes a persistent HTML file."""
     meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
@@ -1727,6 +1745,7 @@ def _project_dashboard_payload(payload: dict[str, Any]) -> dict[str, Any]:
             _project_context_review(payload.get("user_context_review"))
             if "sleep" in (source.get("components") or []) else None
         ),
+        "expert_advisory": _project_expert_advisory(payload.get("expert_advisory")),
         "narrative": {
             "overall": narrative.get("overall"),
             "unknowns": [str(item) for item in narrative.get("unknowns") or []],
@@ -2244,6 +2263,21 @@ def main(argv: list[str] | None = None) -> int:
         requested_end=requested_end,
         context_records=context_records,
     )
+    if (
+        args.chart == "dashboard"
+        and effective_source == "local"
+        and getattr(fetch_dashboard_summary, "__module__", "") == "garmin_intelligence"
+        and getattr(_load_summary, "__module__", "") == __name__
+    ):
+        try:
+            from garmin_expert_advisor import build_expert_advisory
+
+            charts_data["expert_advisory"] = build_expert_advisory(
+                days=days,
+                end_date=date.fromisoformat(requested_end),
+            )
+        except Exception:
+            pass
     html = render_report(charts_data)
     if args.output:
         output_path = Path(args.output).expanduser()

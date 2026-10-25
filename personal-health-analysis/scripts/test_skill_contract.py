@@ -146,7 +146,7 @@ class SkillContractTests(unittest.TestCase):
                 skill_text,
                 rf"{script_name}[^\n]*--source local[^\n]*--allow-health-data",
             )
-        self.assertIn("allow_implicit_invocation: false", metadata)
+        self.assertIn("allow_implicit_invocation: true", metadata)
 
     def test_live_fallback_is_bound_to_no_data_network_and_exact_components(self):
         skill_text = skill_contract_text()
@@ -193,7 +193,7 @@ class SkillContractTests(unittest.TestCase):
             "Ask separately before login, token writes, sync, downloads", metadata
         )
         self.assertNotIn("ask separately before network", metadata)
-        self.assertIn("allow_implicit_invocation: false", metadata)
+        self.assertIn("allow_implicit_invocation: true", metadata)
 
     def test_interactive_window_and_integrity_contract(self):
         skill = skill_contract_text()

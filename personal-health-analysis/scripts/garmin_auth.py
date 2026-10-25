@@ -12,6 +12,10 @@ import sys
 from collections.abc import Mapping, MutableMapping
 from importlib.metadata import PackageNotFoundError, version as package_version
 from pathlib import Path
+from contextlib import contextmanager
+import ipaddress
+import socket
+import subprocess
 from tempfile import TemporaryDirectory
 from types import MethodType
 from typing import Sequence
@@ -47,9 +51,137 @@ SUPPORTED_GARMINCONNECT_VERSION = "0.3.17"
 # every login strategy), so Garmin hosts are routed around a configured HTTP
 # proxy by default. Set GARMIN_EGRESS_ALLOW_PROXY=1 to keep the proxy for them.
 GARMIN_DIRECT_EGRESS_HOSTS = ("garmin.com", ".garmin.com")
+GARMIN_API_DOMAINS = (
+    "sso.garmin.com",
+    "diauth.garmin.com",
+    "connectapi.garmin.com",
+    "connect.garmin.com",
+)
 ALLOW_PROXY_ENV_VAR = "GARMIN_EGRESS_ALLOW_PROXY"
+LOGIN_STRATEGY_ENV_VAR = "GARMIN_LOGIN_STRATEGY"
 PROXY_BYPASS_ENV_VARS = ("NO_PROXY", "no_proxy")
 _TRUE_VALUES = frozenset({"1", "true", "yes"})
+
+
+def _detect_physical_ipv4() -> str | None:
+    try:
+        out = subprocess.check_output(
+            ["route", "print", "0.0.0.0"], text=True, errors="ignore", timeout=3
+        )
+    except Exception:
+        return None
+    fake_net = ipaddress.ip_network("198.18.0.0/15")
+    for line in out.splitlines():
+        match = re.match(
+            r"^\s*0\.0\.0\.0\s+0\.0\.0\.0\s+(\d+\.\d+\.\d+\.\d+)\s+(\d+\.\d+\.\d+\.\d+)\s+(\d+)",
+            line,
+        )
+        if not match:
+            continue
+        _gw, iface, _metric = match.groups()
+        try:
+            ip = ipaddress.ip_address(iface)
+        except ValueError:
+            continue
+        if ip not in fake_net and not ip.is_loopback and not ip.is_link_local:
+            return iface
+    return None
+
+
+@contextmanager
+def _tun_fake_ip_bypass_scope(Garmin: object, request_guard: _LoginRequestGuard | None = None):
+    """When TUN Fake-IP (198.18.0.0/15) intercepts DNS, bind to physical NIC + DoH."""
+    if not _direct_egress_requested(os.environ) or not getattr(
+        Garmin, "__module__", ""
+    ).startswith("garminconnect"):
+        yield
+        return
+    try:
+        from garminconnect import client as sdk
+        from curl_cffi import CurlOpt
+        import requests
+    except ImportError:
+        yield
+        return
+    orig_cffi_session = getattr(sdk.cffi_requests, "Session", None)
+    if not callable(orig_cffi_session) or not getattr(
+        orig_cffi_session, "__module__", ""
+    ).startswith("curl_cffi"):
+        yield
+        return
+    orig_getaddrinfo = socket.getaddrinfo
+    orig_connect = socket.socket.connect
+    try:
+        addrs = orig_getaddrinfo("sso.garmin.com", 443, type=socket.SOCK_STREAM)
+        first_ip = addrs[0][4][0] if addrs else ""
+        is_fake_ip = ipaddress.ip_address(first_ip) in ipaddress.ip_network("198.18.0.0/15")
+    except Exception:
+        is_fake_ip = False
+    if not is_fake_ip:
+        yield
+        return
+    phys_ip = _detect_physical_ipv4()
+    if not phys_ip:
+        yield
+        return
+    host_ips: dict[str, str] = {}
+    try:
+        doh = requests.Session()
+        doh.trust_env = False
+        for host in GARMIN_API_DOMAINS:
+            resp = doh.get(
+                "https://223.5.5.5/resolve",
+                params={"name": host, "type": "A"},
+                timeout=4,
+            ).json()
+            ips = [
+                ans["data"]
+                for ans in resp.get("Answer", [])
+                if isinstance(ans, dict) and ans.get("type") == 1 and isinstance(ans.get("data"), str)
+            ]
+            if ips:
+                host_ips[host] = ips[0]
+    except Exception:
+        pass
+    if not host_ips:
+        yield
+        return
+    target_ips = set(host_ips.values())
+    resolve_list = [f"{h}:443:{ip}" for h, ip in host_ips.items()]
+
+    def custom_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        if isinstance(host, str) and host.lower() in host_ips:
+            return orig_getaddrinfo(host_ips[host.lower()], port, family, type, proto, flags)
+        return orig_getaddrinfo(host, port, family, type, proto, flags)
+
+    def custom_connect(self, address):
+        if isinstance(address, tuple) and len(address) == 2 and address[0] in target_ips:
+            try:
+                self.bind((phys_ip, 0))
+            except OSError:
+                pass
+        return orig_connect(self, address)
+
+    def custom_cffi_session(*args, **kwargs):
+        opts = dict(kwargs.get("curl_options") or {})
+        opts[CurlOpt.INTERFACE] = phys_ip
+        opts[CurlOpt.RESOLVE] = resolve_list
+        kwargs["curl_options"] = opts
+        kwargs["trust_env"] = False
+        sess = orig_cffi_session(*args, **kwargs)
+        if request_guard is not None:
+            request_guard.session(sess)
+        return sess
+
+    socket.getaddrinfo = custom_getaddrinfo
+    socket.socket.connect = custom_connect
+    sdk.cffi_requests.Session = custom_cffi_session
+    try:
+        yield
+    finally:
+        socket.getaddrinfo = orig_getaddrinfo
+        socket.socket.connect = orig_connect
+        sdk.cffi_requests.Session = orig_cffi_session
 
 
 def _direct_egress_requested(env: Mapping[str, str]) -> bool:
@@ -416,11 +548,66 @@ def _new_live_client(Garmin, *args, **kwargs):
     return client
 
 
+def _is_valid_di_token_bytes(raw: bytes) -> bool:
+    if not raw or len(raw) > 1_048_576:
+        return False
+    try:
+        parsed = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(parsed, dict):
+        return False
+    return all(
+        isinstance(parsed.get(key), str) and bool(parsed[key].strip())
+        for key in ("di_token", "di_refresh_token", "di_client_id")
+    )
+
+
+def _write_token_bytes_atomic(target: Path, payload: bytes) -> None:
+    _reject_unsafe_token_path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=target.parent, prefix=f".{target.name}.") as tmp_dir:
+        tmp_file = Path(tmp_dir) / target.name
+        with tmp_file.open("xb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            tmp_file.chmod(0o600)
+        except OSError:
+            pass
+        os.replace(tmp_file, target)
+
+
+def _persist_rotated_di_token_bytes(
+    source_file: Path,
+    original_bytes: bytes,
+    new_bytes: bytes,
+) -> None:
+    if new_bytes == original_bytes or not _is_valid_di_token_bytes(new_bytes):
+        return
+    try:
+        current_bytes = _read_saved_token_bytes(source_file)
+        if current_bytes == original_bytes:
+            _write_token_bytes_atomic(source_file, new_bytes)
+        garmindb_tokens = Path.home() / ".GarminDb" / "garmin_tokens.json"
+        if (
+            garmindb_tokens.resolve(strict=False) != source_file.resolve(strict=False)
+            and garmindb_tokens.is_file()
+        ):
+            gdb_bytes = _read_saved_token_bytes(garmindb_tokens)
+            if gdb_bytes == original_bytes:
+                _write_token_bytes_atomic(garmindb_tokens, new_bytes)
+    except Exception:
+        pass
+
+
 def _restore_client_without_persistent_token_write(
     Garmin, *, token_file: Path | None = None, in_memory: bool = False
 ):
     """Keep profile-free insight restoration separate from profile-based APIs."""
-    token_bytes = _read_saved_token_bytes(token_file or _token_file_path())
+    resolved_token_file = token_file or _token_file_path()
+    token_bytes = _read_saved_token_bytes(resolved_token_file)
     if token_bytes is None:
         return None
     if in_memory:
@@ -441,7 +628,15 @@ def _restore_client_without_persistent_token_write(
         except OSError as exc:
             raise RuntimeError("temporary_token_security_setup_failed") from exc
         client = _new_live_client(Garmin)
-        client.login(tokenstore=temporary_dir)
+        with _tun_fake_ip_bypass_scope(Garmin):
+            client.login(tokenstore=temporary_dir)
+        try:
+            if temporary_file.is_file():
+                _persist_rotated_di_token_bytes(
+                    resolved_token_file, token_bytes, temporary_file.read_bytes()
+                )
+        except OSError:
+            pass
         return client
 
 
@@ -517,7 +712,11 @@ def login(
         # Explicit password login starts fresh: never first retry a rejected
         # saved session. Keep only the SDK's existing first strategy, with no
         # transport/fingerprint rotation after a 429 or provider challenge.
-        disabled.update({"mobile+requests", "widget+cffi", "portal+cffi", "portal+requests"})
+        strategy = os.environ.get(LOGIN_STRATEGY_ENV_VAR, "mobile").strip().casefold()
+        if strategy == "widget" and getattr(Garmin, "__module__", "").startswith("garminconnect"):
+            disabled.update({"mobile+cffi", "mobile+requests", "portal+cffi", "portal+requests"})
+        else:
+            disabled.update({"mobile+requests", "widget+cffi", "portal+cffi", "portal+requests"})
         # The remaining upstream strategy also rotates fingerprints internally,
         # and its verifier accepts inconclusive failures. Override only this
         # fresh instance; installed SDK modules and read-only clients stay intact.
@@ -526,11 +725,26 @@ def login(
         native._bounded_login_guard = request_guard
         native._mobile_login_cffi = MethodType(_single_mobile_login_cffi, native)
         native._verify_token = MethodType(_strict_verify_token, native)
-        native.login(email, password, prompt_mfa=get_mfa)
+        with _tun_fake_ip_bypass_scope(Garmin, request_guard=request_guard):
+            native.login(email, password, prompt_mfa=get_mfa)
         request_guard.check()
         # This is the existing explicitly authorized manual token-write path;
         # SDK dump is atomic. Failed authentication never replaces old tokens.
         native.dump(str(TOKEN_DIR))
+        try:
+            default_token_dir = (Path.home() / ".config" / "garmin-connect").resolve(strict=False)
+            garmindb_dir = (Path.home() / ".GarminDb").resolve(strict=False)
+            dumped_file = _token_file_path()
+            resolved_dir = TOKEN_DIR.resolve(strict=False)
+            if dumped_file.is_file() and (garmindb_dir / "GarminConnectConfig.json").is_file():
+                dumped_bytes = _read_saved_token_bytes(dumped_file)
+                if dumped_bytes and _is_valid_di_token_bytes(dumped_bytes):
+                    if resolved_dir == default_token_dir:
+                        _write_token_bytes_atomic(garmindb_dir / "garmin_tokens.json", dumped_bytes)
+                    elif resolved_dir == garmindb_dir:
+                        _write_token_bytes_atomic(default_token_dir / "garmin_tokens.json", dumped_bytes)
+        except Exception:
+            pass
         return True
     except _LoginTransportBlocked as exc:
         if native is not None:
@@ -614,6 +828,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--allow-token-write",
         action="store_true",
         help="Explicitly authorize creating or refreshing the persistent token store",
+    )
+    login_parser.add_argument(
+        "--strategy",
+        choices=("mobile", "widget"),
+        default=None,
+        help="Single bounded login strategy (default: widget on CLI, mobile in SDK)",
     )
     login_parser.add_argument(
         "--dry-run", action="store_true", help="Validate intent without side effects"
@@ -701,13 +921,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             operation=TOKEN_WRITE_OPERATION,
             request=request,
         )
-        success = login(
-            email,
-            password,
-            network_capability=network_capability,
-            token_write_capability=token_write_capability,
-            request=request,
-        )
+        prev_strategy = os.environ.get(LOGIN_STRATEGY_ENV_VAR)
+        try:
+            if args.strategy:
+                os.environ[LOGIN_STRATEGY_ENV_VAR] = args.strategy
+            elif prev_strategy is None:
+                os.environ[LOGIN_STRATEGY_ENV_VAR] = "widget"
+            success = login(
+                email,
+                password,
+                network_capability=network_capability,
+                token_write_capability=token_write_capability,
+                request=request,
+            )
+        finally:
+            if prev_strategy is None:
+                os.environ.pop(LOGIN_STRATEGY_ENV_VAR, None)
+            else:
+                os.environ[LOGIN_STRATEGY_ENV_VAR] = prev_strategy
         password = ""
         failure = dict(_LAST_FAILURE)
         payload = {

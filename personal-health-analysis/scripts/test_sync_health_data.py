@@ -1684,6 +1684,41 @@ class SyncHealthDataCliTests(unittest.TestCase):
         self.assertEqual(completed.returncode, self.module.EXIT_CONFIGURATION)
         self.assertEqual(json.loads(completed.stdout)["error"], "adapter_arguments_invalid")
 
+    def test_persist_rotated_di_tokens_writes_valid_di_json_and_mirrors_live_store(self):
+        with tempfile.TemporaryDirectory() as root:
+            config_dir, _, _, _ = self.make_bound_environment(root)
+            source_token = config_dir / self.module.TOKEN_STORE_NAME
+            initial_bytes = json.dumps(
+                {
+                    "di_token": "old-access",
+                    "di_refresh_token": "old-refresh",
+                    "di_client_id": "GARMIN_CONNECT_MOBILE_ANDROID_DI_2025Q2",
+                }
+            ).encode("utf-8")
+            source_token.write_bytes(initial_bytes)
+            live_dir = Path(root) / "live-token-dir"
+            live_dir.mkdir()
+            live_token = live_dir / self.module.TOKEN_STORE_NAME
+            live_token.write_bytes(initial_bytes)
+            temp_token = Path(root) / "temp-token.json"
+            rotated_bytes = json.dumps(
+                {
+                    "di_token": "new-access",
+                    "di_refresh_token": "new-refresh",
+                    "di_client_id": "GARMIN_CONNECT_MOBILE_ANDROID_DI_2025Q2",
+                }
+            ).encode("utf-8")
+            temp_token.write_bytes(rotated_bytes)
+            with patch.dict(os.environ, {"GARMIN_TOKEN_DIR": str(live_dir)}):
+                updated = self.module._persist_rotated_di_tokens(
+                    config_dir,
+                    temp_token,
+                    expected_sha256=self.module._sha256_bytes(initial_bytes),
+                )
+            self.assertTrue(updated)
+            self.assertEqual(source_token.read_bytes(), rotated_bytes)
+            self.assertEqual(live_token.read_bytes(), rotated_bytes)
+
 
 if __name__ == "__main__":
     unittest.main()

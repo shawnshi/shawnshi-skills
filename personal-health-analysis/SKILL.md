@@ -27,7 +27,7 @@ metadata:
 
 | 请求 | 执行前读取 |
 | --- | --- |
-| 单指标、摘要、健康画像、个人趋势/睡眠规律 | [本地分析](references/workflow_contract.md#本地分析)；解释指标时读 [health_analysis.md](references/health_analysis.md)，全面画像时读 [health_profile.md](references/health_profile.md) |
+| 单指标、摘要、健康画像、个人趋势/睡眠规律、智能健康管理咨询 | [本地分析](references/workflow_contract.md#本地分析)；解释指标时读 [health_analysis.md](references/health_analysis.md)，全面画像时读 [health_profile.md](references/health_profile.md)，深度归因与N-of-1健康管理方案读 [health_management_expert.md](references/health_management_expert.md) |
 | 数据质量、缺失、覆盖或设备时期核验；任何分析结果解释 | [数据质量](references/workflow_contract.md#数据质量)：设备/固件/厂商与分析算法时期、样本资格、缺失不补零、非独立指标与非诊断边界 |
 | 离线 HTML 趋势面板或持久化 Markdown 报告 | [离线可视化与报告](references/workflow_contract.md#离线可视化与报告)及数据质量节；HTML 必须为 `garmin_chart.py` 直接输出且零外联，不用通用渲染器包装或重写 |
 | 本地明确无数据后的回退，或明确要求实时来源 | [受限实时回退](references/workflow_contract.md#受限实时回退)与 [api.md](references/api.md)；扩展指标、点时查询、活动文件才读 [advanced_tools.md](references/advanced_tools.md) |

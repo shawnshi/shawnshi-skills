@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-10-24T10:47:50+08:00",
+  "generated_at": "2026-10-24T21:36:28+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "513cbfe5e780a67bcbc2ceef101ca50b5378b0ff3ff5f74e352a461732d06e77",
+  "skill_md_sha256": "2ef3f8bed932f78edd29caccddde5dbe65ca429ea23f1347bde6ff582eec6058",
   "top_level_files": [
     ".gitignore",
     "SKILL.md",
@@ -21,7 +21,7 @@
     },
     {
       "path": "SKILL.md",
-      "sha256": "513cbfe5e780a67bcbc2ceef101ca50b5378b0ff3ff5f74e352a461732d06e77"
+      "sha256": "2ef3f8bed932f78edd29caccddde5dbe65ca429ea23f1347bde6ff582eec6058"
     },
     {
       "path": "install.ps1",
@@ -50,11 +50,11 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 60
+      "file_count": 62
     },
     {
       "name": "references",
-      "file_count": 8
+      "file_count": 9
     },
     {
       "name": "resources",
@@ -76,7 +76,7 @@
     },
     {
       "path": "assets/dashboard_v2.html",
-      "sha256": "04c3be5c5d055998f84133af3d6fef177602af3075ca28179fb42d621d496392"
+      "sha256": "49b4936e9b21d2b6984de31c069eb354d5f9f43b19a6b5943ca0e2e9aa060a6e"
     },
     {
       "path": "references/advanced_tools.md",
@@ -93,6 +93,10 @@
     {
       "path": "references/health_analysis.md",
       "sha256": "345fed4bfdc90edb2dca6aabaa36bb21659566a5deb8023c08d79cee6751c763"
+    },
+    {
+      "path": "references/health_management_expert.md",
+      "sha256": "6d1cf52bd9db826667e308f60957ce4a5bf170d931e712a30c2f2feed5c1518c"
     },
     {
       "path": "references/health_profile.md",
@@ -132,7 +136,7 @@
     },
     {
       "path": "scripts/garmin_auth.py",
-      "sha256": "8289f60e47f2585908412a0a2381013d9286110d33aefac0bc9866faf29062b5"
+      "sha256": "a3f5abd1772b9160a7476c75235c022f0cc25af711aaef88744988b101a3fe99"
     },
     {
       "path": "scripts/garmin_auto_sync.py",
@@ -148,7 +152,7 @@
     },
     {
       "path": "scripts/garmin_chart.py",
-      "sha256": "71a6a55e19ab283fdd8f3867b33851a4518c463df32c049cdfed828e9e1a32d3"
+      "sha256": "8d64d0c75f858c4674468bd478efa2a9351e8d4ab780d18ddd294ad53c05aae7"
     },
     {
       "path": "scripts/garmin_data.py",
@@ -157,6 +161,10 @@
     {
       "path": "scripts/garmin_data_extended.py",
       "sha256": "7e338097ad4947cd9eb078016e4a4073585dd44e7c8bfaf94b476323f549e727"
+    },
+    {
+      "path": "scripts/garmin_expert_advisor.py",
+      "sha256": "f5afed6ad24c89eb954e13fbf33bf5c5e27f3e1530d02c8f626efe0df3265d6a"
     },
     {
       "path": "scripts/garmin_fhir_adapter.py",
@@ -208,7 +216,7 @@
     },
     {
       "path": "scripts/sync_health_data.py",
-      "sha256": "e529effa851ee6225a16c85c37be7c8628b6e225e0bfde63f6ade9fd222b47f4"
+      "sha256": "42b5a6253bab1c9e34fa16b4f1e40e89e3a4574bb10e64c9d453ffd38a5e66a4"
     },
     {
       "path": "scripts/test_bounded_read_integrity.py",
@@ -265,6 +273,10 @@
     {
       "path": "scripts/test_garmin_data_extended_cli.py",
       "sha256": "95d125b08f7a48142cebe7df0618b9f8b93082ef6650c929f313d2685e205f60"
+    },
+    {
+      "path": "scripts/test_garmin_expert_advisor.py",
+      "sha256": "b5ed99ec39f633ead6c6cfef32a9607eb3aa5af0be319b76a6db8d0aefb2b93d"
     },
     {
       "path": "scripts/test_garmin_fhir_adapter.py",
@@ -332,11 +344,11 @@
     },
     {
       "path": "scripts/test_skill_contract.py",
-      "sha256": "bcaaafeda0bdb0fe52a5b7e7126ecaa85dc5bf8989e70f36fa22a440f68b8a42"
+      "sha256": "fee0bd88eee3eb0ae0eed86c8744f3c35c075fed05918421380b5c3bc1d4a55b"
     },
     {
       "path": "scripts/test_sync_health_data.py",
-      "sha256": "e5a3e456d2168037afd9989e6e226aeaa65412605ab53333a2aa6207c763e5a4"
+      "sha256": "e669746c32af87ee4f91b8755fab2258161caf0db5586132db017145f9b97688"
     },
     {
       "path": "scripts/test_sync_runner_compatibility.py",
@@ -379,6 +391,12 @@
       "exists": true,
       "resolved_path": "personal-health-analysis/references/health_analysis.md",
       "sha256": "345fed4bfdc90edb2dca6aabaa36bb21659566a5deb8023c08d79cee6751c763"
+    },
+    {
+      "path": "references/health_management_expert.md",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/references/health_management_expert.md",
+      "sha256": "6d1cf52bd9db826667e308f60957ce4a5bf170d931e712a30c2f2feed5c1518c"
     },
     {
       "path": "references/health_profile.md",

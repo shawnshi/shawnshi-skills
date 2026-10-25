@@ -284,6 +284,44 @@ try:
 
         bounded_auth.GarminConnectAuthAdapter.login = token_only_login
         bounded_download.Download.login = monitoring_login
+        if getattr(bounded_download.Download, "__module__", "") == "garmindb.download":
+            try:
+                import ipaddress, re, socket, subprocess, requests
+                _orig_gai = socket.getaddrinfo
+                _orig_conn = socket.socket.connect
+                _addrs = _orig_gai("connectapi.garmin.com", 443, type=socket.SOCK_STREAM)
+                if _addrs and ipaddress.ip_address(_addrs[0][4][0]) in ipaddress.ip_network("198.18.0.0/15"):
+                    _phys_ip = None
+                    _rt = subprocess.check_output(["route", "print", "0.0.0.0"], text=True, errors="ignore", timeout=3)
+                    for _line in _rt.splitlines():
+                        _m = re.match(r"^\s*0\.0\.0\.0\s+0\.0\.0\.0\s+(\d+\.\d+\.\d+\.\d+)\s+(\d+\.\d+\.\d+\.\d+)\s+(\d+)", _line)
+                        if _m:
+                            _ip = ipaddress.ip_address(_m.group(2))
+                            if _ip not in ipaddress.ip_network("198.18.0.0/15") and not _ip.is_loopback and not _ip.is_link_local:
+                                _phys_ip = _m.group(2)
+                                break
+                    if _phys_ip:
+                        _doh = requests.Session()
+                        _doh.trust_env = False
+                        _hips = {}
+                        for _h in ("sso.garmin.com", "diauth.garmin.com", "connectapi.garmin.com", "connect.garmin.com"):
+                            _r = _doh.get("https://223.5.5.5/resolve", params={"name": _h, "type": "A"}, timeout=4).json()
+                            _ips = [_a["data"] for _a in _r.get("Answer", []) if isinstance(_a, dict) and _a.get("type") == 1]
+                            if _ips:
+                                _hips[_h] = _ips[0]
+                        if _hips:
+                            _t_ips = set(_hips.values())
+                            socket.getaddrinfo = lambda h, p, f=0, t=0, pr=0, fl=0: _orig_gai(_hips.get(h.lower(), h) if isinstance(h, str) else h, p, f, t, pr, fl)
+                            def _bound_conn(self, addr):
+                                if isinstance(addr, tuple) and len(addr) == 2 and addr[0] in _t_ips:
+                                    try:
+                                        self.bind((_phys_ip, 0))
+                                    except OSError:
+                                        pass
+                                return _orig_conn(self, addr)
+                            socket.socket.connect = _bound_conn
+            except Exception:
+                pass
 except (OSError, ValueError, SyntaxError, KeyError, TypeError, IndexError, ImportError, AttributeError):
     fail("adapter_preflight_invalid")
 sys.argv = [cli, *args]
@@ -1144,6 +1182,100 @@ def prepare_windowed_config(
         yield temp_dir
 
 
+def _is_valid_di_token_store_bytes(raw: bytes) -> bool:
+    """Verify that refreshed token bytes contain a complete DI OAuth2 token store."""
+    if not raw or len(raw) > MAX_TOKEN_STORE_BYTES:
+        return False
+    try:
+        parsed = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(parsed, dict):
+        return False
+    return all(
+        isinstance(parsed.get(key), str) and bool(parsed[key].strip())
+        for key in ("di_token", "di_refresh_token", "di_client_id")
+    )
+
+
+def _write_token_store_atomic(target: Path, payload: bytes) -> None:
+    """Atomically replace a token store file with 0o600 permissions."""
+    if _is_link_or_reparse(target.parent) or (
+        target.exists() and _is_link_or_reparse(target)
+    ):
+        raise SyncConfigurationError("unsafe_token_store_path")
+    descriptor, temp_name = tempfile.mkstemp(
+        dir=target.parent,
+        prefix=f".{target.name}.",
+        suffix=".tmp",
+    )
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            temp_path.chmod(0o600)
+        except OSError:
+            pass
+        os.replace(temp_path, target)
+    finally:
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
+
+
+def _persist_rotated_di_tokens(
+    source_dir: Path,
+    temp_token_file: Path,
+    *,
+    expected_sha256: str,
+) -> bool:
+    """Persist rotated DI OAuth2 tokens from the disposable download store back to canonical stores."""
+    try:
+        if not temp_token_file.is_file():
+            return False
+        new_bytes = temp_token_file.read_bytes()
+    except OSError:
+        return False
+    new_sha256 = _sha256_bytes(new_bytes)
+    if hmac.compare_digest(new_sha256, expected_sha256):
+        return False
+    if not _is_valid_di_token_store_bytes(new_bytes):
+        return False
+    source_token_file = Path(source_dir) / TOKEN_STORE_NAME
+    try:
+        current_source_bytes = _read_token_store_source(Path(source_dir))
+    except SyncConfigurationError:
+        return False
+    if not hmac.compare_digest(_sha256_bytes(current_source_bytes), expected_sha256):
+        return False
+    _write_token_store_atomic(source_token_file, new_bytes)
+    live_token_dir = Path(
+        os.environ.get("GARMIN_TOKEN_DIR", Path.home() / ".config" / "garmin-connect")
+    ).expanduser()
+    live_token_file = (
+        live_token_dir
+        if live_token_dir.suffix.casefold() == ".json"
+        else live_token_dir / TOKEN_STORE_NAME
+    )
+    try:
+        if (
+            live_token_file.resolve(strict=False) != source_token_file.resolve(strict=False)
+            and live_token_file.is_file()
+            and not live_token_file.is_symlink()
+        ):
+            live_bytes = live_token_file.read_bytes()
+            if hmac.compare_digest(_sha256_bytes(live_bytes), expected_sha256):
+                _write_token_store_atomic(live_token_file, new_bytes)
+    except OSError:
+        pass
+    return True
+
+
 def locate_garmindb_cli(
     python_executable: Path | None,
 ) -> tuple[Path, Path]:
@@ -1709,11 +1841,22 @@ def execute_sync(
                     completed.returncode, completed.stdout or ""
                 )
                 if exit_code != EXIT_OK:
+                    if plan["bindings"]["config"] == build_config_binding(Path(config_dir)):
+                        _persist_rotated_di_tokens(
+                            Path(config_dir),
+                            temporary_token_store,
+                            expected_sha256=temporary_token_store_sha256,
+                        )
                     payload["stage"] = current_stage
                     break
             else:
                 if plan["bindings"]["config"] != build_config_binding(Path(config_dir)):
                     raise SyncConfigurationError("bound_config_changed_after_sync")
+                _persist_rotated_di_tokens(
+                    Path(config_dir),
+                    temporary_token_store,
+                    expected_sha256=temporary_token_store_sha256,
+                )
                 current_stage = "verification"
                 remaining_budget()
                 verification = verifier(
